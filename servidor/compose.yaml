@@ -21,10 +21,10 @@ services:
     environment:
       Desastres__Url: http://desastres:8080/gestion-emergencias/api/
       Nucleo__Url: http://nucleo:8080/plataforma-desastres/api/
-      Integracion__Key: ${INTEGRACION_KEY:-arqui-interna-local-cambiar}
+      Integracion__Key: ${INTEGRACION_KEY:?Falta INTEGRACION_KEY en .env (copia .env.ejemplo)}
       Campo__Diferida: "${CAMPO_DIFERIDA:-false}"
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Mapas: Host=db;Database=mapas;Username=mapas;Password=mapas-local
+      ConnectionStrings__Mapas: Host=db;Database=mapas;Username=mapas;Password=${MAPAS_DB_PASSWORD:?Falta MAPAS_DB_PASSWORD en .env}
     depends_on:
       db:
         condition: service_healthy
@@ -33,7 +33,7 @@ services:
     environment:
       POSTGRES_DB: mapas
       POSTGRES_USER: mapas
-      POSTGRES_PASSWORD: mapas-local
+      POSTGRES_PASSWORD: ${MAPAS_DB_PASSWORD:?Falta MAPAS_DB_PASSWORD en .env}
     volumes: ["mapas-data:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mapas -d mapas"]
@@ -44,8 +44,8 @@ services:
     image: rabbitmq:4.1-management
     hostname: rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: taller
-      RABBITMQ_DEFAULT_PASS: taller-local
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USUARIO:?Falta RABBIT_USUARIO en .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_CLAVE:?Falta RABBIT_CLAVE en .env}
     ports: ["127.0.0.1:15683:5672", "127.0.0.1:15684:15672"]
     volumes: ["mensajes:/var/lib/rabbitmq"]
     healthcheck:
@@ -63,11 +63,11 @@ services:
     build: ../desastres
     environment:
       RABBIT_HOST: rabbitmq
-      RABBIT_USER: taller
-      RABBIT_PASSWORD: taller-local
+      RABBIT_USER: ${RABBIT_USUARIO:?Falta RABBIT_USUARIO en .env}
+      RABBIT_PASSWORD: ${RABBIT_CLAVE:?Falta RABBIT_CLAVE en .env}
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
-      INTEGRACION_KEY: ${INTEGRACION_KEY:-arqui-interna-local-cambiar}
+      INTEGRACION_KEY: ${INTEGRACION_KEY:?Falta INTEGRACION_KEY en .env (copia .env.ejemplo)}
       REGISTRO_ARCHIVO: /opt/payara/registro/estado.json
     volumes: ["registro-desastres:/opt/payara/registro"]
     depends_on:
@@ -79,22 +79,22 @@ services:
     profiles: [pruebas]
     build: ../interop
     environment:
-      EJB_USUARIO: ${EJB_USUARIO:-ejbcliente}
-      EJB_CLAVE: ${EJB_CLAVE:-Arqui-Rpc-Local-2026!}
-      PGDR_BOOTSTRAP_USER: ${PGDR_BOOTSTRAP_USER:-coordinador_demo}
-      PGDR_BOOTSTRAP_PASSWORD: ${PGDR_BOOTSTRAP_PASSWORD:-Arqui-Local-2026!}
+      EJB_USUARIO: ${EJB_USUARIO:?Falta EJB_USUARIO en .env (copia .env.ejemplo)}
+      EJB_CLAVE: ${EJB_CLAVE:?Falta EJB_CLAVE en .env (copia .env.ejemplo)}
+      PGDR_BOOTSTRAP_USER: ${PGDR_BOOTSTRAP_USER:?Falta PGDR_BOOTSTRAP_USER en .env (copia .env.ejemplo)}
+      PGDR_BOOTSTRAP_PASSWORD: ${PGDR_BOOTSTRAP_PASSWORD:?Falta PGDR_BOOTSTRAP_PASSWORD en .env (copia .env.ejemplo)}
   nucleo:
     build:
       context: ../nucleo
       args:
-        EJB_USUARIO: ${EJB_USUARIO:-ejbcliente}
-        EJB_CLAVE: ${EJB_CLAVE:-Arqui-Rpc-Local-2026!}
+        EJB_USUARIO: ${EJB_USUARIO:?Falta EJB_USUARIO en .env (copia .env.ejemplo)}
+        EJB_CLAVE: ${EJB_CLAVE:?Falta EJB_CLAVE en .env (copia .env.ejemplo)}
     ports: ["127.0.0.1:18092:8080"]
     environment:
-      PGDR_DB_PASSWORD: ${PGDR_DB_PASSWORD:-nucleo-local-cambiar}
-      PGDR_BOOTSTRAP_USER: ${PGDR_BOOTSTRAP_USER:-coordinador_demo}
-      PGDR_BOOTSTRAP_PASSWORD: ${PGDR_BOOTSTRAP_PASSWORD:-Arqui-Local-2026!}
-      INTEGRACION_KEY: ${INTEGRACION_KEY:-arqui-interna-local-cambiar}
+      PGDR_DB_PASSWORD: ${PGDR_DB_PASSWORD:?Falta PGDR_DB_PASSWORD en .env (copia .env.ejemplo)}
+      PGDR_BOOTSTRAP_USER: ${PGDR_BOOTSTRAP_USER:?Falta PGDR_BOOTSTRAP_USER en .env (copia .env.ejemplo)}
+      PGDR_BOOTSTRAP_PASSWORD: ${PGDR_BOOTSTRAP_PASSWORD:?Falta PGDR_BOOTSTRAP_PASSWORD en .env (copia .env.ejemplo)}
+      INTEGRACION_KEY: ${INTEGRACION_KEY:?Falta INTEGRACION_KEY en .env (copia .env.ejemplo)}
       NOTIFICACIONES_URL: http://desastres:8080/gestion-emergencias/api
     depends_on:
       database:
@@ -104,7 +104,7 @@ services:
     environment:
       POSTGRES_DB: pgdrdb
       POSTGRES_USER: pgdr
-      POSTGRES_PASSWORD: ${PGDR_DB_PASSWORD:-nucleo-local-cambiar}
+      POSTGRES_PASSWORD: ${PGDR_DB_PASSWORD:?Falta PGDR_DB_PASSWORD en .env (copia .env.ejemplo)}
     volumes:
       - nucleo-data:/var/lib/postgresql/data
       - ../nucleo/migraciones:/docker-entrypoint-initdb.d:ro
@@ -119,16 +119,16 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://reconstruccion-db:5432/reconstruccion
       SPRING_DATASOURCE_USERNAME: reconstruccion
-      SPRING_DATASOURCE_PASSWORD: reconstruccion-local
+      SPRING_DATASOURCE_PASSWORD: ${RECONSTRUCCION_DB_PASSWORD:?Falta RECONSTRUCCION_DB_PASSWORD en .env}
       RECONSTRUCCION_DATOS_DEMO: "false"
       RECONSTRUCCION_INTEGRACION_HABILITADA: "true"
       RECONSTRUCCION_NUCLEO_URL: http://nucleo:8080/plataforma-desastres/api
       RECONSTRUCCION_SERVIDOR_URL: http://api:8080
-      RECONSTRUCCION_INTEGRACION_CLAVE: ${INTEGRACION_KEY:-arqui-interna-local-cambiar}
+      RECONSTRUCCION_INTEGRACION_CLAVE: ${INTEGRACION_KEY:?Falta INTEGRACION_KEY en .env (copia .env.ejemplo)}
       RECONSTRUCCION_MENSAJERIA_HABILITADA: "true"
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: taller
-      SPRING_RABBITMQ_PASSWORD: taller-local
+      SPRING_RABBITMQ_USERNAME: ${RABBIT_USUARIO:?Falta RABBIT_USUARIO en .env}
+      SPRING_RABBITMQ_PASSWORD: ${RABBIT_CLAVE:?Falta RABBIT_CLAVE en .env}
     ports: ["127.0.0.1:19096:9096"]
     depends_on:
       reconstruccion-db:
@@ -140,7 +140,7 @@ services:
     environment:
       POSTGRES_DB: reconstruccion
       POSTGRES_USER: reconstruccion
-      POSTGRES_PASSWORD: reconstruccion-local
+      POSTGRES_PASSWORD: ${RECONSTRUCCION_DB_PASSWORD:?Falta RECONSTRUCCION_DB_PASSWORD en .env}
     volumes: ["reconstruccion-data:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U reconstruccion -d reconstruccion"]

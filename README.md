@@ -1,6 +1,8 @@
 # Territorio · integración de los talleres
 
-Código unificado de persistencia/login de PROYECTO ARQUI, mapas/DAL .NET, captura desconectada Android, registro/notificaciones del Taller 3 y lógica de solicitudes de recursos del Taller 2. SRS, SAD y ATAM no se modificaron.
+Código unificado de la plataforma: núcleo de identidad y desastres (Jakarta EE), evaluaciones de campo y mapas (.NET), captura sin conexión (.NET MAUI), notificaciones (Taller 3, RabbitMQ), Reconstrucción física (Spring Boot, REST y gRPC) y el **portal web** (Spring MVC + Thymeleaf), que es la única interfaz web y tiene el servlet asíncrono multihilo del tablero.
+
+Estado al 15 de noviembre de 2026: todo compila y `./verificar.sh` pasa completo (243 comprobaciones, registro en `evidencias/rol1-build/`). Los documentos SRS, SAD y ATAM todavía no reflejan estos cambios.
 
 ## Ejecutar
 
@@ -10,11 +12,20 @@ Con Docker Desktop activo y Python 3:
 ./iniciar.sh
 ```
 
-Web: http://127.0.0.1:18085 · Buzón de pruebas: http://127.0.0.1:18026
+Portal web: http://127.0.0.1:18085 · Buzón de pruebas: http://127.0.0.1:18026
+
+`iniciar.sh` crea `servidor/.env` a partir de `.env.ejemplo` si no existe. Compose ya no tiene contraseñas escritas: todas salen de ese archivo, que no se versiona.
 
 Acceso de laboratorio inicial: **coordinador_demo** / **Arqui-Local-2026!**. Puedes definir las variables de `.env.ejemplo` en el entorno antes de la primera instalación; el bootstrap nunca cambia la contraseña de un usuario existente. `compose.yaml` está en servidor/: si usas un archivo de variables, pásalo explícitamente con `docker compose --env-file /ruta/.env -f servidor/compose.yaml ...` y exporta las mismas variables para los scripts Python. El entorno es de demostración local; no es un despliegue de producción.
 
-El inicio aplica V001–V007, incluso sobre un volumen existente. Para detener conservando datos: `docker compose -f servidor/compose.yaml stop`. No uses `down -v` para actualizar.
+El inicio aplica V001–V009, incluso sobre un volumen existente. Para detener conservando datos: `docker compose -f servidor/compose.yaml stop`. No uses `down -v` para actualizar.
+
+## Portal web (UD-09)
+
+- **MVC con Spring MVC + Thymeleaf:** controladores `@Controller` en `portal/src/main/java/com/pgdr/portal/web`, vistas en `portal/src/main/resources/templates`. El token del núcleo vive en la sesión del servidor; el navegador solo tiene la cookie de sesión.
+- **Pantallas:** desastres (registro, fase y caracterización), tablero de un desastre con mapa, evaluaciones con historial y foto, mapa general, Reconstrucción física completa y usuarios del organismo.
+- **Servlet multihilo:** `portal/.../tablero/TableroServlet.java` (`GET /tablero?desastre=REF`). Consulta en paralelo el núcleo, servidor y Reconstrucción (gRPC) con un pool acotado. Responde parcial si una fuente falla y 503 si el pool está lleno.
+- **Medición:** `python portal/scripts/medir_tablero.py` deja el informe en `evidencias/rol1-tablero/`.
 
 ## Qué se unió
 
@@ -28,6 +39,8 @@ COORDINADOR administra desastres, suscriptores, usuarios y puntos de coordinaci�
 Los clientes usan `/api/auth/login`, `/api/auth/me`, `/api/auth/logout` y `/api/auth/usuarios`. El resto de las APIs mantiene sus rutas anteriores, con `Authorization: Bearer <token>`. `POST /api/desastres` devuelve 201 al guardar y 200 al repetir exactamente el mismo ID y contenido; 409 indica conflicto. Las notificaciones son posteriores. El puerto 18092 expone la API Java solo en localhost; las rutas internas requieren INTEGRACION_KEY. El Taller 3 queda dentro de la red Docker, sin su anterior puerto público 18081.
 
 ## Solicitudes de recursos · Taller 2
+
+> Fuera de alcance según el profesor (gestión de recursos). El portal ya no la ofrece; su código se retirará del núcleo y de servidor cuando el equipo lo acuerde.
 
 Acceso: http://127.0.0.1:18085/solicitudes.html. También se llega desde los mapas y desde el detalle de una evaluación vinculada.
 
@@ -93,14 +106,13 @@ Este paso asigna los datos antiguos sin organismo al organismo inicial de labora
 
 ```sh
 ./verificar.sh
-python3 servidor/scripts/verificar_unificacion.py
 ```
 
-La primera conserva las regresiones de DAL, mapas y campo con autenticación. La segunda crea datos sintéticos y prueba roles, aislamiento, foto, idempotencia, notificaciones y reinicio; detiene el broker y reinicia servicios de esta integración, por lo que debe ejecutarse sin demostraciones concurrentes. Los correos llegan exclusivamente a Mailpit. Los resultados de versiones anteriores se conservan como evidencia histórica y no acreditan por sí solos la versión actual.
+Corre, en orden: API, integración, campo, Reconstrucción (con gRPC), evolución, unificación, caracterización (C2), portal y seguridad. La de seguridad va al final porque agota a propósito el cupo de intentos de inicio de sesión por un minuto. `verificar_unificacion.py` crea datos sintéticos y prueba roles, aislamiento, foto, idempotencia, notificaciones y reinicio; detiene el broker y reinicia servicios de esta integración, por lo que debe ejecutarse sin demostraciones concurrentes. Los correos llegan exclusivamente a Mailpit. Los resultados de versiones anteriores se conservan como evidencia histórica y no acreditan por sí solos la versión actual.
 
 ## Límites actuales
 
-Esta unión integra lo reutilizable de los talleres; todavía no completa todos los módulos del proyecto. No incluye ciclo de vida e historial completos de desastres/evaluaciones, personas afectadas, inventario/asignación de recursos, tareas ni reconstrucción. La integración operativa usa REST y mensajería con transacciones locales JTA. Los adaptadores SOAP y EJB remoto del login ya están conectados a las mismas cuentas y sesiones; no se añadió SAGA.
+Esta unión cubre los mínimos del proyecto: app de campo, Reconstrucción física, mapa y evaluación de daños, con autenticación y autorización. Quedan fuera por alcance las personas afectadas, los recursos y las donaciones. Quedan diseñados pero sin código el modo degradado de servidor y el despliegue en tres centros de datos. La integración operativa usa REST y mensajería con transacciones locales JTA. Los adaptadores SOAP y EJB remoto del login ya están conectados a las mismas cuentas y sesiones; no se añadió SAGA.
 
 La API Java original de afectaciones sigue disponible como parte del trabajo del compañero; la captura oficial web/Android y su mapa se conservan en el DAL de campo .NET. No se copian sus evaluaciones a dos bases. La auditoría de creación de desastres se conserva; no se presenta como auditoría exhaustiva de todas las acciones. Los catálogos de la interfaz y los tipos de activos requieren evolución posterior. El APK ahora captura el activo y permite corregirlo junto al daño y la descripción.
 

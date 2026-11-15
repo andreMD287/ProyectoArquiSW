@@ -13,12 +13,15 @@ import java.util.List;
 public class AuthService {
     @PersistenceContext(unitName="PGDR_PU") private EntityManager em;
     public record LoginExitoso(String token,Instant expiraEn,Identidad identidad) {}
+    private static final String SAL_FICTICIA=Criptografia.sal();
+    private static final String HASH_FICTICIO=Criptografia.hashPassword("clave-ficticia-para-igualar-tiempos".toCharArray(),SAL_FICTICIA);
 
     public LoginExitoso login(String username,String clave){
       if(username==null||username.isBlank()||username.length()>80||clave==null||clave.isEmpty()||clave.length()>256){return null;}
       List<Usuario> found=em.createQuery("SELECT u FROM Usuario u WHERE u.usuario=:username",Usuario.class)
           .setParameter("username",username.trim().toLowerCase(java.util.Locale.ROOT)).setMaxResults(1).getResultList();
-      if(found.isEmpty()){return null;}
+      // Sin usuario se calcula igual un hash: la respuesta tarda lo mismo y no revela qué usuarios existen.
+      if(found.isEmpty()){Criptografia.comprobar(clave.toCharArray(),SAL_FICTICIA,HASH_FICTICIO);return null;}
       Usuario u=found.get(0);
       if(!u.isActivo()||!Criptografia.comprobar(clave.toCharArray(),u.getPasswordSalt(),u.getPasswordHash())) return null;
       String token=Criptografia.token();

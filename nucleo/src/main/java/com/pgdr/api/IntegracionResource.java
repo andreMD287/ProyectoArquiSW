@@ -13,7 +13,12 @@ public class IntegracionResource {
  @Context HttpServletRequest request;
  @GET @Path("/catalogo") public JsonArray catalogo(){return registro.catalogo();}
  @GET @Path("/organizacion-legado") public Map<String,String> org(){return Map.of("organizacionId",registro.migrador().organizacionId().toString());}
- @POST @Path("/importar") public Response importar(JsonObject body){return crear(body,registro.migrador());}
+ // Migración única de datos del Taller 3: crea desastres a nombre del coordinador inicial, así que
+ // queda apagada salvo que PGDR_MIGRACION_HABILITADA=true mientras dura la migración.
+ @POST @Path("/importar") public Response importar(JsonObject body){
+  if(!"true".equals(System.getenv("PGDR_MIGRACION_HABILITADA")))return Response.status(404).build();
+  return crear(body,registro.migrador());
+ }
  @POST @Path("/registro") public Response crear(JsonObject body){
   Identidad actor=(Identidad)request.getAttribute("pgdr.identidad");
   if(!actor.puedeRegistrarDesastre())return Response.status(403).entity(Map.of("error","SIN_PERMISO")).build();

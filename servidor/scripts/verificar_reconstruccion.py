@@ -130,7 +130,7 @@ for _ in range(20):
  if pendientes()==0:break
  time.sleep(1)
 check(pendientes()==0,'la bandeja de salida quedó despachada')
-q=urllib.request.Request('http://127.0.0.1:15684/api/queues/%2F/integracion.reconstruccion',headers={'Authorization':'Basic '+base64.b64encode(b'taller:taller-local').decode()})
+q=urllib.request.Request('http://127.0.0.1:15684/api/queues/%2F/integracion.reconstruccion',headers={'Authorization':'Basic '+base64.b64encode((os.environ.get('RABBIT_USUARIO','taller')+':'+os.environ.get('RABBIT_CLAVE','taller-local')).encode()).decode()})
 for _ in range(15):
  with urllib.request.urlopen(q,timeout=10) as r:cola=json.loads(r.read())
  if cola.get('messages',0)>0:break

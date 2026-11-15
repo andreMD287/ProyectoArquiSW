@@ -41,17 +41,11 @@ boolean esLogin =
     "POST".equals(metodo) &&
     "/plataforma-desastres/api/auth/login".equals(ruta);
 
-System.out.println(
-    "[PGDR-AUTH] Metodo: " + metodo +
-    " | Ruta: " + ruta +
-    " | Publica: " + (esHealth || esLogin)
-);
-
 boolean interna = ruta.startsWith("/plataforma-desastres/api/integracion/") &&
     !ruta.endsWith("/registro");
 if (interna) {
- String key=System.getenv("INTEGRACION_KEY");
- if(key==null || !key.equals(requestContext.getHeaderString("X-Integracion-Key")))
+ // Clave compartida solo entre servicios internos: comparación en tiempo constante y nunca vacía o corta.
+ if(!claveIntegracionValida(requestContext.getHeaderString("X-Integracion-Key")))
    requestContext.abortWith(Response.status(401).entity(Map.of("error","SERVICIO_NO_AUTORIZADO")).build());
  return;
 }
@@ -94,5 +88,12 @@ if (esHealth || esLogin) {
             "pgdr.identidad",
             identidad
         );
+    }
+
+    static boolean claveIntegracionValida(String recibida) {
+        String esperada = System.getenv("INTEGRACION_KEY");
+        if (esperada == null || esperada.length() < 16 || recibida == null) return false;
+        return java.security.MessageDigest.isEqual(esperada.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                recibida.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }

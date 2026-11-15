@@ -44,12 +44,20 @@ public class RegistroIntegrado {
    .setParameter(1,Json.createObjectBuilder(d).add("version",0).build().toString()).setParameter(2,result.desastre().getId()).executeUpdate();
   return new Resultado(d,result.creado(),false);
  }
+ private static final List<String> SEVERIDADES=List.of("BAJA","MEDIA","ALTA","CRITICA");
  public JsonObject datos(UUID id){
-  List<?> rows=em.createNativeQuery("SELECT datos_json FROM desastres_integrados WHERE desastre_id=?1").setParameter(1,id).getResultList();
+  List<?> rows=em.createNativeQuery("SELECT datos_json,fase,latitud,longitud,radio_km FROM desastres_integrados WHERE desastre_id=?1").setParameter(1,id).getResultList();
   if(!rows.isEmpty()){
-   JsonObject guardado=leer(rows.get(0).toString());
-   return Json.createObjectBuilder(guardado).add("version",((Number)em.createNativeQuery("SELECT version FROM desastres WHERE id=?1").setParameter(1,id).getSingleResult()).longValue())
-    .add("fase",guardado.getString("fase","REGISTRO")).build();
+   Object[] fila=(Object[])rows.get(0);
+   JsonObject guardado=leer(fila[0].toString());
+   var b=Json.createObjectBuilder(guardado).add("version",((Number)em.createNativeQuery("SELECT version FROM desastres WHERE id=?1").setParameter(1,id).getSingleResult()).longValue())
+    .add("fase",fila[1]==null?guardado.getString("fase","REGISTRO"):fila[1].toString());
+   int nivel=SEVERIDADES.indexOf(guardado.getString("severidad",""))+1;
+   if(nivel>0)b.add("nivel",nivel);
+   // C2: ubicación y radio del área afectada, para el mapa y la app de campo.
+   if(fila[2]!=null&&fila[3]!=null&&fila[4]!=null)
+    b.add("latitud",((Number)fila[2]).doubleValue()).add("longitud",((Number)fila[3]).doubleValue()).add("radioKm",((Number)fila[4]).doubleValue());
+   return b.build();
   }
   var d=em.find(com.pgdr.domain.Desastre.class,id);
   return Json.createObjectBuilder().add("id",id.toString()).add("tipo","OTRO").add("ubicacion","Sin ubicación registrada")
@@ -107,10 +115,55 @@ public class RegistroIntegrado {
   if(!FASES.getOrDefault(antes.getString("fase","REGISTRO"),List.of()).contains(fase))throw new ValidacionException("Transición de fase no permitida");
   JsonObject despues=Json.createObjectBuilder(antes).add("fase",fase).add("version",base+1).build();
   em.createNativeQuery("UPDATE desastres SET version=version+1 WHERE id=?1").setParameter(1,id).executeUpdate();
-  em.createNativeQuery("INSERT INTO desastres_integrados(desastre_id,referencia,datos_json) VALUES (?1,?2,?3) ON CONFLICT(desastre_id) DO UPDATE SET datos_json=EXCLUDED.datos_json").setParameter(1,id).setParameter(2,ref).setParameter(3,despues.toString()).executeUpdate();
+  em.createNativeQuery("INSERT INTO desastres_integrados(desastre_id,referencia,datos_json,fase) VALUES (?1,?2,?3,?4) ON CONFLICT(desastre_id) DO UPDATE SET datos_json=EXCLUDED.datos_json,fase=EXCLUDED.fase").setParameter(1,id).setParameter(2,ref).setParameter(3,despues.toString()).setParameter(4,fase).executeUpdate();
   em.createNativeQuery("INSERT INTO desastre_cambios(id,organizacion_id,desastre_id,version,anterior,nuevo,actor_id,motivo,huella) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)")
    .setParameter(1,cambio).setParameter(2,actor.organizacionId()).setParameter(3,id).setParameter(4,base+1).setParameter(5,antes.toString()).setParameter(6,despues.toString()).setParameter(7,actor.usuarioId()).setParameter(8,motivo).setParameter(9,huella).executeUpdate();
   em.flush();em.clear();return despues;
+ }
+ /**
+  * Contrato C2: caracterización del desastre desde la app de campo o el portal. Guarda la
+  * ubicación y el radio del área afectada, y opcionalmente el nivel (1 a 4) y la descripción.
+  * La primera caracterización pasa el desastre de REGISTRO a CARACTERIZACION. Es idempotente
+  * por la clave del cliente y rechaza una versión base vieja sin sobrescribir.
+  */
+ public JsonObject caracterizar(Identidad actor,String ref,UUID clave,long base,double latitud,double longitud,double radioKm,Integer nivel,String descripcion){
+  if(!actor.puedeRegistrarAfectacion())throw new jakarta.ws.rs.ForbiddenException();
+  if(clave==null||base<0||!(latitud>=-90&&latitud<=90)||!(longitud>=-180&&longitud<=180)||!(radioKm>0&&radioKm<=500)
+     ||(nivel!=null&&(nivel<1||nivel>4))||(descripcion!=null&&descripcion.length()>2000))
+   throw new ValidacionException("Ubicación, radio (hasta 500 km), nivel (1 a 4) y versión válidos requeridos");
+  UUID id=resolver(ref,actor);
+  em.createNativeQuery("SELECT id FROM desastres WHERE id=?1 FOR UPDATE").setParameter(1,id).getSingleResult();
+  String severidad=nivel==null?null:SEVERIDADES.get(nivel-1);
+  String texto=descripcion==null||descripcion.isBlank()?null:descripcion.trim();
+  String huella=Criptografia.sha256("CARACTERIZACION:"+id+":"+base+":"+latitud+":"+longitud+":"+radioKm+":"+severidad+":"+texto);
+  var prev=em.createNativeQuery("SELECT huella,nuevo FROM desastre_cambios WHERE organizacion_id=?1 AND id=?2").setParameter(1,actor.organizacionId()).setParameter(2,clave).getResultList();
+  if(!prev.isEmpty()){Object[] row=(Object[])prev.get(0);if(!huella.equals(row[0].toString()))throw new CambioConflicto();return leer(row[1].toString());}
+  JsonObject antes=datos(id);
+  long actual=antes.getJsonNumber("version").longValue();
+  if(actual!=base)throw new VersionDesactualizada(actual);
+  String fase=antes.getString("fase","REGISTRO");
+  if("CIERRE".equals(fase))throw new ValidacionException("Un desastre cerrado no se caracteriza");
+  String nuevaFase="REGISTRO".equals(fase)?"CARACTERIZACION":fase;
+  var b=Json.createObjectBuilder(antes).add("latitud",latitud).add("longitud",longitud).add("radioKm",radioKm).add("fase",nuevaFase).add("version",base+1);
+  if(texto!=null)b.add("descripcion",texto);
+  boolean cambiaGravedad=severidad!=null&&!severidad.equals(antes.getString("severidad",""));
+  if(severidad!=null)b.add("severidad",severidad).add("nivel",nivel);
+  JsonObject despues=b.build();
+  if(cambiaGravedad)em.createNativeQuery("UPDATE desastres SET version=version+1,severidad=?2 WHERE id=?1").setParameter(1,id).setParameter(2,"Nivel_"+nivel).executeUpdate();
+  else em.createNativeQuery("UPDATE desastres SET version=version+1 WHERE id=?1").setParameter(1,id).executeUpdate();
+  em.createNativeQuery("INSERT INTO desastres_integrados(desastre_id,referencia,datos_json,fase,latitud,longitud,radio_km) VALUES (?1,?2,?3,?4,?5,?6,?7) "
+   +"ON CONFLICT(desastre_id) DO UPDATE SET datos_json=EXCLUDED.datos_json,fase=EXCLUDED.fase,latitud=EXCLUDED.latitud,longitud=EXCLUDED.longitud,radio_km=EXCLUDED.radio_km")
+   .setParameter(1,id).setParameter(2,ref).setParameter(3,despues.toString()).setParameter(4,nuevaFase).setParameter(5,latitud).setParameter(6,longitud).setParameter(7,radioKm).executeUpdate();
+  String motivo="Caracterización del desastre"+(texto==null?"":": "+(texto.length()>450?texto.substring(0,450):texto));
+  em.createNativeQuery("INSERT INTO desastre_cambios(id,organizacion_id,desastre_id,version,anterior,nuevo,actor_id,motivo,huella) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)")
+   .setParameter(1,clave).setParameter(2,actor.organizacionId()).setParameter(3,id).setParameter(4,base+1).setParameter(5,antes.toString()).setParameter(6,despues.toString()).setParameter(7,actor.usuarioId()).setParameter(8,motivo).setParameter(9,huella).executeUpdate();
+  // Si la caracterización cambia el nivel, se avisa igual que un cambio de gravedad.
+  if(cambiaGravedad)em.persist(new com.pgdr.domain.EventoOutbox(actor.organizacionId(),"DESASTRE_GRAVEDAD_CAMBIADA",id,Json.createObjectBuilder(despues).add("clase","DESASTRE_GRAVEDAD_CAMBIADA").add("motivo",motivo).build().toString()));
+  em.flush();em.clear();return despues;
+ }
+ @ApplicationException(rollback=true) public static class VersionDesactualizada extends RuntimeException{
+  public final long actual;
+  public VersionDesactualizada(long actual){this.actual=actual;}
  }
  public JsonArray historial(Identidad actor,String ref){
   UUID id=resolver(ref,actor);var b=Json.createArrayBuilder();

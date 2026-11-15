@@ -136,10 +136,10 @@ for _ in range(15):
  if cola.get('messages',0)>0:break
  time.sleep(1)
 check(cola.get('messages',0)>0,'los avisos llegaron a la cola de integración en RabbitMQ',cola.get('messages'))
-g=urllib.request.Request('http://127.0.0.1:15684/api/queues/%2F/integracion.reconstruccion/get',json.dumps({'count':50,'ackmode':'ack_requeue_true','encoding':'auto'}).encode(),{'Authorization':'Basic '+base64.b64encode(b'taller:taller-local').decode(),'Content-Type':'application/json'},method='POST')
-with urllib.request.urlopen(g,timeout=10) as r:mensajes=[json.loads(m['payload']) for m in json.loads(r.read())]
-propio=[m for m in mensajes if m.get('desastreId')==did and m.get('tipo')=='PROYECTO_APROBADO']
-check(propio and all(k in propio[0] for k in ['idEvento','tipo','ocurridoEn','desastreId','proyectoId','organismoId','datos']),'el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)',mensajes[:2])
+# El aviso de la aprobación, tal como salió de la bandeja de salida hacia RabbitMQ (contrato C5).
+fila=subprocess.check_output(C+['exec','-T','reconstruccion-db','psql','-At','-U','reconstruccion','-d','reconstruccion','-c',f"SELECT payload_json FROM outbox_eventos WHERE tipo='PROYECTO_APROBADO' AND agregado_id='{puente}'"],text=True,encoding='utf-8').strip()
+aviso=json.loads(fila)
+check(all(k in aviso for k in ['idEvento','tipo','ocurridoEn','desastreId','proyectoId','organismoId','datos']) and aviso['proyectoId']==puente and aviso['datos'].get('tipoActivo')=='Puente','el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)',aviso)
 # --- gRPC con un cliente real (grpcurl en un contenedor de la misma red) ---
 PROTO=str(Path(__file__).resolve().parents[2]/'reconstruccion'/'backend'/'src'/'main'/'proto')
 def grpc(metodo,cuerpo,token=None):

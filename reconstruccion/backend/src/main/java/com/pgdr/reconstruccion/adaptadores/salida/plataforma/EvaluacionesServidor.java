@@ -74,7 +74,10 @@ public class EvaluacionesServidor implements ConsultaEvaluaciones {
     }
 
     private static EvaluacionDano evaluacion(UUID id, UUID desastreId, String organizacion, JsonNode datos) {
-        String activo = datos.path("activo").asText("");
+        // Contrato C1: el código del tipo de activo físico (VIVIENDA, VIA, PUENTE…). Mientras servidor
+        // no lo envíe, se usa el texto libre "activo" de la evaluación.
+        String tipo = datos.path("tipoActivo").asText("");
+        String activo = tipo.isBlank() ? datos.path("activo").asText("") : tipo;
         return new EvaluacionDano(id, desastreId, organizacion,
                 activo.isBlank() ? "Sin clasificar" : activo,
                 datos.path("descripcion").asText(""),

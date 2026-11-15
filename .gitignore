@@ -1,0 +1,11 @@
+# Compilados y dependencias
+bin/
+obj/
+target/
+node_modules/
+dist/
+*.apk
+# Secretos locales
+.env
+# Pedidos del lanzador
+.construir/

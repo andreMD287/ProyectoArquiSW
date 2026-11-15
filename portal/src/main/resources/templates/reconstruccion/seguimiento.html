@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeza('Reconstrucción')}"></head>
+<body>
+<header th:replace="~{fragmentos :: barra}"></header>
+<main class="contenido">
+  <p><a th:href="@{/desastres/{r}(r=${ref})}">← Tablero del desastre</a></p>
+  <div class="titulo-con-accion">
+    <h1>Reconstrucción física · <span th:text="${d.path('tipo').asText() + ' · ' + d.path('ubicacion').asText()}">desastre</span></h1>
+    <span th:replace="~{fragmentos :: fase(${d.path('fase').asText('REGISTRO')})}"></span>
+  </div>
+  <p class="tenue">Solo activos físicos (viviendas, vías, puentes, escuelas…). Reconstrucción no registra datos de personas.
+    Tu rol aquí: <strong th:text="${sesion.rolReconstruccion()}">Autoridad</strong>.</p>
+  <div th:replace="~{fragmentos :: mensajes}"></div>
+
+  <div class="acciones" th:if="${sesion.esCoordinador()}">
+    <form th:if="${d.path('fase').asText() == 'CARACTERIZACION'}" method="post" th:action="@{/reconstruccion/{r}/iniciar(r=${ref})}">
+      <button>Iniciar reconstrucción</button>
+    </form>
+    <form th:if="${d.path('fase').asText() == 'RECONSTRUCCION'}" method="post" th:action="@{/reconstruccion/{r}/cerrar(r=${ref})}">
+      <button class="secundario">Cerrar el desastre</button>
+    </form>
+  </div>
+
+  <section class="cifras">
+    <div><strong th:text="${s.proyectosCount}">0</strong><span>proyectos</span></div>
+    <div><strong th:text="${s.avancePonderado} + ' %'">0 %</strong><span>avance ponderado por presupuesto</span></div>
+    <div><strong th:text="${s.presupuestoTotal}">0</strong><span>presupuesto total</span></div>
+    <div><strong th:text="${s.costoTotal}">0</strong><span>costo ejecutado</span></div>
+    <div><strong th:text="${s.conSobrecosto}">0</strong><span>con sobrecosto</span></div>
+  </section>
+
+  <h2>Proyectos</h2>
+  <p th:if="${s.proyectosList.isEmpty()}" class="tenue">Aún no hay proyectos de reconstrucción en este desastre.</p>
+  <table th:unless="${s.proyectosList.isEmpty()}" class="tabla">
+    <thead><tr><th>Proyecto</th><th>Activo</th><th>Tipo</th><th>Estado</th><th>Avance</th><th>Presupuesto</th><th>Costo</th><th>Responsable</th></tr></thead>
+    <tbody>
+    <tr th:each="p : ${s.proyectosList}" th:classappend="${p.sobrecosto ? 'alerta' : ''}">
+      <td><a th:href="@{/reconstruccion/{r}/proyectos/{id}(r=${ref},id=${p.id})}" th:text="${p.nombre}">nombre</a></td>
+      <td th:text="${p.tipoActivo}">Puente</td>
+      <td th:text="${p.tipo}">REPARACION</td>
+      <td><span class="estado" th:text="${p.estado}">PROPUESTO</span></td>
+      <td><progress max="100" th:value="${p.avance}"></progress> <span th:text="${p.avance} + ' %'">0 %</span></td>
+      <td th:text="${p.presupuesto == '' ? '—' : p.presupuesto}">—</td>
+      <td th:text="${p.costoAcumulado}">0</td>
+      <td th:text="${p.responsable == '' ? '—' : p.responsable}">—</td>
+    </tr>
+    </tbody>
+  </table>
+
+  <section th:if="${sesion.esCoordinador()}" class="tarjeta">
+    <h2>Crear proyecto desde evaluaciones de daño</h2>
+    <p class="aviso error" th:if="${avisoEvaluaciones}" th:text="${avisoEvaluaciones}"></p>
+    <form th:if="${evaluaciones != null}" method="post" th:action="@{/reconstruccion/{r}/proyectos(r=${ref})}" class="formulario">
+      <label>Nombre del proyecto <input name="nombre" required maxlength="200"></label>
+      <label>Tipo
+        <select name="tipo">
+          <option value="">Deducir del daño (destrucción total = Reconstrucción)</option>
+          <option value="REPARACION">Reparación</option><option value="RECONSTRUCCION">Reconstrucción</option>
+        </select>
+      </label>
+      <fieldset>
+        <legend>Evaluaciones que lo originan</legend>
+        <p th:if="${evaluaciones.isEmpty()}" class="tenue">Este desastre no tiene evaluaciones de tu organismo.</p>
+        <label th:each="e : ${evaluaciones}" class="opcion" th:classappend="${!e.elegible or e.conProyectoActivo ? 'deshabilitada' : ''}">
+          <input type="checkbox" name="evaluaciones" th:value="${e.id}" th:disabled="${!e.elegible or e.conProyectoActivo}">
+          <span th:text="${e.tipoActivo + ' · ' + e.nivel + ' · ' + e.descripcion}">Puente · GRAVE</span>
+          <em th:if="${e.conProyectoActivo}">ya tiene un proyecto activo</em>
+          <em th:if="${!e.elegible and !e.conProyectoActivo}">daño leve o sin validar: no origina proyectos</em>
+        </label>
+      </fieldset>
+      <button>Crear proyecto</button>
+    </form>
+  </section>
+</main>
+</body>
+</html>

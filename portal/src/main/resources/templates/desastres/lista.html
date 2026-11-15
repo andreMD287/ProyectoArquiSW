@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeza('Desastres')}"></head>
+<body>
+<header th:replace="~{fragmentos :: barra}"></header>
+<main class="contenido">
+  <div class="titulo-con-accion">
+    <h1>Desastres del organismo</h1>
+    <a th:if="${sesion.esCoordinador()}" class="boton" href="/desastres/nuevo">Registrar desastre</a>
+  </div>
+  <div th:replace="~{fragmentos :: mensajes}"></div>
+
+  <nav class="filtros" aria-label="Filtrar por fase">
+    <a href="/desastres" th:classappend="${fase == '' ? 'activo' : ''}" th:text="'Todos (' + ${total} + ')'">Todos</a>
+    <a th:each="f : ${porFase}" th:href="@{/desastres(fase=${f.key})}" th:classappend="${fase == f.key ? 'activo' : ''}"
+       th:text="${(f.key == 'CARACTERIZACION' ? 'Caracterización' : (f.key == 'RECONSTRUCCION' ? 'Reconstrucción' : (f.key == 'REGISTRO' ? 'Registro' : 'Cierre'))) + ' (' + f.value + ')'}">Fase</a>
+  </nav>
+
+  <p th:if="${desastres.isEmpty()}" class="tenue">No hay desastres en esta fase.</p>
+  <table th:unless="${desastres.isEmpty()}" class="tabla">
+    <thead><tr><th>Referencia</th><th>Tipo</th><th>Ubicación</th><th>Nivel</th><th>Fase</th><th>Área afectada</th><th></th></tr></thead>
+    <tbody>
+    <tr th:each="d : ${desastres}">
+      <td><a th:href="@{/desastres/{r}(r=${d.path('id').asText()})}" th:text="${d.path('id').asText()}">REF</a></td>
+      <td th:text="${d.path('tipo').asText()}">TIPO</td>
+      <td th:text="${d.path('ubicacion').asText()}">Lugar</td>
+      <td><span class="nivel" th:classappend="${'nivel-' + d.path('nivel').asInt(0)}" th:text="${d.path('severidad').asText()}">ALTA</span></td>
+      <td><span th:replace="~{fragmentos :: fase(${d.path('fase').asText('REGISTRO')})}"></span></td>
+      <td th:text="${d.has('radioKm') ? 'Radio ' + d.path('radioKm').asText() + ' km' : 'Sin caracterizar'}">—</td>
+      <td><a th:href="@{/desastres/{r}(r=${d.path('id').asText()})}">Tablero</a></td>
+    </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

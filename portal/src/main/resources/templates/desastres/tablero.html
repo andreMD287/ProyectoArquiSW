@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeza('Tablero del desastre')}"></head>
+<body>
+<header th:replace="~{fragmentos :: barra}"></header>
+<main class="contenido">
+  <p><a href="/desastres">← Desastres</a></p>
+  <div class="titulo-con-accion">
+    <h1><span th:text="${d.path('tipo').asText()}">TIPO</span> · <span th:text="${d.path('ubicacion').asText()}">Lugar</span></h1>
+    <span th:replace="~{fragmentos :: fase(${d.path('fase').asText('REGISTRO')})}"></span>
+  </div>
+  <p class="tenue">
+    <span th:text="${ref}">REF</span> ·
+    Nivel <span th:text="${d.path('severidad').asText()}">ALTA</span> ·
+    versión <span th:text="${d.path('version').asLong()}">0</span>
+  </p>
+  <p th:text="${d.path('descripcion').asText()}">Descripción</p>
+  <div th:replace="~{fragmentos :: mensajes}"></div>
+
+  <!-- Tablero: lo arma el servlet asíncrono multihilo con las tres fuentes en paralelo -->
+  <section class="tablero" id="tablero" th:data-ref="${ref}"
+           th:data-lat="${d.has('latitud') ? d.path('latitud').asDouble() : ''}"
+           th:data-lon="${d.has('longitud') ? d.path('longitud').asDouble() : ''}"
+           th:data-radio="${d.has('radioKm') ? d.path('radioKm').asDouble() : ''}"
+           th:data-fase="${d.path('fase').asText('REGISTRO')}">
+    <div id="mapa" class="mapa" aria-label="Mapa del desastre"></div>
+    <aside class="paneles">
+      <div class="panel">
+        <h2>Evaluaciones de daño</h2>
+        <p id="resumen-evaluaciones" class="tenue">Cargando…</p>
+        <a th:href="@{/evaluaciones(desastre=${ref})}">Ver evaluaciones</a>
+      </div>
+      <div class="panel">
+        <h2>Reconstrucción física</h2>
+        <p id="resumen-reconstruccion" class="tenue">Cargando…</p>
+        <a th:href="@{/reconstruccion/{r}(r=${ref})}">Ver proyectos</a>
+      </div>
+      <div class="panel fuentes">
+        <h2>Fuentes del tablero</h2>
+        <p class="tenue">Consultadas en paralelo por el servlet multihilo.</p>
+        <table class="tabla compacta" id="fuentes"><tbody></tbody></table>
+        <p id="total-tablero" class="tenue"></p>
+      </div>
+    </aside>
+  </section>
+
+  <div class="columnas">
+    <section class="tarjeta" th:if="${sesion.puedeEvaluar() and d.path('fase').asText() != 'CIERRE'}">
+      <h2>Caracterizar el desastre</h2>
+      <p class="tenue">Ubicación y radio del área afectada. La primera caracterización pasa el desastre a
+        <strong>Caracterización</strong>. La app de campo envía la misma información sin conexión.</p>
+      <form method="post" th:action="@{/desastres/{r}/caracterizacion(r=${ref})}" class="formulario">
+        <input type="hidden" name="versionBase" th:value="${d.path('version').asLong()}">
+        <div class="fila">
+          <label>Latitud <input name="latitud" type="number" step="any" min="-90" max="90" required
+                                th:value="${d.has('latitud') ? d.path('latitud').asDouble() : ''}"></label>
+          <label>Longitud <input name="longitud" type="number" step="any" min="-180" max="180" required
+                                 th:value="${d.has('longitud') ? d.path('longitud').asDouble() : ''}"></label>
+          <label>Radio (km) <input name="radioKm" type="number" step="0.1" min="0.1" max="500" required
+                                   th:value="${d.has('radioKm') ? d.path('radioKm').asDouble() : ''}"></label>
+        </div>
+        <label>Nivel (opcional)
+          <select name="nivel">
+            <option value="">Sin cambio</option>
+            <option value="1">Nivel 1 · Bajo</option><option value="2">Nivel 2 · Medio</option>
+            <option value="3">Nivel 3 · Alto</option><option value="4">Nivel 4 · Crítico</option>
+          </select>
+        </label>
+        <label>Observación <textarea name="descripcion" maxlength="2000" rows="2"></textarea></label>
+        <button>Guardar caracterización</button>
+      </form>
+    </section>
+
+    <section class="tarjeta" th:if="${sesion.esCoordinador() and !siguientes.isEmpty()}">
+      <h2>Cambiar de fase</h2>
+      <p class="tenue">Reconstrucción se inicia desde su módulo, cuando hay evaluaciones con daño.</p>
+      <form method="post" th:action="@{/desastres/{r}/fase(r=${ref})}" class="formulario">
+        <input type="hidden" name="versionBase" th:value="${d.path('version').asLong()}">
+        <label>Nueva fase
+          <select name="fase">
+            <option th:each="f : ${siguientes}" th:value="${f}" th:text="${f == 'CARACTERIZACION' ? 'Caracterización' : 'Cierre'}">Fase</option>
+          </select>
+        </label>
+        <label>Motivo <input name="motivo" required maxlength="500"></label>
+        <button>Cambiar fase</button>
+      </form>
+    </section>
+  </div>
+
+  <section>
+    <h2>Historial del desastre</h2>
+    <p th:if="${historial.isEmpty()}" class="tenue">Sin cambios desde el registro.</p>
+    <table th:unless="${historial.isEmpty()}" class="tabla">
+      <thead><tr><th>Versión</th><th>Fecha</th><th>Quién</th><th>Fase</th><th>Nivel</th><th>Motivo</th></tr></thead>
+      <tbody>
+      <tr th:each="h : ${historial}">
+        <td th:text="${h.path('version').asLong()}">1</td>
+        <td th:text="${#strings.substring(h.path('fecha').asText() + '                ', 0, 16)}">fecha</td>
+        <td th:text="${h.path('actor').asText()}">usuario</td>
+        <td th:text="${h.path('anterior').path('fase').asText('REGISTRO') + ' → ' + h.path('nuevo').path('fase').asText('REGISTRO')}">fase</td>
+        <td th:text="${h.path('anterior').path('severidad').asText() + ' → ' + h.path('nuevo').path('severidad').asText()}">nivel</td>
+        <td th:text="${h.path('motivo').asText()}">motivo</td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+<link rel="stylesheet" href="/webjars/leaflet/1.9.4/dist/leaflet.css">
+<script src="/webjars/leaflet/1.9.4/dist/leaflet.js"></script>
+<script src="/js/tablero.js"></script>
+</body>
+</html>

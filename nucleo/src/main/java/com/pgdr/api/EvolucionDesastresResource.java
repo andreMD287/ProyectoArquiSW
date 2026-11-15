@@ -5,6 +5,14 @@ import jakarta.ejb.EJB;import jakarta.json.*;import jakarta.ws.rs.*;import jakar
 public class EvolucionDesastresResource {
  @EJB RegistroIntegrado registro;@Context HttpServletRequest req;
  Identidad actor(){return (Identidad)req.getAttribute("pgdr.identidad");}
+ /** Desastres del organismo de la sesión, del más reciente al más antiguo (lo usa el portal). */
+ @GET public JsonArray listar(){return registro.listarDelOrganismo(actor());}
+ /** Un desastre del organismo de la sesión, con fase, nivel y ubicación (lo usa el portal). */
+ @GET @Path("{id}") public Response leer(@PathParam("id") String id){
+  try{return Response.ok(registro.leerDesastre(actor(),id)).build();}
+  catch(jakarta.ejb.EJBException e){if(e.getCause() instanceof NotFoundException)return Response.status(404).entity(Map.of("error","DESASTRE_NO_ENCONTRADO")).build();throw e;}
+  catch(NotFoundException e){return Response.status(404).entity(Map.of("error","DESASTRE_NO_ENCONTRADO")).build();}
+ }
  @GET @Path("{id}/historial") public JsonArray historial(@PathParam("id") String id){return registro.historial(actor(),id);}
  @PATCH @Path("{id}/gravedad") public Response cambiar(@PathParam("id") String id,JsonObject b){
   if(!actor().puedeRegistrarDesastre())return Response.status(403).build();

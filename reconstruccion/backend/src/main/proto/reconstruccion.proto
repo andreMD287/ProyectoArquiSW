@@ -22,6 +22,7 @@ service ReconstruccionService {
   rpc ConsultarSeguimiento (DesastreRequest) returns (SeguimientoResponse);       // CU-08
   rpc ConsultarAuditoria (ConsultarAuditoriaRequest) returns (AuditoriaResponse); // CU-08
   rpc CerrarDesastre (DesastreRequest) returns (DesastreMsg);                     // CU-09
+  rpc ConsultarEvaluaciones (DesastreRequest) returns (EvaluacionesResponse);     // CU-02 (evaluaciones disponibles)
 }
 
 // Quién ejecuta la operación. rol: AUTORIDAD, RESPONSABLE o AUDITOR.
@@ -164,6 +165,21 @@ message SeguimientoResponse {
   int32 avance_promedio = 6;
   int32 con_sobrecosto = 7;
   int32 avance_ponderado = 8;   // avance ponderado por presupuesto
+}
+
+// Evaluación de daño vista desde Reconstrucción: si puede originar un proyecto y si ya tiene uno activo.
+message EvaluacionMsg {
+  string id = 1;
+  string tipo_activo = 2;
+  string descripcion = 3;
+  string nivel = 4;                   // SIN_DANO, LEVE, MODERADO, GRAVE o DESTRUCCION_TOTAL
+  bool validada = 5;
+  bool elegible = 6;
+  bool con_proyecto_activo = 7;
+}
+
+message EvaluacionesResponse {
+  repeated EvaluacionMsg evaluaciones = 1;
 }
 
 // Indique proyecto_id para la traza de un proyecto o desastre_id para la de todo el desastre.

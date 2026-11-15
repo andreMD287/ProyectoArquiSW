@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeza('Proyecto de reconstrucción')}"></head>
+<body>
+<header th:replace="~{fragmentos :: barra}"></header>
+<main class="contenido">
+  <p><a th:href="@{/reconstruccion/{r}(r=${ref})}">← Proyectos del desastre</a></p>
+  <div class="titulo-con-accion">
+    <h1 th:text="${p.nombre}">Proyecto</h1>
+    <span class="estado grande" th:text="${p.estado}">PROPUESTO</span>
+  </div>
+  <p class="tenue" th:text="${p.tipo + ' · activo: ' + p.tipoActivo + ' · formulado por ' + (p.formulador == '' ? '—' : p.formulador) + ' · versión ' + p.version}">datos</p>
+  <div th:replace="~{fragmentos :: mensajes}"></div>
+  <p class="aviso error" th:if="${p.sobrecosto}">Sobrecosto: el costo acumulado supera el presupuesto. No se puede finalizar hasta ajustar el presupuesto con su motivo (RN-15).</p>
+
+  <section class="cifras">
+    <div><strong th:text="${p.avance} + ' %'">0 %</strong><span>avance</span></div>
+    <div><strong th:text="${p.presupuesto == '' ? '—' : p.presupuesto}">—</strong><span>presupuesto</span></div>
+    <div><strong th:text="${p.costoAcumulado}">0</strong><span>costo acumulado</span></div>
+    <div><strong th:text="${p.responsable == '' ? '—' : p.responsable}">—</strong><span>responsable</span></div>
+    <div><strong th:text="${p.contratista == '' ? '—' : p.contratista}">—</strong><span>contratista</span></div>
+  </section>
+
+  <div class="columnas">
+    <!-- Autoridad (COORDINADOR) -->
+    <section class="tarjeta" th:if="${sesion.esCoordinador() and p.estado == 'PROPUESTO'}">
+      <h2>Aprobar</h2>
+      <p class="tenue">Quien formuló el proyecto no puede aprobarlo (RN-19).</p>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/aprobar(r=${ref},id=${p.id})}" class="formulario">
+        <label>Presupuesto <input name="presupuesto" type="number" min="1" step="0.01" required></label>
+        <label>Fuente de financiación <input name="fuente" required maxlength="200"></label>
+        <label>Responsable (usuario evaluador) <input name="responsable" required maxlength="120"></label>
+        <button>Aprobar</button>
+      </form>
+    </section>
+    <section class="tarjeta" th:if="${sesion.esCoordinador() and p.presupuesto != '' and p.estado != 'FINALIZADO' and p.estado != 'CANCELADO'}">
+      <h2>Modificar presupuesto</h2>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/presupuesto(r=${ref},id=${p.id})}" class="formulario">
+        <label>Nuevo presupuesto <input name="presupuesto" type="number" min="1" step="0.01" required></label>
+        <label>Motivo <input name="motivo" required maxlength="500"></label>
+        <button>Modificar</button>
+      </form>
+    </section>
+    <section class="tarjeta" th:if="${sesion.esCoordinador() and p.estado != 'FINALIZADO' and p.estado != 'CANCELADO'}">
+      <h2>Cancelar</h2>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/estado(r=${ref},id=${p.id})}" class="formulario">
+        <input type="hidden" name="estado" value="CANCELADO">
+        <label>Motivo <input name="motivo" required maxlength="500"></label>
+        <button class="secundario">Cancelar proyecto</button>
+      </form>
+    </section>
+
+    <!-- Responsable asignado (EVALUADOR) -->
+    <section class="tarjeta" th:if="${sesion.esEvaluador() and p.estado == 'APROBADO'}">
+      <h2>Iniciar ejecución</h2>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/iniciar(r=${ref},id=${p.id})}" class="formulario">
+        <label>Contratista <input name="contratista" required maxlength="200"></label>
+        <div class="fila">
+          <label>Inicio <input name="inicio" type="date" required></label>
+          <label>Fin <input name="fin" type="date" required></label>
+        </div>
+        <button>Iniciar</button>
+      </form>
+    </section>
+    <section class="tarjeta" th:if="${sesion.esEvaluador() and p.estado == 'EN_EJECUCION'}">
+      <h2>Seguimiento</h2>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/avance(r=${ref},id=${p.id})}" class="formulario">
+        <div class="fila">
+          <label>Avance (%) <input name="porcentaje" type="number" min="0" max="100" required th:value="${p.avance}"></label>
+          <label>Descripción <input name="descripcion" maxlength="500"></label>
+        </div>
+        <label>Motivo de corrección (si el avance baja) <input name="motivo" maxlength="500"></label>
+        <button>Registrar avance</button>
+      </form>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/costo(r=${ref},id=${p.id})}" class="formulario">
+        <div class="fila">
+          <label>Costo <input name="valor" type="number" min="0.01" step="0.01" required></label>
+          <label>Soporte <input name="descripcion" maxlength="500" placeholder="Acta n.º"></label>
+        </div>
+        <button>Registrar costo</button>
+      </form>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/evidencia(r=${ref},id=${p.id})}" class="formulario">
+        <label>Evidencia (acta, informe, enlace) <input name="descripcion" required maxlength="500"></label>
+        <button>Adjuntar evidencia</button>
+      </form>
+    </section>
+    <section class="tarjeta" th:if="${sesion.esEvaluador() and (p.estado == 'EN_EJECUCION' or p.estado == 'SUSPENDIDO')}">
+      <h2>Cambiar estado</h2>
+      <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/estado(r=${ref},id=${p.id})}" class="formulario">
+        <label>Estado
+          <select name="estado">
+            <option th:if="${p.estado == 'EN_EJECUCION'}" value="FINALIZADO">Finalizar (100 %, con evidencia y sin sobrecosto)</option>
+            <option th:if="${p.estado == 'EN_EJECUCION'}" value="SUSPENDIDO">Suspender</option>
+            <option th:if="${p.estado == 'SUSPENDIDO'}" value="EN_EJECUCION">Reanudar</option>
+          </select>
+        </label>
+        <label>Motivo (obligatorio para suspender) <input name="motivo" maxlength="500"></label>
+        <button>Cambiar</button>
+      </form>
+    </section>
+  </div>
+
+  <h2>Seguimiento registrado</h2>
+  <p th:if="${p.seguimientoList.isEmpty()}" class="tenue">Sin registros de avance, costos ni evidencias.</p>
+  <table th:unless="${p.seguimientoList.isEmpty()}" class="tabla">
+    <thead><tr><th>Momento</th><th>Tipo</th><th>Valor</th><th>Descripción</th><th>Usuario</th></tr></thead>
+    <tbody><tr th:each="x : ${p.seguimientoList}">
+      <td th:text="${#strings.substring(x.momento + '                ', 0, 16)}">fecha</td><td th:text="${x.tipo}">AVANCE</td>
+      <td th:text="${x.valor}">60</td><td th:text="${x.descripcion}">texto</td><td th:text="${x.usuario}">usuario</td>
+    </tr></tbody>
+  </table>
+
+  <th:block th:if="${auditoria != null}">
+    <h2>Auditoría</h2>
+    <p class="tenue">Cada cambio y cada intento rechazado, con quién, cuándo y por qué (RN-17).</p>
+    <table class="tabla compacta">
+      <thead><tr><th>Momento</th><th>Usuario</th><th>Operación</th><th>Antes → después</th><th>Resultado</th><th>Detalle</th></tr></thead>
+      <tbody><tr th:each="a : ${auditoria}" th:classappend="${a.resultado == 'RECHAZADO' ? 'alerta' : ''}">
+        <td th:text="${#strings.substring(a.momento + '                ', 0, 16)}">fecha</td><td th:text="${a.usuario}">usuario</td>
+        <td th:text="${a.operacion}">OP</td><td th:text="${a.valorAnterior + ' → ' + a.valorNuevo}">x → y</td>
+        <td th:text="${a.resultado}">EXITOSO</td><td th:text="${a.detalle}">detalle</td>
+      </tr></tbody>
+    </table>
+  </th:block>
+</main>
+</body>
+</html>

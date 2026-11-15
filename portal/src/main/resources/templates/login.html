@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeza('Iniciar sesión')}"></head>
+<body class="acceso">
+<main class="tarjeta estrecha">
+  <p class="antetitulo">Plataforma para la Gestión de Desastres y Reconstrucción</p>
+  <h1>Iniciar sesión</h1>
+  <p>Entra con el usuario de tu organismo.</p>
+  <p class="aviso ok" th:if="${param.salida}">Sesión cerrada.</p>
+  <p class="aviso error" th:if="${param.vencida}">Tu sesión venció. Inicia sesión de nuevo.</p>
+  <p class="aviso error" th:if="${error}" th:text="${error}" role="alert"></p>
+  <form method="post" action="/login" class="formulario">
+    <input type="hidden" name="siguiente" th:value="${siguiente}">
+    <label>Usuario <input name="usuario" th:value="${usuario}" autocomplete="username" required maxlength="80" autofocus></label>
+    <label>Contraseña <input name="clave" type="password" autocomplete="current-password" required maxlength="256"></label>
+    <button>Entrar</button>
+  </form>
+</main>
+</body>
+</html>

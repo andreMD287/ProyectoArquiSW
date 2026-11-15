@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeza('Evaluaciones de daño')}"></head>
+<body>
+<header th:replace="~{fragmentos :: barra}"></header>
+<main class="contenido">
+  <h1>Evaluaciones de daño</h1>
+  <p class="tenue">Capturadas en campo con la app (también sin conexión) y sincronizadas al recuperar la red.</p>
+  <form method="get" action="/evaluaciones" class="filtros">
+    <label>Desastre
+      <select name="desastre" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        <option th:each="x : ${desastres}" th:value="${x.path('id').asText()}" th:selected="${x.path('id').asText() == desastre}"
+                th:text="${x.path('id').asText() + ' · ' + x.path('tipo').asText() + ' · ' + x.path('ubicacion').asText()}">REF</option>
+      </select>
+    </label>
+  </form>
+  <p th:if="${evaluaciones.isEmpty()}" class="tenue">No hay evaluaciones para este filtro.</p>
+  <table th:unless="${evaluaciones.isEmpty()}" class="tabla">
+    <thead><tr><th>Capturada</th><th>Activo</th><th>Nivel de afectación</th><th>Desastre</th><th>Evaluador</th><th>Ubicación</th><th></th></tr></thead>
+    <tbody>
+    <tr th:each="e : ${evaluaciones}">
+      <td th:text="${#strings.substring(e.path('registradaEn').asText() + '                ', 0, 16)}">fecha</td>
+      <td th:text="${e.path('activo').asText('—')}">activo</td>
+      <td><span class="nivel" th:classappend="${'afectacion-' + e.path('nivelAfectacion').asInt(0)}" th:text="${e.path('nivelAfectacion').asInt(0)} + ' de 5'">3 de 5</span></td>
+      <td th:text="${e.path('eventoId').asText('Sin vincular')}">REF</td>
+      <td th:text="${e.path('evaluador').asText('—')}">usuario</td>
+      <td th:text="${#numbers.formatDecimal(e.path('latitud').asDouble(), 1, 4) + ', ' + #numbers.formatDecimal(e.path('longitud').asDouble(), 1, 4)}">lat, lon</td>
+      <td><a th:href="@{/evaluaciones/{id}(id=${e.path('id').asText()})}">Detalle</a></td>
+    </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

@@ -18,3 +18,4 @@ fi
 "$PY" servidor/scripts/verificar_evolucion.py
 "$PY" servidor/scripts/verificar_unificacion.py
 "$PY" servidor/scripts/verificar_caracterizacion.py
+"$PY" servidor/scripts/verificar_portal.py

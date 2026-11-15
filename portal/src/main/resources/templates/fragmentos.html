@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="cabeza(titulo)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title th:text="${titulo} + ' · Plataforma de desastres'">Plataforma de desastres</title>
+  <link rel="stylesheet" href="/css/portal.css">
+</head>
+<body>
+
+<header th:fragment="barra" class="barra">
+  <a class="marca" href="/desastres">Gestión de Desastres y Reconstrucción</a>
+  <nav>
+    <a href="/desastres">Desastres</a>
+    <a href="/mapa">Mapa</a>
+    <a href="/evaluaciones">Evaluaciones</a>
+    <a th:if="${sesion != null and sesion.esCoordinador()}" href="/usuarios">Usuarios</a>
+  </nav>
+  <div class="quien" th:if="${sesion != null}">
+    <span th:text="${sesion.usuario}">usuario</span>
+    <span class="rol" th:text="${sesion.rol}">ROL</span>
+    <form method="post" action="/logout"><button class="enlace">Salir</button></form>
+  </div>
+</header>
+
+<div th:fragment="mensajes">
+  <p class="aviso ok" th:if="${ok}" th:text="${ok}" role="status"></p>
+  <p class="aviso error" th:if="${error}" th:text="${error}" role="alert"></p>
+</div>
+
+<span th:fragment="fase(f)" class="fase" th:classappend="${'fase-' + #strings.toLowerCase(f)}"
+      th:text="${f == 'CARACTERIZACION' ? 'Caracterización' : (f == 'RECONSTRUCCION' ? 'Reconstrucción' : (f == 'REGISTRO' ? 'Registro' : 'Cierre'))}">Registro</span>
+
+</body>
+</html>

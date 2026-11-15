@@ -45,30 +45,45 @@ public class RegistroIntegrado {
   return new Resultado(d,result.creado(),false);
  }
  private static final List<String> SEVERIDADES=List.of("BAJA","MEDIA","ALTA","CRITICA");
+ // Una sola consulta arma cada desastre (antes eran dos o tres por desastre). La usan datos(),
+ // el catálogo que copia servidor cada pocos segundos, la lista del portal y Reconstrucción.
+ private static final String CONSULTA_DESASTRES="SELECT d.id,d.version,d.nombre,d.descripcion,d.severidad,d.creado_en,d.organizacion_id,"
+  +"i.datos_json,i.fase,i.latitud,i.longitud,i.radio_km FROM desastres d LEFT JOIN desastres_integrados i ON i.desastre_id=d.id ";
  public JsonObject datos(UUID id){
-  List<?> rows=em.createNativeQuery("SELECT datos_json,fase,latitud,longitud,radio_km FROM desastres_integrados WHERE desastre_id=?1").setParameter(1,id).getResultList();
-  if(!rows.isEmpty()){
-   Object[] fila=(Object[])rows.get(0);
-   JsonObject guardado=leer(fila[0].toString());
-   var b=Json.createObjectBuilder(guardado).add("version",((Number)em.createNativeQuery("SELECT version FROM desastres WHERE id=?1").setParameter(1,id).getSingleResult()).longValue())
-    .add("fase",fila[1]==null?guardado.getString("fase","REGISTRO"):fila[1].toString());
+  List<?> filas=em.createNativeQuery(CONSULTA_DESASTRES+"WHERE d.id=?1").setParameter(1,id).getResultList();
+  if(filas.isEmpty())throw new jakarta.ws.rs.NotFoundException();
+  return componer((Object[])filas.get(0));
+ }
+ private JsonObject componer(Object[] f){
+  String id=f[0].toString();long version=((Number)f[1]).longValue();
+  if(f[7]!=null){
+   JsonObject guardado=leer(f[7].toString());
+   var b=Json.createObjectBuilder(guardado).add("version",version).add("fase",f[8]==null?guardado.getString("fase","REGISTRO"):f[8].toString());
    int nivel=SEVERIDADES.indexOf(guardado.getString("severidad",""))+1;
    if(nivel>0)b.add("nivel",nivel);
    // C2: ubicación y radio del área afectada, para el mapa y la app de campo.
-   if(fila[2]!=null&&fila[3]!=null&&fila[4]!=null)
-    b.add("latitud",((Number)fila[2]).doubleValue()).add("longitud",((Number)fila[3]).doubleValue()).add("radioKm",((Number)fila[4]).doubleValue());
+   if(f[9]!=null&&f[10]!=null&&f[11]!=null)
+    b.add("latitud",((Number)f[9]).doubleValue()).add("longitud",((Number)f[10]).doubleValue()).add("radioKm",((Number)f[11]).doubleValue());
    return b.build();
   }
-  var d=em.find(com.pgdr.domain.Desastre.class,id);
-  return Json.createObjectBuilder().add("id",id.toString()).add("tipo","OTRO").add("ubicacion","Sin ubicación registrada")
-   .add("descripcion",d.getDescripcion()==null?d.getNombre():d.getDescripcion()).add("fecha",d.getCreadoEn().toString())
-   .add("version",d.getVersion()).add("fase","REGISTRO").add("severidad",List.of("BAJA","MEDIA","ALTA","CRITICA").get(Integer.parseInt(d.getSeveridad().substring(6))-1)).build();
+  int nivel=Integer.parseInt(f[4].toString().substring(6));
+  return Json.createObjectBuilder().add("id",id).add("tipo","OTRO").add("ubicacion","Sin ubicación registrada")
+   .add("descripcion",f[3]==null?f[2].toString():f[3].toString()).add("fecha",instante(f[5]).toString())
+   .add("version",version).add("fase","REGISTRO").add("severidad",SEVERIDADES.get(nivel-1)).add("nivel",nivel).build();
+ }
+ private static java.time.Instant instante(Object valor){
+  if(valor instanceof java.time.Instant i)return i;
+  if(valor instanceof java.time.OffsetDateTime o)return o.toInstant();
+  if(valor instanceof java.sql.Timestamp t)return t.toInstant();
+  return java.time.Instant.parse(valor.toString());
  }
  public JsonArray catalogo(){
   var b=Json.createArrayBuilder();
-  for(var d:em.createQuery("SELECT d FROM Desastre d WHERE d.organizacionId IS NOT NULL ORDER BY d.creadoEn",com.pgdr.domain.Desastre.class).getResultList())
-   b.add(Json.createObjectBuilder().add("desastre",datos(d.getId())).add("organizacionId",d.getOrganizacionId().toString())
-    .add("registradoEn",d.getCreadoEn().toString()).add("notificacionPublicada",false).add("destinatarios",Json.createArrayBuilder()).add("correosEnviados",Json.createArrayBuilder()));
+  for(Object raw:em.createNativeQuery(CONSULTA_DESASTRES+"WHERE d.organizacion_id IS NOT NULL ORDER BY d.creado_en").getResultList()){
+   Object[] f=(Object[])raw;
+   b.add(Json.createObjectBuilder().add("desastre",componer(f)).add("organizacionId",f[6].toString())
+    .add("registradoEn",instante(f[5]).toString()).add("notificacionPublicada",false).add("destinatarios",Json.createArrayBuilder()).add("correosEnviados",Json.createArrayBuilder()));
+  }
   return b.build();
  }
 
@@ -164,6 +179,13 @@ public class RegistroIntegrado {
  @ApplicationException(rollback=true) public static class VersionDesactualizada extends RuntimeException{
   public final long actual;
   public VersionDesactualizada(long actual){this.actual=actual;}
+ }
+ public JsonObject leerDesastre(Identidad actor,String ref){return datos(resolver(ref,actor));}
+ public JsonArray listarDelOrganismo(Identidad actor){
+  var b=Json.createArrayBuilder();
+  for(Object raw:em.createNativeQuery(CONSULTA_DESASTRES+"WHERE d.organizacion_id=?1 ORDER BY d.creado_en DESC LIMIT 200").setParameter(1,actor.organizacionId()).getResultList())
+   b.add(componer((Object[])raw));
+  return b.build();
  }
  public JsonArray historial(Identidad actor,String ref){
   UUID id=resolver(ref,actor);var b=Json.createArrayBuilder();

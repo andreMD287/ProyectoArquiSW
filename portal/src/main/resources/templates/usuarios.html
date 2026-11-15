@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeza('Usuarios')}"></head>
+<body>
+<header th:replace="~{fragmentos :: barra}"></header>
+<main class="contenido estrecho">
+  <h1>Usuarios del organismo</h1>
+  <p>El usuario nuevo pertenece a tu organismo. Un segundo coordinador permite aprobar proyectos de
+    reconstrucción a dos manos: quien formula un proyecto no puede aprobarlo.</p>
+  <div th:replace="~{fragmentos :: mensajes}"></div>
+  <form method="post" action="/usuarios" class="formulario tarjeta">
+    <label>Usuario <input name="usuario" required minlength="3" maxlength="80" pattern="[a-z0-9_.\-]{3,80}"></label>
+    <label>Contraseña inicial <input name="clave" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label>
+    <label>Rol
+      <select name="rol">
+        <option value="EVALUADOR">Evaluador · registra daños y opera los proyectos que tiene asignados</option>
+        <option value="CONSULTA">Consulta · solo lectura</option>
+        <option value="COORDINADOR">Coordinador · registra desastres y aprueba proyectos</option>
+      </select>
+    </label>
+    <button>Crear usuario</button>
+  </form>
+</main>
+</body>
+</html>

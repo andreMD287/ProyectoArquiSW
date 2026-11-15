@@ -32,6 +32,8 @@ import com.pgdr.reconstruccion.grpc.CrearLoteRequest;
 import com.pgdr.reconstruccion.grpc.CrearLoteResponse;
 import com.pgdr.reconstruccion.grpc.CrearProyectoRequest;
 import com.pgdr.reconstruccion.grpc.DesastreMsg;
+import com.pgdr.reconstruccion.grpc.EvaluacionMsg;
+import com.pgdr.reconstruccion.grpc.EvaluacionesResponse;
 import com.pgdr.reconstruccion.grpc.DesastreRequest;
 import com.pgdr.reconstruccion.grpc.Identidad;
 import com.pgdr.reconstruccion.grpc.IniciarEjecucionRequest;
@@ -163,6 +165,19 @@ public class ReconstruccionGrpcService extends ReconstruccionServiceGrpc.Reconst
                     .setConSobrecosto(c.conSobrecosto()).setAvancePonderado(c.avancePonderado());
             c.proyectos().forEach(p -> respuesta.addProyectos(proyecto(p)));
             c.porEstado().forEach((estado, cantidad) -> respuesta.putPorEstado(estado.name(), cantidad));
+            return respuesta.build();
+        });
+    }
+
+    @Override
+    public void consultarEvaluaciones(DesastreRequest r, StreamObserver<EvaluacionesResponse> o) {
+        responder(o, () -> {
+            EvaluacionesResponse.Builder respuesta = EvaluacionesResponse.newBuilder();
+            for (ConsultarSeguimiento.EvaluacionDisponible e : consultar.evaluaciones(actor(r.getIdentidad()), uuid(r.getDesastreId())))
+                respuesta.addEvaluaciones(EvaluacionMsg.newBuilder().setId(e.evaluacion().id().toString())
+                        .setTipoActivo(texto(e.evaluacion().tipoActivo())).setDescripcion(texto(e.evaluacion().descripcion()))
+                        .setNivel(e.evaluacion().nivel().name()).setValidada(e.evaluacion().validada())
+                        .setElegible(e.elegible()).setConProyectoActivo(e.conProyectoActivo()).build());
             return respuesta.build();
         });
     }

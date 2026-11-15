@@ -4,6 +4,7 @@ import com.pgdr.reconstruccion.aplicacion.puertos.ConflictoDeVersionException;
 import com.pgdr.reconstruccion.aplicacion.puertos.RepositorioProyectos;
 import com.pgdr.reconstruccion.dominio.EstadoProyecto;
 import com.pgdr.reconstruccion.dominio.Proyecto;
+import com.pgdr.reconstruccion.dominio.ReglaVioladaException;
 import com.pgdr.reconstruccion.dominio.Seguimiento;
 import com.pgdr.reconstruccion.dominio.TipoProyecto;
 import java.sql.Date;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -21,7 +23,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RepositorioProyectosJdbc implements RepositorioProyectos {
     private static final String COLUMNAS = "id, desastre_id, organizacion, nombre, tipo, estado, presupuesto, "
-            + "fuente_financiacion, responsable, contratista, inicio_plan, fin_plan, avance, costo_acumulado, version";
+            + "fuente_financiacion, responsable, contratista, inicio_plan, fin_plan, avance, costo_acumulado, version, "
+            + "formulador, tipo_activo";
 
     private final JdbcTemplate jdbc;
 
@@ -31,13 +34,23 @@ public class RepositorioProyectosJdbc implements RepositorioProyectos {
 
     @Override
     public void guardarNuevo(Proyecto p) {
-        jdbc.update("INSERT INTO proyectos (" + COLUMNAS + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        jdbc.update("INSERT INTO proyectos (" + COLUMNAS + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 p.id().toString(), p.desastreId().toString(), p.organizacion(), p.nombre(), p.tipo().name(),
                 p.estado().name(), p.presupuesto(), p.fuenteFinanciacion(), p.responsable(), p.contratista(),
-                fecha(p.inicioPlan()), fecha(p.finPlan()), p.avance(), p.costoAcumulado(), p.version());
-        for (UUID evaluacion : p.evaluaciones())
+                fecha(p.inicioPlan()), fecha(p.finPlan()), p.avance(), p.costoAcumulado(), p.version(),
+                p.formulador(), p.tipoActivo());
+        for (UUID evaluacion : p.evaluaciones()) {
             jdbc.update("INSERT INTO proyecto_evaluaciones (proyecto_id, evaluacion_id) VALUES (?,?)",
                     p.id().toString(), evaluacion.toString());
+            // RN-09 garantizado por la base: la llave primaria impide que dos solicitudes simultáneas
+            // tomen la misma evaluación (la consulta previa solo da un mensaje claro).
+            try {
+                jdbc.update("INSERT INTO evaluaciones_tomadas (evaluacion_id, proyecto_id) VALUES (?,?)",
+                        evaluacion.toString(), p.id().toString());
+            } catch (DuplicateKeyException e) {
+                throw new ReglaVioladaException("RN-09", "La evaluación " + evaluacion + " ya tiene un proyecto activo.");
+            }
+        }
         guardarSeguimientoNuevo(p);
     }
 
@@ -52,6 +65,8 @@ public class RepositorioProyectosJdbc implements RepositorioProyectos {
                 p.version());
         if (filas == 0)
             throw new ConflictoDeVersionException("Otro usuario modificó el proyecto; consulte de nuevo y reintente.");
+        if (p.estado() == EstadoProyecto.CANCELADO)   // RN-09: al cancelar, sus evaluaciones quedan libres
+            jdbc.update("DELETE FROM evaluaciones_tomadas WHERE proyecto_id = ?", p.id().toString());
         guardarSeguimientoNuevo(p);
         p.marcarGuardado();
     }
@@ -108,7 +123,8 @@ public class RepositorioProyectosJdbc implements RepositorioProyectos {
                 evaluaciones, EstadoProyecto.valueOf(rs.getString("estado")), rs.getBigDecimal("presupuesto"),
                 rs.getString("fuente_financiacion"), rs.getString("responsable"), rs.getString("contratista"),
                 local(rs.getDate("inicio_plan")), local(rs.getDate("fin_plan")), rs.getInt("avance"),
-                rs.getBigDecimal("costo_acumulado"), seguimiento, rs.getLong("version"));
+                rs.getBigDecimal("costo_acumulado"), seguimiento, rs.getLong("version"), rs.getString("formulador"),
+                rs.getString("tipo_activo"));
     }
 
     private static Date fecha(LocalDate d) {

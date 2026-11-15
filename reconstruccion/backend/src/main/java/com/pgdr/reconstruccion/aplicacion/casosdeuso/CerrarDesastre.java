@@ -32,7 +32,7 @@ public class CerrarDesastre extends CasoDeUso {
             d.desastres().cambiarEstado(desastreId, EstadoDesastre.CIERRE);
             auditar(actor, "CERRAR_DESASTRE", DESASTRE, desastreId, desastreId,
                     desastre.estado().name(), EstadoDesastre.CIERRE.name(), null);
-            d.eventos().publicar("DESASTRE_CERRADO", desastreId, Map.of("desastreId", desastreId.toString()));
+            d.eventos().publicar("DESASTRE_CERRADO", desastreId, datosDesastre(actor, desastreId));
             return new Desastre(desastre.id(), desastre.nombre(), EstadoDesastre.CIERRE);
         });
     }

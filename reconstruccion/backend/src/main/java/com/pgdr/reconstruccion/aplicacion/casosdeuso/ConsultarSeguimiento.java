@@ -18,7 +18,7 @@ public class ConsultarSeguimiento extends CasoDeUso {
     /** Consolidado de los proyectos de una organización en un desastre. */
     public record Consolidado(Desastre desastre, List<Proyecto> proyectos, Map<EstadoProyecto, Integer> porEstado,
                               BigDecimal presupuestoTotal, BigDecimal costoTotal, int avancePromedio,
-                              int conSobrecosto) {}
+                              int conSobrecosto, int avancePonderado) {}
 
     /** Evaluación con la marca de si todavía puede originar un proyecto. */
     public record EvaluacionDisponible(EvaluacionDano evaluacion, boolean elegible, boolean conProyectoActivo) {}
@@ -49,6 +49,7 @@ public class ConsultarSeguimiento extends CasoDeUso {
         BigDecimal presupuesto = BigDecimal.ZERO;
         BigDecimal costo = BigDecimal.ZERO;
         int sumaAvance = 0;
+        BigDecimal avancePorPresupuesto = BigDecimal.ZERO;
         int vigentes = 0;
         int sobrecosto = 0;
         for (Proyecto p : proyectos) {
@@ -57,11 +58,17 @@ public class ConsultarSeguimiento extends CasoDeUso {
             if (p.presupuesto() != null) presupuesto = presupuesto.add(p.presupuesto());
             costo = costo.add(p.costoAcumulado());
             sumaAvance += p.avance();
+            if (p.presupuesto() != null)
+                avancePorPresupuesto = avancePorPresupuesto.add(p.presupuesto().multiply(BigDecimal.valueOf(p.avance())));
             vigentes++;
             if (p.tieneSobrecosto()) sobrecosto++;
         }
         int promedio = vigentes == 0 ? 0 : Math.round((float) sumaAvance / vigentes);
-        return new Consolidado(desastre, proyectos, porEstado, presupuesto, costo, promedio, sobrecosto);
+        // El avance de la reconstrucción pondera cada proyecto por su presupuesto: un puente de
+        // 500 millones al 50 % pesa más que una vivienda de 20 millones al 100 %.
+        int ponderado = presupuesto.signum() == 0 ? 0
+                : avancePorPresupuesto.divide(presupuesto, 0, java.math.RoundingMode.HALF_UP).intValue();
+        return new Consolidado(desastre, proyectos, porEstado, presupuesto, costo, promedio, sobrecosto, ponderado);
     }
 
     public Proyecto proyecto(Actor actor, UUID proyectoId) {

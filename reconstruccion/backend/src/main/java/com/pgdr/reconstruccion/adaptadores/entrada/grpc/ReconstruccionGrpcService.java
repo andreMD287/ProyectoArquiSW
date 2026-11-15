@@ -160,7 +160,7 @@ public class ReconstruccionGrpcService extends ReconstruccionServiceGrpc.Reconst
             SeguimientoResponse.Builder respuesta = SeguimientoResponse.newBuilder().setDesastre(desastre(c.desastre()))
                     .setPresupuestoTotal(c.presupuestoTotal().toPlainString())
                     .setCostoTotal(c.costoTotal().toPlainString()).setAvancePromedio(c.avancePromedio())
-                    .setConSobrecosto(c.conSobrecosto());
+                    .setConSobrecosto(c.conSobrecosto()).setAvancePonderado(c.avancePonderado());
             c.proyectos().forEach(p -> respuesta.addProyectos(proyecto(p)));
             c.porEstado().forEach((estado, cantidad) -> respuesta.putPorEstado(estado.name(), cantidad));
             return respuesta.build();
@@ -257,7 +257,7 @@ public class ReconstruccionGrpcService extends ReconstruccionServiceGrpc.Reconst
                 .setInicioPlan(p.inicioPlan() == null ? "" : p.inicioPlan().toString())
                 .setFinPlan(p.finPlan() == null ? "" : p.finPlan().toString()).setAvance(p.avance())
                 .setCostoAcumulado(p.costoAcumulado().toPlainString()).setSobrecosto(p.tieneSobrecosto())
-                .setVersion(p.version());
+                .setVersion(p.version()).setFormulador(texto(p.formulador())).setTipoActivo(texto(p.tipoActivo()));
         p.evaluaciones().forEach(e -> m.addEvaluaciones(e.toString()));
         for (Seguimiento s : p.seguimiento())
             m.addSeguimiento(SeguimientoMsg.newBuilder().setTipo(s.tipo().name())

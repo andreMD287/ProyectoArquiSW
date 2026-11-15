@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS proyectos (
   version BIGINT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_proyectos_desastre ON proyectos(desastre_id, organizacion);
+-- RN-19: quien formula el proyecto no puede aprobarlo. Tipo de activo físico (vivienda, vía, puente…).
+ALTER TABLE proyectos ADD COLUMN IF NOT EXISTS formulador VARCHAR(80);
+ALTER TABLE proyectos ADD COLUMN IF NOT EXISTS tipo_activo VARCHAR(80);
 
 CREATE TABLE IF NOT EXISTS proyecto_evaluaciones (
   proyecto_id VARCHAR(36) NOT NULL REFERENCES proyectos(id),
@@ -43,6 +46,18 @@ CREATE TABLE IF NOT EXISTS proyecto_evaluaciones (
   PRIMARY KEY (proyecto_id, evaluacion_id)
 );
 CREATE INDEX IF NOT EXISTS idx_proyecto_evaluaciones_eval ON proyecto_evaluaciones(evaluacion_id);
+
+-- RN-09 en la base: una evaluación la toma a lo sumo un proyecto no cancelado. La llave primaria
+-- evita que dos solicitudes simultáneas tomen la misma evaluación.
+CREATE TABLE IF NOT EXISTS evaluaciones_tomadas (
+  evaluacion_id VARCHAR(36) PRIMARY KEY,
+  proyecto_id VARCHAR(36) NOT NULL REFERENCES proyectos(id)
+);
+INSERT INTO evaluaciones_tomadas (evaluacion_id, proyecto_id)
+  SELECT pe.evaluacion_id, MIN(pe.proyecto_id) FROM proyecto_evaluaciones pe JOIN proyectos p ON p.id = pe.proyecto_id
+  WHERE p.estado <> 'CANCELADO'
+    AND NOT EXISTS (SELECT 1 FROM evaluaciones_tomadas t WHERE t.evaluacion_id = pe.evaluacion_id)
+  GROUP BY pe.evaluacion_id;
 
 CREATE TABLE IF NOT EXISTS seguimiento (
   id VARCHAR(36) PRIMARY KEY,

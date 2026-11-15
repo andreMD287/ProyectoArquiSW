@@ -19,6 +19,8 @@ public class Proyecto {
     private final String nombre;
     private final TipoProyecto tipo;
     private final List<UUID> evaluaciones;
+    private final String formulador;
+    private final String tipoActivo;
     private EstadoProyecto estado;
     private BigDecimal presupuesto;
     private String fuenteFinanciacion;
@@ -35,7 +37,7 @@ public class Proyecto {
                      List<UUID> evaluaciones, EstadoProyecto estado, BigDecimal presupuesto,
                      String fuenteFinanciacion, String responsable, String contratista, LocalDate inicioPlan,
                      LocalDate finPlan, int avance, BigDecimal costoAcumulado, List<Seguimiento> seguimiento,
-                     long version) {
+                     long version, String formulador, String tipoActivo) {
         this.id = id;
         this.desastreId = desastreId;
         this.organizacion = organizacion;
@@ -53,11 +55,24 @@ public class Proyecto {
         this.costoAcumulado = costoAcumulado;
         this.seguimiento = new ArrayList<>(seguimiento);
         this.version = version;
+        this.formulador = formulador;
+        this.tipoActivo = tipoActivo;
     }
 
     /** CU-02. RN-07, RN-08 y elegibilidad de RN-02; RN-11 para el estado Propuesto. */
     public static Proyecto proponer(UUID id, UUID desastreId, String organizacion, String nombre,
                                     TipoProyecto tipoSolicitado, List<EvaluacionDano> evaluaciones) {
+        return proponer(id, desastreId, organizacion, nombre, tipoSolicitado, evaluaciones, null);
+    }
+
+    /**
+     * CU-02 con el usuario que formula el proyecto. Se guarda para exigir, al aprobar, que otra
+     * persona lo apruebe (RN-19). El tipo de activo físico se toma de las evaluaciones: si todas
+     * son del mismo tipo (vivienda, vía, puente…) el proyecto queda con ese tipo; si no, VARIOS.
+     */
+    public static Proyecto proponer(UUID id, UUID desastreId, String organizacion, String nombre,
+                                    TipoProyecto tipoSolicitado, List<EvaluacionDano> evaluaciones,
+                                    String formulador) {
         if (enBlanco(nombre)) throw new ReglaVioladaException("RN-11", "El proyecto necesita un nombre.");
         if (evaluaciones == null || evaluaciones.isEmpty())
             throw new ReglaVioladaException("RN-07", "El proyecto debe nacer de al menos una evaluación de daño.");
@@ -77,7 +92,19 @@ public class Proyecto {
         if (destruccionTotal && tipo != TipoProyecto.RECONSTRUCCION)
             throw new ReglaVioladaException("RN-08", "Con destrucción total el proyecto debe ser de Reconstrucción.");
         return new Proyecto(id, desastreId, organizacion, nombre.trim(), tipo, ids, EstadoProyecto.PROPUESTO,
-                null, null, null, null, null, null, 0, BigDecimal.ZERO, List.of(), 0);
+                null, null, null, null, null, null, 0, BigDecimal.ZERO, List.of(), 0, nulo(formulador),
+                tipoActivoComun(evaluaciones));
+    }
+
+    /** Tipo de activo físico común a las evaluaciones, o VARIOS si mezclan tipos. */
+    private static String tipoActivoComun(List<EvaluacionDano> evaluaciones) {
+        String comun = null;
+        for (EvaluacionDano e : evaluaciones) {
+            String tipo = enBlanco(e.tipoActivo()) ? "OTRO" : e.tipoActivo().trim();
+            if (comun == null) comun = tipo;
+            else if (!comun.equalsIgnoreCase(tipo)) return "VARIOS";
+        }
+        return comun;
     }
 
     /** Reconstruye un proyecto ya guardado. Solo para los adaptadores de persistencia. */
@@ -85,15 +112,24 @@ public class Proyecto {
                                       List<UUID> evaluaciones, EstadoProyecto estado, BigDecimal presupuesto,
                                       String fuenteFinanciacion, String responsable, String contratista,
                                       LocalDate inicioPlan, LocalDate finPlan, int avance, BigDecimal costoAcumulado,
-                                      List<Seguimiento> seguimiento, long version) {
+                                      List<Seguimiento> seguimiento, long version, String formulador,
+                                      String tipoActivo) {
         return new Proyecto(id, desastreId, organizacion, nombre, tipo, evaluaciones, estado, presupuesto,
                 fuenteFinanciacion, responsable, contratista, inicioPlan, finPlan, avance, costoAcumulado,
-                seguimiento, version);
+                seguimiento, version, formulador, tipoActivo);
     }
 
     /** CU-03. RN-11 (datos de Aprobado) y RN-12 (presupuesto mayor que cero). */
     public void aprobar(BigDecimal presupuesto, String fuenteFinanciacion, String responsable) {
+        aprobar(presupuesto, fuenteFinanciacion, responsable, null);
+    }
+
+    /** CU-03 con el usuario que aprueba. RN-19: quien formuló el proyecto no puede aprobarlo. */
+    public void aprobar(BigDecimal presupuesto, String fuenteFinanciacion, String responsable, String aprobador) {
         exigirTransicion(EstadoProyecto.APROBADO);
+        if (formulador != null && aprobador != null && formulador.equalsIgnoreCase(aprobador.trim()))
+            throw new ReglaVioladaException("RN-19",
+                    "Quien formuló el proyecto no puede aprobarlo: la aprobación exige a otra persona.");
         if (presupuesto == null || presupuesto.signum() <= 0)
             throw new ReglaVioladaException("RN-12", "El presupuesto debe ser mayor que cero.");
         if (enBlanco(fuenteFinanciacion))
@@ -189,6 +225,9 @@ public class Proyecto {
                 throw new ReglaVioladaException("RN-15", "Finalizar exige un avance de 100 %.");
             if (seguimiento.stream().noneMatch(s -> s.tipo() == Seguimiento.Tipo.EVIDENCIA))
                 throw new ReglaVioladaException("RN-15", "Finalizar exige al menos una evidencia.");
+            if (tieneSobrecosto())
+                throw new ReglaVioladaException("RN-15", "No se finaliza con sobrecosto: primero se ajusta el "
+                        + "presupuesto con su motivo (el costo acumulado supera el presupuesto vigente).");
         }
         EstadoProyecto anterior = this.estado;
         this.estado = destino;
@@ -239,4 +278,11 @@ public class Proyecto {
     public BigDecimal costoAcumulado() { return costoAcumulado; }
     public List<Seguimiento> seguimiento() { return Collections.unmodifiableList(seguimiento); }
     public long version() { return version; }
+    public String formulador() { return formulador; }
+    public String tipoActivo() { return tipoActivo; }
+
+    /** RN-20: el responsable asignado al aprobar es el único RESPONSABLE que opera el proyecto. */
+    public boolean esResponsable(String usuario) {
+        return responsable != null && usuario != null && responsable.equalsIgnoreCase(usuario.trim());
+    }
 }

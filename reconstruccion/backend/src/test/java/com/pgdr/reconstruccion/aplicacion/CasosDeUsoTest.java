@@ -38,6 +38,9 @@ import org.junit.jupiter.api.Test;
 /** Casos de uso CU-01 a CU-09 (capa 2) con los puertos sustituidos por dobles en memoria. */
 class CasosDeUsoTest {
     private static final Actor AUTORIDAD = new Actor("carlos", Rol.AUTORIDAD, "UNGRD");
+    /** Segunda autoridad del organismo: aprueba lo que formula la primera (RN-19). */
+    private static final Actor AUTORIDAD_2 = new Actor("maria", Rol.AUTORIDAD, "UNGRD");
+    private static final Actor OTRO_RESPONSABLE = new Actor("jorge", Rol.RESPONSABLE, "UNGRD");
     private static final Actor RESPONSABLE = new Actor("ana", Rol.RESPONSABLE, "UNGRD");
     private static final Actor AUDITOR = new Actor("luisa", Rol.AUDITOR, "UNGRD");
     private static final Actor OTRA_ORG = new Actor("pedro", Rol.AUTORIDAD, "Alcaldia");
@@ -68,7 +71,7 @@ class CasosDeUsoTest {
 
     private Proyecto enEjecucion(EvaluacionDano e) {
         Proyecto p = crear(e);
-        new AprobarProyecto(d).ejecutar(AUTORIDAD, p.id(), new BigDecimal("1000"), "Fondo Nacional", "Ana Ruiz");
+        new AprobarProyecto(d).ejecutar(AUTORIDAD_2, p.id(), new BigDecimal("1000"), "Fondo Nacional", "ana");
         return new IniciarEjecucion(d).ejecutar(RESPONSABLE, p.id(), "Constructora Andes",
                 LocalDate.of(2027, 1, 10), LocalDate.of(2027, 6, 30));
     }
@@ -214,6 +217,7 @@ class CasosDeUsoTest {
         assertEquals(new BigDecimal("1000"), c.presupuestoTotal());
         assertEquals(new BigDecimal("400"), c.costoTotal());
         assertEquals(30, c.avancePromedio());
+        assertEquals(60, c.avancePonderado());   // el propuesto sin presupuesto no pesa en el avance ponderado
         assertEquals(b.id(), c.proyectos().get(1).id());
     }
 
@@ -231,6 +235,61 @@ class CasosDeUsoTest {
         assertEquals(EstadoDesastre.CIERRE, new CerrarDesastre(d).ejecutar(AUTORIDAD, desastre.id()).estado());
         assertEquals("RN-05", regla(() -> new CerrarDesastre(d).ejecutar(AUTORIDAD, desastre.id())));
         assertEquals("RN-06", regla(() -> crear(escuela)));
+    }
+
+    @Test
+    void rn19_quienFormulaElProyectoNoLoAprueba() {
+        new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
+        Proyecto p = crear(puente);
+        assertEquals("carlos", p.formulador());
+        assertEquals("RN-19", regla(() -> new AprobarProyecto(d).ejecutar(AUTORIDAD, p.id(), new BigDecimal("1000"),
+                "Fondo Nacional", "ana")));
+        assertEquals(EstadoProyecto.PROPUESTO, d.proyectos().buscar(p.id()).orElseThrow().estado());
+        assertEquals(EstadoProyecto.APROBADO, new AprobarProyecto(d).ejecutar(AUTORIDAD_2, p.id(),
+                new BigDecimal("1000"), "Fondo Nacional", "ana").estado());
+    }
+
+    @Test
+    void rn15_noSeFinalizaConSobrecostoHastaAjustarElPresupuesto() {
+        new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
+        Proyecto p = enEjecucion(puente);
+        RegistrarSeguimiento seg = new RegistrarSeguimiento(d);
+        seg.avance(RESPONSABLE, p.id(), 100, "Obra terminada", null);
+        seg.evidencia(RESPONSABLE, p.id(), "Acta de entrega n.º 7");
+        seg.costo(RESPONSABLE, p.id(), new BigDecimal("1200"), "Acta final");
+        assertEquals("RN-15", regla(() -> new CambiarEstado(d).ejecutar(RESPONSABLE, p.id(), EstadoProyecto.FINALIZADO, null)));
+        new ModificarPresupuesto(d).ejecutar(AUTORIDAD, p.id(), new BigDecimal("1200"), "Mayor cantidad de obra");
+        assertEquals(EstadoProyecto.FINALIZADO,
+                new CambiarEstado(d).ejecutar(RESPONSABLE, p.id(), EstadoProyecto.FINALIZADO, null).estado());
+    }
+
+    @Test
+    void rn20_soloLaAutoridadCancelaYSoloElResponsableAsignadoOpera() {
+        new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
+        Proyecto p = enEjecucion(puente);
+        assertThrows(AccesoDenegadoException.class,
+                () -> new CambiarEstado(d).ejecutar(RESPONSABLE, p.id(), EstadoProyecto.CANCELADO, "No sigue"));
+        assertThrows(AccesoDenegadoException.class,
+                () -> new RegistrarSeguimiento(d).avance(OTRO_RESPONSABLE, p.id(), 20, "Ajeno", null));
+        assertThrows(AccesoDenegadoException.class,
+                () -> new CambiarEstado(d).ejecutar(OTRO_RESPONSABLE, p.id(), EstadoProyecto.SUSPENDIDO, "Ajeno"));
+        assertEquals(20, new RegistrarSeguimiento(d).avance(RESPONSABLE, p.id(), 20, "Propio", null).avance());
+        assertEquals(EstadoProyecto.CANCELADO,
+                new CambiarEstado(d).ejecutar(AUTORIDAD, p.id(), EstadoProyecto.CANCELADO, "Sin recursos").estado());
+    }
+
+    @Test
+    void elProyectoTomaElTipoDeActivoFisicoYLosAvisosSiguenElContratoC5() {
+        new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
+        assertEquals("Puente", crear(puente).tipoActivo());
+        EvaluacionDano vivienda = mem.evaluacion(desastre.id(), "UNGRD", "Vivienda", NivelDano.GRAVE, true);
+        Proyecto mixto = new CrearProyectos(d).crearUno(AUTORIDAD, desastre.id(),
+                new CrearProyectos.Solicitud("Mixto", null, List.of(escuela.id(), vivienda.id())));
+        assertEquals("VARIOS", mixto.tipoActivo());
+        EnMemoria.Evento creado = mem.eventos().stream().filter(e -> e.tipo().equals("PROYECTO_CREADO")).findFirst().orElseThrow();
+        assertEquals(desastre.id().toString(), creado.datos().get("desastreId"));
+        assertEquals("UNGRD", creado.datos().get("organizacion"));
+        assertEquals("Puente", creado.datos().get("tipoActivo"));
     }
 
     @Test

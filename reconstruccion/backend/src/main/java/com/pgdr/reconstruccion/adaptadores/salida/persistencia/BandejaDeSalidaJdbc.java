@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgdr.reconstruccion.aplicacion.puertos.PublicadorEventos;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,10 +29,20 @@ public class BandejaDeSalidaJdbc implements PublicadorEventos {
     @Override
     public void publicar(String tipo, UUID agregadoId, Map<String, String> datos) {
         try {
+            String id = UUID.randomUUID().toString();
+            Instant ahora = Instant.now();
+            // Sobre del contrato C5: el consumidor descarta repetidos por idEvento.
+            Map<String, Object> sobre = new LinkedHashMap<>();
+            sobre.put("idEvento", id);
+            sobre.put("tipo", tipo);
+            sobre.put("ocurridoEn", ahora.toString());
+            sobre.put("desastreId", datos.get("desastreId"));
+            sobre.put("proyectoId", datos.get("proyectoId"));
+            sobre.put("organismoId", datos.get("organizacion"));
+            sobre.put("datos", datos);
             jdbc.update("INSERT INTO outbox_eventos (id, tipo, agregado_id, payload_json, creado_en, publicado_en) "
                             + "VALUES (?,?,?,?,?,NULL)",
-                    UUID.randomUUID().toString(), tipo, agregadoId.toString(), json.writeValueAsString(datos),
-                    Timestamp.from(Instant.now()));
+                    id, tipo, agregadoId.toString(), json.writeValueAsString(sobre), Timestamp.from(ahora));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("No se pudo serializar el evento " + tipo, e);
         }

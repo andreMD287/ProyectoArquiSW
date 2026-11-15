@@ -11,7 +11,6 @@ import com.pgdr.reconstruccion.dominio.TipoProyecto;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /** CU-02: crear proyectos desde evaluaciones, uno o en lote (RN-06 a RN-09, RN-18). */
@@ -75,11 +74,11 @@ public class CrearProyectos extends CasoDeUso {
             if (d.proyectos().existeActivoParaEvaluacion(e.id()))
                 throw new ReglaVioladaException("RN-09", "La evaluación " + e.id() + " ya tiene un proyecto activo.");
         }
-        Proyecto proyecto = Proyecto.proponer(id, desastreId, actor.organizacion(), s.nombre(), s.tipo(), evaluaciones);
+        Proyecto proyecto = Proyecto.proponer(id, desastreId, actor.organizacion(), s.nombre(), s.tipo(), evaluaciones,
+                actor.usuario());
         d.proyectos().guardarNuevo(proyecto);
         auditar(actor, "CREAR_PROYECTO", PROYECTO, id, desastreId, null, proyecto.estado().name(), null);
-        d.eventos().publicar("PROYECTO_CREADO", id,
-                Map.of("proyectoId", id.toString(), "desastreId", desastreId.toString(), "tipo", proyecto.tipo().name()));
+        d.eventos().publicar("PROYECTO_CREADO", id, datosProyecto(proyecto, "tipo", proyecto.tipo().name()));
         return proyecto;
     }
 }

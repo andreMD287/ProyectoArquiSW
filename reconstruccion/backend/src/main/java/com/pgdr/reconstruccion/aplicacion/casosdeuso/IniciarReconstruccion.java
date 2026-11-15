@@ -6,7 +6,6 @@ import com.pgdr.reconstruccion.dominio.EstadoDesastre;
 import com.pgdr.reconstruccion.dominio.EvaluacionDano;
 import com.pgdr.reconstruccion.dominio.ReglaVioladaException;
 import com.pgdr.reconstruccion.dominio.Rol;
-import java.util.Map;
 import java.util.UUID;
 
 /** CU-01: pasar un desastre de Caracterización a Reconstrucción (RN-01, RN-02). */
@@ -31,7 +30,7 @@ public class IniciarReconstruccion extends CasoDeUso {
             d.desastres().cambiarEstado(desastreId, EstadoDesastre.RECONSTRUCCION);
             auditar(actor, "INICIAR_RECONSTRUCCION", DESASTRE, desastreId, desastreId,
                     desastre.estado().name(), EstadoDesastre.RECONSTRUCCION.name(), null);
-            d.eventos().publicar("DESASTRE_EN_RECONSTRUCCION", desastreId, Map.of("desastreId", desastreId.toString()));
+            d.eventos().publicar("DESASTRE_EN_RECONSTRUCCION", desastreId, datosDesastre(actor, desastreId));
             return new Desastre(desastre.id(), desastre.nombre(), EstadoDesastre.RECONSTRUCCION);
         });
     }

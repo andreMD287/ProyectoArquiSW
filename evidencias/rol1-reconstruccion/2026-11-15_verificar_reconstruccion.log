@@ -1,0 +1,78 @@
+OK: login coordinador_demo
+OK: sin sesión responde 401
+OK: las cabeceras de identidad sin token no sirven
+OK: un token inventado responde 401
+OK: crear usuario EVALUADOR
+OK: login rec_evaluador_788c1d80b3
+OK: crear usuario CONSULTA
+OK: login rec_consulta_788c1d80b3
+OK: crear usuario COORDINADOR
+OK: login rec_coordinador_788c1d80b3
+OK: crear usuario EVALUADOR
+OK: login rec_evaluador2_788c1d80b3
+OK: desastre registrado en el núcleo
+OK: evaluación puente capturada en servidor
+OK: evaluación escuela capturada en servidor
+OK: evaluación leve capturada en servidor
+OK: el módulo lista los desastres del núcleo
+OK: el desastre aparece una vez en el módulo
+OK: el desastre nace en fase Registro
+OK: no se inicia reconstrucción desde Registro (RN-01)
+OK: catálogo de la plataforma
+OK: el núcleo rechaza saltar de Registro a Reconstrucción
+OK: solo un coordinador cambia la fase
+OK: el núcleo pasa el desastre a Caracterización
+OK: repetir el mismo cambio no lo aplica dos veces
+OK: una versión base vieja responde 409
+OK: el módulo lista los desastres del núcleo
+OK: el desastre aparece una vez en el módulo
+OK: el módulo ve la fase nueva del núcleo
+OK: consulta no inicia la reconstrucción
+OK: falsificar el rol en una cabecera no da permisos
+OK: la autoridad inicia la reconstrucción (CU-01)
+OK: catálogo de la plataforma
+OK: catálogo de la plataforma
+OK: la fase quedó guardada en el núcleo
+OK: el historial del núcleo conserva los cambios de fase
+OK: el módulo lee las evaluaciones de servidor
+OK: el nivel de afectación se traduce a categoría de daño
+OK: el responsable no crea proyectos
+OK: el lote crea los válidos y reporta los demás (CU-02, RN-18)
+OK: daño leve se rechaza con RN-02 y evaluación inexistente con RN-07
+OK: una evaluación no origina dos proyectos activos (RN-09)
+OK: quien formuló el proyecto no lo aprueba (RN-19)
+OK: otra autoridad aprueba el proyecto (CU-03)
+OK: el proyecto guarda al formulador y el tipo de activo físico
+OK: consulta no inicia la ejecución
+OK: el responsable inicia la ejecución (CU-04)
+OK: un responsable no asignado no registra avance (RN-20)
+OK: el responsable registra avance (CU-05)
+OK: un costo mayor que el presupuesto se registra y marca sobrecosto (RN-14)
+OK: el presupuesto no cambia sin motivo (RN-12)
+OK: la autoridad modifica el presupuesto con motivo (CU-06)
+OK: no se finaliza con avance menor que 100 (RN-15)
+OK: avance al 100 %
+OK: no se finaliza sin evidencia (RN-15)
+OK: el responsable adjunta la evidencia (CU-05)
+OK: un costo final deja el proyecto con sobrecosto
+OK: no se finaliza con sobrecosto (RN-15)
+OK: la autoridad ajusta el presupuesto con motivo
+OK: el responsable finaliza el proyecto (CU-07)
+OK: consulta ve el proyecto de su organismo (CU-08)
+OK: la auditoría guarda los cambios y los intentos rechazados (RN-17)
+OK: consulta no modifica
+OK: no se cierra con proyectos sin terminar (RN-04)
+OK: un responsable no cancela proyectos
+OK: la autoridad cancela un proyecto propuesto
+OK: la autoridad cierra el desastre (CU-09)
+OK: catálogo de la plataforma
+OK: el cierre quedó guardado en el núcleo
+OK: la bandeja de salida quedó despachada
+OK: los avisos llegaron a la cola de integración en RabbitMQ
+OK: el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)
+OK: gRPC ConsultarSeguimiento responde con el token del núcleo
+OK: gRPC sin token responde Unauthenticated
+OK: gRPC con un token inventado responde Unauthenticated
+OK: gRPC respeta los roles (consulta no aprueba)
+
+Reconstrucción integrada: 76 comprobaciones correctas.

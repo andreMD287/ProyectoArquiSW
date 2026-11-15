@@ -5,10 +5,9 @@ import com.pgdr.reconstruccion.dominio.EstadoProyecto;
 import com.pgdr.reconstruccion.dominio.Proyecto;
 import com.pgdr.reconstruccion.dominio.Rol;
 import java.math.BigDecimal;
-import java.util.Map;
 import java.util.UUID;
 
-/** CU-03: asignar presupuesto, fuente de financiación y responsable, y aprobar (RN-10 a RN-12). */
+/** CU-03: asignar presupuesto, fuente de financiación y responsable, y aprobar (RN-10 a RN-12, RN-19). */
 public class AprobarProyecto extends CasoDeUso {
     public AprobarProyecto(Dependencias d) {
         super(d);
@@ -20,13 +19,12 @@ public class AprobarProyecto extends CasoDeUso {
         return ejecutarAuditado(actor, "APROBAR_PROYECTO", PROYECTO, proyectoId, null, null, () -> {
             Proyecto p = cargarProyecto(actor, proyectoId);
             EstadoProyecto anterior = p.estado();
-            p.aprobar(presupuesto, fuenteFinanciacion, responsable);
+            p.aprobar(presupuesto, fuenteFinanciacion, responsable, actor.usuario());
             d.proyectos().actualizar(p);
             auditar(actor, "CAMBIAR_ESTADO", PROYECTO, p.id(), p.desastreId(), anterior.name(), p.estado().name(), null);
             auditar(actor, "ASIGNAR_PRESUPUESTO", PROYECTO, p.id(), p.desastreId(), null,
                     p.presupuesto().toPlainString(), "Presupuesto inicial al aprobar");
-            d.eventos().publicar("PROYECTO_APROBADO", p.id(),
-                    Map.of("proyectoId", p.id().toString(), "presupuesto", p.presupuesto().toPlainString()));
+            d.eventos().publicar("PROYECTO_APROBADO", p.id(), datosProyecto(p, "responsable", p.responsable()));
             return p;
         });
     }

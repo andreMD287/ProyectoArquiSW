@@ -7,6 +7,8 @@ import com.pgdr.reconstruccion.dominio.RegistroAuditoria;
 import com.pgdr.reconstruccion.dominio.ReglaVioladaException;
 import com.pgdr.reconstruccion.dominio.Rol;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -25,6 +27,38 @@ abstract class CasoDeUso {
     protected void autorizar(Actor actor, Rol... permitidos) {
         if (!Arrays.asList(permitidos).contains(actor.rol()))
             throw new AccesoDenegadoException("El rol " + actor.rol() + " no puede ejecutar esta operación.");
+    }
+
+    /** RN-20: un RESPONSABLE solo opera el proyecto que tiene asignado desde la aprobación. */
+    protected void exigirResponsableAsignado(Actor actor, Proyecto p) {
+        if (actor.rol() == Rol.RESPONSABLE && !p.esResponsable(actor.usuario()))
+            throw new AccesoDenegadoException("RN-20: el proyecto está asignado a otro responsable.");
+    }
+
+    /**
+     * Datos de un aviso sobre un proyecto, con los campos del contrato C5: identificadores del
+     * proyecto, del desastre y de la organización, más el nombre, el tipo de activo y el estado.
+     * Nunca incluye datos de personas: Reconstrucción solo maneja activos físicos.
+     */
+    protected static Map<String, String> datosProyecto(Proyecto p, String... extra) {
+        Map<String, String> datos = new LinkedHashMap<>();
+        datos.put("proyectoId", p.id().toString());
+        datos.put("desastreId", p.desastreId().toString());
+        datos.put("organizacion", p.organizacion());
+        datos.put("nombre", p.nombre());
+        if (p.tipoActivo() != null) datos.put("tipoActivo", p.tipoActivo());
+        datos.put("estado", p.estado().name());
+        if (p.presupuesto() != null) datos.put("presupuesto", p.presupuesto().toPlainString());
+        for (int i = 0; i + 1 < extra.length; i += 2) datos.put(extra[i], extra[i + 1]);
+        return datos;
+    }
+
+    /** Datos de un aviso sobre un desastre (contrato C5). */
+    protected static Map<String, String> datosDesastre(Actor actor, UUID desastreId) {
+        Map<String, String> datos = new LinkedHashMap<>();
+        datos.put("desastreId", desastreId.toString());
+        datos.put("organizacion", actor.organizacion());
+        return datos;
     }
 
     /** RN-10: cada organización ve y modifica solo sus proyectos. */

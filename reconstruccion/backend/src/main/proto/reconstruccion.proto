@@ -151,6 +151,8 @@ message ProyectoMsg {
   repeated string evaluaciones = 16;
   repeated SeguimientoMsg seguimiento = 17;
   int64 version = 18;
+  string formulador = 19;    // quien formuló el proyecto (RN-19: no puede aprobarlo)
+  string tipo_activo = 20;   // vivienda, vía, puente… (VARIOS si mezcla tipos)
 }
 
 message SeguimientoResponse {
@@ -161,6 +163,7 @@ message SeguimientoResponse {
   string costo_total = 5;
   int32 avance_promedio = 6;
   int32 con_sobrecosto = 7;
+  int32 avance_ponderado = 8;   // avance ponderado por presupuesto
 }
 
 // Indique proyecto_id para la traza de un proyecto o desastre_id para la de todo el desastre.

@@ -1,0 +1,117 @@
+[
+  {
+    "idEvento": "f97ff846-943e-449e-9ea3-a98196c205e0",
+    "tipo": "DESASTRE_EN_RECONSTRUCCION",
+    "ocurridoEn": "2026-11-15T18:06:05.452771140Z",
+    "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+    "proyectoId": null,
+    "organismoId": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+    "datos": {
+      "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+      "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e"
+    }
+  },
+  {
+    "idEvento": "0bae3292-bf4b-4afc-9ebd-6ae1e5b45c2b",
+    "tipo": "PROYECTO_CREADO",
+    "ocurridoEn": "2026-11-15T18:06:06.544616164Z",
+    "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+    "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+    "organismoId": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+    "datos": {
+      "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+      "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+      "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+      "nombre": "Puente 788c1d80b3",
+      "tipoActivo": "Puente",
+      "estado": "PROPUESTO",
+      "tipo": "REPARACION"
+    }
+  },
+  {
+    "idEvento": "7cea714c-8663-45c4-be45-817cf3db55a1",
+    "tipo": "PROYECTO_APROBADO",
+    "ocurridoEn": "2026-11-15T18:06:06.961938820Z",
+    "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+    "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+    "organismoId": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+    "datos": {
+      "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+      "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+      "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+      "nombre": "Puente 788c1d80b3",
+      "tipoActivo": "Puente",
+      "estado": "APROBADO",
+      "presupuesto": "500000000",
+      "responsable": "rec_evaluador_788c1d80b3"
+    }
+  },
+  {
+    "idEvento": "a543a736-4a24-45a8-8a0e-adf5ee5ff3f5",
+    "tipo": "PROYECTO_ESTADO_CAMBIADO",
+    "ocurridoEn": "2026-11-15T18:06:07.036749791Z",
+    "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+    "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+    "organismoId": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+    "datos": {
+      "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+      "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+      "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+      "nombre": "Puente 788c1d80b3",
+      "tipoActivo": "Puente",
+      "estado": "EN_EJECUCION",
+      "presupuesto": "500000000.00",
+      "estadoAnterior": "APROBADO"
+    }
+  },
+  {
+    "idEvento": "d793099a-e2ae-49a5-8d70-1906701caffd",
+    "tipo": "PROYECTO_CON_SOBRECOSTO",
+    "ocurridoEn": "2026-11-15T18:06:07.128402381Z",
+    "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+    "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+    "organismoId": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+    "datos": {
+      "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+      "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+      "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+      "nombre": "Puente 788c1d80b3",
+      "tipoActivo": "Puente",
+      "estado": "EN_EJECUCION",
+      "presupuesto": "500000000.00",
+      "costoAcumulado": "600000000.00"
+    }
+  },
+  {
+    "idEvento": "82f08d50-2ca5-4656-a4ea-79de08c86c4b",
+    "tipo": "PRESUPUESTO_MODIFICADO",
+    "ocurridoEn": "2026-11-15T18:06:07.199232971Z",
+    "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+    "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+    "organismoId": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+    "datos": {
+      "proyectoId": "62bcb8b0-8968-4890-b5e9-e1ab465b73c3",
+      "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+      "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+      "nombre": "Puente 788c1d80b3",
+      "tipoActivo": "Puente",
+      "estado": "EN_EJECUCION",
+      "presupuesto": "650000000",
+      "anterior": "500000000.00",
+      "nuevo": "650000000",
+      "motivo": "Mayor cantidad de obra"
+    }
+  },
+  {
+    "idEvento": "9a763c52-038a-47cc-b3c6-66a82b938182",
+    "tipo": "DESASTRE_CERRADO",
+    "ocurridoEn": "2026-11-15T18:06:07.829036843Z",
+    "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+    "proyectoId": null,
+    "organismoId": "ffe316ed-532b-426e-8005-7c5bfe54bb9e",
+    "datos": {
+      "desastreId": "35dfb8db-f860-3d36-a0b6-21fa70eaf13e",
+      "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e"
+    }
+  }
+]

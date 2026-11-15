@@ -136,6 +136,30 @@ class ProyectoTest {
     }
 
     @Test
+    void rn15_noSeFinalizaConSobrecosto() {
+        Proyecto p = enEjecucion();
+        p.registrarAvance(100, "Obra terminada", null, AHORA, "ana");
+        p.adjuntarEvidencia("Acta de entrega n.º 12", AHORA, "ana");
+        p.registrarCosto(new BigDecimal("1100"), "Acta final", AHORA, "ana");
+        assertEquals("RN-15", regla(() -> p.cambiarEstado(EstadoProyecto.FINALIZADO, null)));
+        p.modificarPresupuesto(new BigDecimal("1100"), "Mayor cantidad de obra");
+        p.cambiarEstado(EstadoProyecto.FINALIZADO, null);
+        assertEquals(EstadoProyecto.FINALIZADO, p.estado());
+    }
+
+    @Test
+    void rn19_quienFormulaNoAprueba() {
+        Proyecto p = Proyecto.proponer(UUID.randomUUID(), DESASTRE, "UNGRD", "Puente La Vega", null,
+                List.of(evaluacion(NivelDano.GRAVE, true)), "carlos");
+        assertEquals("RN-19", regla(() -> p.aprobar(BigDecimal.TEN, "Fondo", "ana", "Carlos")));
+        p.aprobar(BigDecimal.TEN, "Fondo", "ana", "maria");
+        assertEquals(EstadoProyecto.APROBADO, p.estado());
+        assertTrue(p.esResponsable("ana"));
+        assertFalse(p.esResponsable("jorge"));
+        assertEquals("Puente", p.tipoActivo());
+    }
+
+    @Test
     void rn16_suspenderYCancelarExigenMotivoYLosTerminalesNoCambian() {
         Proyecto p = enEjecucion();
         assertEquals("RN-16", regla(() -> p.cambiarEstado(EstadoProyecto.SUSPENDIDO, "")));

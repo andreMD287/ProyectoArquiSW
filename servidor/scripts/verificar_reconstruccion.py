@@ -31,11 +31,11 @@ check(req('GET',R+'/desastres')[0]==401,'sin sesión responde 401')
 check(req('GET',R+'/desastres',extra={'X-Usuario':'intruso','X-Rol':'AUTORIDAD','X-Organizacion':root['organizacionId']})[0]==401,'las cabeceras de identidad sin token no sirven')
 check(req('GET',R+'/desastres',token='token-inventado')[0]==401,'un token inventado responde 401')
 roles={}
-for rol in ['EVALUADOR','CONSULTA']:
- user='rec_'+rol.lower()+'_'+tag
+for clave_rol in ['EVALUADOR','CONSULTA','COORDINADOR','EVALUADOR2']:
+ user='rec_'+clave_rol.lower()+'_'+tag;rol=clave_rol.rstrip('2')
  s,b=req('POST','/auth/usuarios',{'usuario':user,'clave':'Reconstruccion-Clave-2026!','rol':rol},t);check(s==201,'crear usuario '+rol,(s,b))
- roles[rol]=login(user,'Reconstruccion-Clave-2026!')['accessToken']
-resp,cons=roles['EVALUADOR'],roles['CONSULTA']
+ roles[clave_rol]=login(user,'Reconstruccion-Clave-2026!')['accessToken']
+resp,cons,t2,resp2=roles['EVALUADOR'],roles['CONSULTA'],roles['COORDINADOR'],roles['EVALUADOR2']
 # --- Desastre y evaluaciones en sus unidades dueñas ---
 d={'id':'RECON-'+tag,'tipo':'TERREMOTO','ubicacion':'Zona sintética '+tag,'descripcion':'Prueba de reconstrucción','severidad':'ALTA','fecha':'2026-11-14T12:00:00Z'}
 s,b=req('POST','/desastres',d,t);check(s==201,'desastre registrado en el núcleo',(s,b))
@@ -48,8 +48,13 @@ def desastre_rec(token=t):
  propios=[x for x in b if tag in x['nombre']]
  check(len(propios)==1,'el desastre aparece una vez en el módulo',b);return propios[0]
 def catalogo():
- s,b=req('GET','/desastres',token=t);check(s==200,'catálogo de la plataforma',(s,b))
- return [x['desastre'] for x in b['desastres'] if x['desastre']['id']==d['id']][0]
+ # La copia de lectura de servidor puede tardar unos segundos en recibir un desastre nuevo.
+ for _ in range(40):
+  s,b=req('GET','/desastres',token=t)
+  propios=[x['desastre'] for x in b['desastres'] if x['desastre']['id']==d['id']] if s==200 else []
+  if propios:break
+  time.sleep(0.5)
+ check(s==200 and propios,'catálogo de la plataforma',(s,b));return propios[0]
 def catalogo_hasta(condicion,segundos=20):
  # servidor guarda una copia de lectura del catálogo del núcleo (ADR-03): se espera a que converja.
  for _ in range(segundos*2):
@@ -89,9 +94,13 @@ puente,escuela=b[0]['proyectoId'],b[2]['proyectoId']
 s,b=req('POST',L,{'proyectos':[{'nombre':'Repetido','tipo':'REPARACION','evaluaciones':[ev['puente']]}]},t);check(s==200 and b[0]['regla']=='RN-09','una evaluación no origina dos proyectos activos (RN-09)',(s,b))
 # --- CU-03 a CU-07 ---
 P=R+'/proyectos/'+puente;inicio={'contratista':'Consorcio Vial','inicio':'2026-12-01','fin':'2027-06-30'}
-s,b=req('POST',P+'/aprobar',{'presupuesto':500000000,'fuenteFinanciacion':'Fondo de reconstrucción','responsable':'rec_evaluador_'+tag},t);check(s==200 and b['estado']=='APROBADO','la autoridad aprueba el proyecto (CU-03)',(s,b))
+aprobacion={'presupuesto':500000000,'fuenteFinanciacion':'Fondo de reconstrucción','responsable':'rec_evaluador_'+tag}
+s,b=req('POST',P+'/aprobar',aprobacion,t);check(s==422 and b.get('regla')=='RN-19','quien formuló el proyecto no lo aprueba (RN-19)',(s,b))
+s,b=req('POST',P+'/aprobar',aprobacion,t2);check(s==200 and b['estado']=='APROBADO','otra autoridad aprueba el proyecto (CU-03)',(s,b))
+check(b.get('formulador')==root['usuario'] and b.get('tipoActivo')=='Puente','el proyecto guarda al formulador y el tipo de activo físico',b)
 s,b=req('POST',P+'/iniciar',inicio,cons);check(s==403,'consulta no inicia la ejecución',(s,b))
 s,b=req('POST',P+'/iniciar',inicio,resp);check(s==200 and b['estado']=='EN_EJECUCION','el responsable inicia la ejecución (CU-04)',(s,b))
+s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp2);check(s==403,'un responsable no asignado no registra avance (RN-20)',(s,b))
 s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp);check(s==200,'el responsable registra avance (CU-05)',(s,b))
 s,b=req('POST',P+'/costo',{'valor':600000000,'descripcion':'Acta 1'},resp);check(s==200,'un costo mayor que el presupuesto se registra y marca sobrecosto (RN-14)',(s,b))
 s,b=req('POST',P+'/presupuesto',{'presupuesto':650000000,'motivo':''},t);check(s==422 and b.get('regla')=='RN-12','el presupuesto no cambia sin motivo (RN-12)',(s,b))
@@ -100,6 +109,9 @@ s,b=req('POST',P+'/estado',{'estado':'FINALIZADO','motivo':''},resp);check(s==42
 s,b=req('POST',P+'/avance',{'porcentaje':100,'descripcion':'Obra entregada'},resp);check(s==200,'avance al 100 %',(s,b))
 s,b=req('POST',P+'/estado',{'estado':'FINALIZADO','motivo':''},resp);check(s==422 and b.get('regla')=='RN-15','no se finaliza sin evidencia (RN-15)',(s,b))
 s,b=req('POST',P+'/evidencia',{'descripcion':'Acta de entrega de obra n.º 1'},resp);check(s==200,'el responsable adjunta la evidencia (CU-05)',(s,b))
+s,b=req('POST',P+'/costo',{'valor':100000000,'descripcion':'Acta final'},resp);check(s==200 and b['sobrecosto'],'un costo final deja el proyecto con sobrecosto',(s,b))
+s,b=req('POST',P+'/estado',{'estado':'FINALIZADO','motivo':''},resp);check(s==422 and b.get('regla')=='RN-15','no se finaliza con sobrecosto (RN-15)',(s,b))
+s,b=req('POST',P+'/presupuesto',{'presupuesto':720000000,'motivo':'Ajuste por acta final'},t);check(s==200 and not b['sobrecosto'],'la autoridad ajusta el presupuesto con motivo',(s,b))
 s,b=req('POST',P+'/estado',{'estado':'FINALIZADO','motivo':''},resp);check(s==200 and b['estado']=='FINALIZADO','el responsable finaliza el proyecto (CU-07)',(s,b))
 # --- CU-08 ---
 s,b=req('GET',P,token=cons);check(s==200 and b['estado']=='FINALIZADO','consulta ve el proyecto de su organismo (CU-08)',(s,b))
@@ -108,6 +120,7 @@ s,b=req('POST',P+'/aprobar',{'presupuesto':1,'fuenteFinanciacion':'x','responsab
 # --- CU-09 ---
 K=R+f'/desastres/{did}/cerrar'
 s,b=req('POST',K,token=t);check(s==422 and b.get('regla')=='RN-04','no se cierra con proyectos sin terminar (RN-04)',(s,b))
+s,b=req('POST',R+'/proyectos/'+escuela+'/estado',{'estado':'CANCELADO','motivo':'Se atenderá con otro programa'},resp);check(s==403,'un responsable no cancela proyectos',(s,b))
 s,b=req('POST',R+'/proyectos/'+escuela+'/estado',{'estado':'CANCELADO','motivo':'Se atenderá con otro programa'},t);check(s==200 and b['estado']=='CANCELADO','la autoridad cancela un proyecto propuesto',(s,b))
 s,b=req('POST',K,token=t);check(s==200 and b['estado']=='CIERRE','la autoridad cierra el desastre (CU-09)',(s,b))
 c3=catalogo_hasta(lambda c:c.get('fase')=='CIERRE');check(c3.get('fase')=='CIERRE','el cierre quedó guardado en el núcleo',c3)
@@ -123,6 +136,10 @@ for _ in range(15):
  if cola.get('messages',0)>0:break
  time.sleep(1)
 check(cola.get('messages',0)>0,'los avisos llegaron a la cola de integración en RabbitMQ',cola.get('messages'))
+g=urllib.request.Request('http://127.0.0.1:15684/api/queues/%2F/integracion.reconstruccion/get',json.dumps({'count':50,'ackmode':'ack_requeue_true','encoding':'auto'}).encode(),{'Authorization':'Basic '+base64.b64encode(b'taller:taller-local').decode(),'Content-Type':'application/json'},method='POST')
+with urllib.request.urlopen(g,timeout=10) as r:mensajes=[json.loads(m['payload']) for m in json.loads(r.read())]
+propio=[m for m in mensajes if m.get('desastreId')==did and m.get('tipo')=='PROYECTO_APROBADO']
+check(propio and all(k in propio[0] for k in ['idEvento','tipo','ocurridoEn','desastreId','proyectoId','organismoId','datos']),'el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)',mensajes[:2])
 # --- gRPC con un cliente real (grpcurl en un contenedor de la misma red) ---
 PROTO=str(Path(__file__).resolve().parents[2]/'reconstruccion'/'backend'/'src'/'main'/'proto')
 def grpc(metodo,cuerpo,token=None):

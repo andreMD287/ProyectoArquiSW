@@ -84,7 +84,8 @@ public class EnMemoria implements RepositorioProyectos, ConsultaEvaluaciones,
     private static Proyecto copiar(Proyecto p) {
         return Proyecto.rehidratar(p.id(), p.desastreId(), p.organizacion(), p.nombre(), p.tipo(), p.evaluaciones(),
                 p.estado(), p.presupuesto(), p.fuenteFinanciacion(), p.responsable(), p.contratista(), p.inicioPlan(),
-                p.finPlan(), p.avance(), p.costoAcumulado(), p.seguimiento(), p.version());
+                p.finPlan(), p.avance(), p.costoAcumulado(), p.seguimiento(), p.version(), p.formulador(),
+                p.tipoActivo());
     }
 
     // --- RepositorioProyectos ---

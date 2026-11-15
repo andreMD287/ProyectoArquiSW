@@ -32,7 +32,7 @@ public final class Vistas {
                          BigDecimal presupuesto, String fuenteFinanciacion, String responsable, String contratista,
                          String inicioPlan, String finPlan, int avance, BigDecimal costoAcumulado, boolean sobrecosto,
                          List<String> evaluaciones, List<SeguimientoVista> seguimiento, List<String> estadosSiguientes,
-                         long version) {
+                         long version, String formulador, String tipoActivo) {
         public static ProyectoVista de(Proyecto p) {
             return new ProyectoVista(p.id().toString(), p.desastreId().toString(), p.organizacion(), p.nombre(),
                     p.tipo().name(), p.estado().name(), p.presupuesto(), p.fuenteFinanciacion(), p.responsable(),
@@ -40,7 +40,8 @@ public final class Vistas {
                     p.finPlan() == null ? null : p.finPlan().toString(), p.avance(), p.costoAcumulado(),
                     p.tieneSobrecosto(), p.evaluaciones().stream().map(Object::toString).toList(),
                     p.seguimiento().stream().map(SeguimientoVista::de).toList(),
-                    p.estado().destinos().stream().map(Enum::name).toList(), p.version());
+                    p.estado().destinos().stream().map(Enum::name).toList(), p.version(), p.formulador(),
+                    p.tipoActivo());
         }
     }
 
@@ -54,13 +55,14 @@ public final class Vistas {
     }
 
     public record ConsolidadoVista(DesastreVista desastre, List<ProyectoVista> proyectos, Map<String, Integer> porEstado,
-                            BigDecimal presupuestoTotal, BigDecimal costoTotal, int avancePromedio, int conSobrecosto) {
+                            BigDecimal presupuestoTotal, BigDecimal costoTotal, int avancePromedio, int conSobrecosto,
+                            int avancePonderado) {
         public static ConsolidadoVista de(ConsultarSeguimiento.Consolidado c) {
             Map<String, Integer> porEstado = new LinkedHashMap<>();
             for (EstadoProyecto e : EstadoProyecto.values()) porEstado.put(e.name(), c.porEstado().getOrDefault(e, 0));
             return new ConsolidadoVista(DesastreVista.de(c.desastre()),
                     c.proyectos().stream().map(ProyectoVista::de).toList(), porEstado, c.presupuestoTotal(),
-                    c.costoTotal(), c.avancePromedio(), c.conSobrecosto());
+                    c.costoTotal(), c.avancePromedio(), c.conSobrecosto(), c.avancePonderado());
         }
     }
 

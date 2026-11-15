@@ -34,11 +34,13 @@ public class AuthService {
       if(u==null||!u.isActivo()) return null;
       return new Identidad(u.getId(),u.getOrganizacionId(),u.getUsuario(),u.getRol());
     }
+    // Un coordinador crea usuarios solo de su propio organismo. Puede crear otro coordinador porque
+    // las operaciones a dos manos (aprobar un proyecto de reconstrucción, RN-19) exigen dos personas.
     public boolean crearUsuario(Identidad actor,String username,String password,String rol){
       if(!actor.puedeRegistrarDesastre())throw new SecurityException("SIN_PERMISO");
       if(username==null||password==null||rol==null)throw new ValidacionException("Datos incompletos");
       String limpio=username.trim().toLowerCase(java.util.Locale.ROOT);
-      if(!limpio.matches("[a-z0-9_.-]{3,80}")||password.length()<12||password.length()>256||!("EVALUADOR".equals(rol)||"CONSULTA".equals(rol)))
+      if(!limpio.matches("[a-z0-9_.-]{3,80}")||password.length()<12||password.length()>256||!List.of("EVALUADOR","CONSULTA","COORDINADOR").contains(rol))
         throw new ValidacionException("Usuario, clave o rol invalido");
       if(!em.createQuery("SELECT u FROM Usuario u WHERE u.usuario=:u",Usuario.class)
           .setParameter("u",limpio).setMaxResults(1).getResultList().isEmpty())return false;

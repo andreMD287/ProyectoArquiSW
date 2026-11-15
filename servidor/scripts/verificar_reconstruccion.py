@@ -144,7 +144,7 @@ check(all(k in aviso for k in ['idEvento','tipo','ocurridoEn','desastreId','proy
 PROTO=str(Path(__file__).resolve().parents[2]/'reconstruccion'/'backend'/'src'/'main'/'proto')
 def grpc(metodo,cuerpo,token=None):
  cabecera=['-H','authorization: Bearer '+token] if token else []
- r=subprocess.run(['docker','run','--rm','--network','arqui-integracion_default','-v',PROTO+':/protos:ro','fullstorydev/grpcurl:v1.9.3','-plaintext','-import-path','/protos','-proto','reconstruccion.proto',*cabecera,'-d',json.dumps(cuerpo),'reconstruccion:9096','pgdr.reconstruccion.v1.ReconstruccionService/'+metodo],capture_output=True,text=True,encoding='utf-8')
+ r=subprocess.run(['docker','run','--rm','--network',os.environ.get('COMPOSE_PROJECT_NAME','arqui-integracion')+'_default','-v',PROTO+':/protos:ro','fullstorydev/grpcurl:v1.9.3','-plaintext','-import-path','/protos','-proto','reconstruccion.proto',*cabecera,'-d',json.dumps(cuerpo),'reconstruccion:9096','pgdr.reconstruccion.v1.ReconstruccionService/'+metodo],capture_output=True,text=True,encoding='utf-8')
  return r.returncode,(r.stdout+r.stderr)
 rc,out=grpc('ConsultarSeguimiento',{'desastre_id':did},t)
 check(rc==0 and puente in out and 'FINALIZADO' in out,'gRPC ConsultarSeguimiento responde con el token del núcleo',out[:300])

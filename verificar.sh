@@ -1,11 +1,19 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")"
-python3 servidor/scripts/esperar_api.py
-python3 servidor/scripts/verificar_api.py
-python3 servidor/scripts/verificar_integracion.py
+# Python en modo UTF-8 para que los scripts lean bien los acentos también en Windows.
+export PYTHONUTF8=1
+# En Windows "python3" puede ser solo el acceso directo de la tienda: se usa el que funcione.
+PY=python3
+"$PY" -c "import sys" 2>/dev/null || PY=python
+"$PY" servidor/scripts/esperar_api.py
+"$PY" servidor/scripts/verificar_api.py
+"$PY" servidor/scripts/verificar_integracion.py
 if [ "${CAMPO_DIFERIDA:-false}" = "true" ]; then
-    python3 servidor/scripts/verificar_campo.py --url "${MAPAS_URL:-http://127.0.0.1:18085}" --diferida
+    "$PY" servidor/scripts/verificar_campo.py --url "${MAPAS_URL:-http://127.0.0.1:18085}" --diferida
 else
-    python3 servidor/scripts/verificar_campo.py --url "${MAPAS_URL:-http://127.0.0.1:18085}"
+    "$PY" servidor/scripts/verificar_campo.py --url "${MAPAS_URL:-http://127.0.0.1:18085}"
 fi
+"$PY" servidor/scripts/verificar_reconstruccion.py
+"$PY" servidor/scripts/verificar_evolucion.py
+"$PY" servidor/scripts/verificar_unificacion.py

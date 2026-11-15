@@ -50,6 +50,13 @@ def desastre_rec(token=t):
 def catalogo():
  s,b=req('GET','/desastres',token=t);check(s==200,'catálogo de la plataforma',(s,b))
  return [x['desastre'] for x in b['desastres'] if x['desastre']['id']==d['id']][0]
+def catalogo_hasta(condicion,segundos=20):
+ # servidor guarda una copia de lectura del catálogo del núcleo (ADR-03): se espera a que converja.
+ for _ in range(segundos*2):
+  c=catalogo()
+  if condicion(c):return c
+  time.sleep(0.5)
+ return c
 dr=desastre_rec();did=dr['id']
 check(dr['estado']=='REGISTRO','el desastre nace en fase Registro',dr)
 s,b=req('POST',R+f'/desastres/{did}/iniciar-reconstruccion',token=t);check(s==422 and b.get('regla')=='RN-01','no se inicia reconstrucción desde Registro (RN-01)',(s,b))
@@ -67,7 +74,7 @@ I=R+f'/desastres/{did}/iniciar-reconstruccion'
 s,b=req('POST',I,token=cons);check(s==403,'consulta no inicia la reconstrucción',(s,b))
 s,b=req('POST',I,token=cons,extra={'X-Rol':'AUTORIDAD','X-Usuario':'falso'});check(s==403,'falsificar el rol en una cabecera no da permisos',(s,b))
 s,b=req('POST',I,token=t);check(s==200 and b['estado']=='RECONSTRUCCION','la autoridad inicia la reconstrucción (CU-01)',(s,b))
-check(catalogo().get('fase')=='RECONSTRUCCION','la fase quedó guardada en el núcleo')
+c2=catalogo_hasta(lambda c:c.get('fase')=='RECONSTRUCCION');check(c2.get('fase')=='RECONSTRUCCION','la fase quedó guardada en el núcleo',c2)
 s,b=req('GET',f"/desastres/{d['id']}/historial",token=t);check(s==200 and [x['nuevo'].get('fase') for x in b][-2:]==['CARACTERIZACION','RECONSTRUCCION'],'el historial del núcleo conserva los cambios de fase',(s,b))
 # --- CU-02 ---
 s,b=req('GET',R+f'/desastres/{did}/evaluaciones',token=t);check(s==200 and {x['id'] for x in b}>=set(ev.values()),'el módulo lee las evaluaciones de servidor',(s,b))
@@ -91,6 +98,8 @@ s,b=req('POST',P+'/presupuesto',{'presupuesto':650000000,'motivo':''},t);check(s
 s,b=req('POST',P+'/presupuesto',{'presupuesto':650000000,'motivo':'Mayor cantidad de obra'},t);check(s==200,'la autoridad modifica el presupuesto con motivo (CU-06)',(s,b))
 s,b=req('POST',P+'/estado',{'estado':'FINALIZADO','motivo':''},resp);check(s==422,'no se finaliza con avance menor que 100 (RN-15)',(s,b))
 s,b=req('POST',P+'/avance',{'porcentaje':100,'descripcion':'Obra entregada'},resp);check(s==200,'avance al 100 %',(s,b))
+s,b=req('POST',P+'/estado',{'estado':'FINALIZADO','motivo':''},resp);check(s==422 and b.get('regla')=='RN-15','no se finaliza sin evidencia (RN-15)',(s,b))
+s,b=req('POST',P+'/evidencia',{'descripcion':'Acta de entrega de obra n.º 1'},resp);check(s==200,'el responsable adjunta la evidencia (CU-05)',(s,b))
 s,b=req('POST',P+'/estado',{'estado':'FINALIZADO','motivo':''},resp);check(s==200 and b['estado']=='FINALIZADO','el responsable finaliza el proyecto (CU-07)',(s,b))
 # --- CU-08 ---
 s,b=req('GET',P,token=cons);check(s==200 and b['estado']=='FINALIZADO','consulta ve el proyecto de su organismo (CU-08)',(s,b))
@@ -101,7 +110,7 @@ K=R+f'/desastres/{did}/cerrar'
 s,b=req('POST',K,token=t);check(s==422 and b.get('regla')=='RN-04','no se cierra con proyectos sin terminar (RN-04)',(s,b))
 s,b=req('POST',R+'/proyectos/'+escuela+'/estado',{'estado':'CANCELADO','motivo':'Se atenderá con otro programa'},t);check(s==200 and b['estado']=='CANCELADO','la autoridad cancela un proyecto propuesto',(s,b))
 s,b=req('POST',K,token=t);check(s==200 and b['estado']=='CIERRE','la autoridad cierra el desastre (CU-09)',(s,b))
-check(catalogo().get('fase')=='CIERRE','el cierre quedó guardado en el núcleo')
+c3=catalogo_hasta(lambda c:c.get('fase')=='CIERRE');check(c3.get('fase')=='CIERRE','el cierre quedó guardado en el núcleo',c3)
 # --- Avisos en RabbitMQ ---
 def pendientes():return int(subprocess.check_output(C+['exec','-T','reconstruccion-db','psql','-At','-U','reconstruccion','-d','reconstruccion','-c','SELECT count(*) FROM outbox_eventos WHERE publicado_en IS NULL'],text=True).strip())
 for _ in range(20):
@@ -114,4 +123,18 @@ for _ in range(15):
  if cola.get('messages',0)>0:break
  time.sleep(1)
 check(cola.get('messages',0)>0,'los avisos llegaron a la cola de integración en RabbitMQ',cola.get('messages'))
+# --- gRPC con un cliente real (grpcurl en un contenedor de la misma red) ---
+PROTO=str(Path(__file__).resolve().parents[2]/'reconstruccion'/'backend'/'src'/'main'/'proto')
+def grpc(metodo,cuerpo,token=None):
+ cabecera=['-H','authorization: Bearer '+token] if token else []
+ r=subprocess.run(['docker','run','--rm','--network','arqui-integracion_default','-v',PROTO+':/protos:ro','fullstorydev/grpcurl:v1.9.3','-plaintext','-import-path','/protos','-proto','reconstruccion.proto',*cabecera,'-d',json.dumps(cuerpo),'reconstruccion:9096','pgdr.reconstruccion.v1.ReconstruccionService/'+metodo],capture_output=True,text=True,encoding='utf-8')
+ return r.returncode,(r.stdout+r.stderr)
+rc,out=grpc('ConsultarSeguimiento',{'desastre_id':did},t)
+check(rc==0 and puente in out and 'FINALIZADO' in out,'gRPC ConsultarSeguimiento responde con el token del núcleo',out[:300])
+rc,out=grpc('ConsultarSeguimiento',{'desastre_id':did})
+check(rc!=0 and 'Unauthenticated' in out,'gRPC sin token responde Unauthenticated',out[:300])
+rc,out=grpc('ConsultarSeguimiento',{'desastre_id':did},'token-inventado')
+check(rc!=0 and 'Unauthenticated' in out,'gRPC con un token inventado responde Unauthenticated',out[:300])
+rc,out=grpc('AprobarProyecto',{'proyecto_id':escuela,'presupuesto':'1','fuente_financiacion':'x','responsable':'y'},cons)
+check(rc!=0 and 'PermissionDenied' in out,'gRPC respeta los roles (consulta no aprueba)',out[:300])
 print(f'\nReconstrucción integrada: {total} comprobaciones correctas.')

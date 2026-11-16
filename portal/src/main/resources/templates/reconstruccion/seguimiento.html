@@ -25,8 +25,8 @@
   <section class="cifras">
     <div><strong th:text="${s.proyectosCount}">0</strong><span>proyectos</span></div>
     <div><strong th:text="${s.avancePonderado} + ' %'">0 %</strong><span>avance ponderado por presupuesto</span></div>
-    <div><strong th:text="${s.presupuestoTotal}">0</strong><span>presupuesto total</span></div>
-    <div><strong th:text="${s.costoTotal}">0</strong><span>costo ejecutado</span></div>
+    <div><strong th:text="${@formato.dinero(s.presupuestoTotal)}">0</strong><span>presupuesto total</span></div>
+    <div><strong th:text="${@formato.dinero(s.costoTotal)}">0</strong><span>costo ejecutado</span></div>
     <div><strong th:text="${s.conSobrecosto}">0</strong><span>con sobrecosto</span></div>
   </section>
 
@@ -41,8 +41,8 @@
       <td th:text="${p.tipo}">REPARACION</td>
       <td><span class="estado" th:text="${p.estado}">PROPUESTO</span></td>
       <td><progress max="100" th:value="${p.avance}"></progress> <span th:text="${p.avance} + ' %'">0 %</span></td>
-      <td th:text="${p.presupuesto == '' ? '—' : p.presupuesto}">—</td>
-      <td th:text="${p.costoAcumulado}">0</td>
+      <td th:text="${@formato.dinero(p.presupuesto)}">—</td>
+      <td th:text="${@formato.dinero(p.costoAcumulado)}">0</td>
       <td th:text="${p.responsable == '' ? '—' : p.responsable}">—</td>
     </tr>
     </tbody>

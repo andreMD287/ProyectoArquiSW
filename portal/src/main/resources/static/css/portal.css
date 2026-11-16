@@ -75,3 +75,5 @@ fieldset { border: 1px solid var(--borde); border-radius: 8px; padding: .6rem .9
 .foto img { max-width: 100%; border-radius: 10px; border: 1px solid var(--borde); }
 progress { width: 90px; vertical-align: middle; }
 @media (max-width: 860px) { .tablero { grid-template-columns: 1fr; } .quien { margin-left: 0; } }
+.fuentes .tabla td { white-space: nowrap; font-size: .8rem; }
+.fuentes .tabla { display: block; overflow-x: auto; }

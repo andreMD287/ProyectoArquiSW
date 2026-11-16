@@ -15,8 +15,8 @@
 
   <section class="cifras">
     <div><strong th:text="${p.avance} + ' %'">0 %</strong><span>avance</span></div>
-    <div><strong th:text="${p.presupuesto == '' ? '—' : p.presupuesto}">—</strong><span>presupuesto</span></div>
-    <div><strong th:text="${p.costoAcumulado}">0</strong><span>costo acumulado</span></div>
+    <div><strong th:text="${@formato.dinero(p.presupuesto)}">—</strong><span>presupuesto</span></div>
+    <div><strong th:text="${@formato.dinero(p.costoAcumulado)}">0</strong><span>costo acumulado</span></div>
     <div><strong th:text="${p.responsable == '' ? '—' : p.responsable}">—</strong><span>responsable</span></div>
     <div><strong th:text="${p.contratista == '' ? '—' : p.contratista}">—</strong><span>contratista</span></div>
   </section>
@@ -114,7 +114,7 @@
     <thead><tr><th>Momento</th><th>Tipo</th><th>Valor</th><th>Descripción</th><th>Usuario</th></tr></thead>
     <tbody><tr th:each="x : ${p.seguimientoList}">
       <td th:text="${#strings.substring(x.momento + '                ', 0, 16)}">fecha</td><td th:text="${x.tipo}">AVANCE</td>
-      <td th:text="${x.valor}">60</td><td th:text="${x.descripcion}">texto</td><td th:text="${x.usuario}">usuario</td>
+      <td th:text="${x.tipo == 'COSTO' ? @formato.dinero(x.valor) : (x.tipo == 'AVANCE' ? x.valor + ' %' : '')}">60</td><td th:text="${x.descripcion}">texto</td><td th:text="${x.usuario}">usuario</td>
     </tr></tbody>
   </table>
 

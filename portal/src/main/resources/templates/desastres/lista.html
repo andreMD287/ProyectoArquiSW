@@ -26,7 +26,7 @@
       <td th:text="${d.path('ubicacion').asText()}">Lugar</td>
       <td><span class="nivel" th:classappend="${'nivel-' + d.path('nivel').asInt(0)}" th:text="${d.path('severidad').asText()}">ALTA</span></td>
       <td><span th:replace="~{fragmentos :: fase(${d.path('fase').asText('REGISTRO')})}"></span></td>
-      <td th:text="${d.has('radioKm') ? 'Radio ' + d.path('radioKm').asText() + ' km' : 'Sin caracterizar'}">—</td>
+      <td th:text="${d.has('radioKm') ? 'Radio ' + @formato.decimal(d.path('radioKm').asText(), 1) + ' km' : 'Sin caracterizar'}">—</td>
       <td><a th:href="@{/desastres/{r}(r=${d.path('id').asText()})}">Tablero</a></td>
     </tr>
     </tbody>

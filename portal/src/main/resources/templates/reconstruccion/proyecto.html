@@ -25,7 +25,7 @@
     <!-- Autoridad (COORDINADOR) -->
     <section class="tarjeta" th:if="${sesion.esCoordinador() and p.estado == 'PROPUESTO'}">
       <h2>Aprobar</h2>
-      <p class="tenue">Quien formuló el proyecto no puede aprobarlo (RN-19).</p>
+      <p class="tenue">Quien formuló el proyecto no puede aprobarlo (RN-20).</p>
       <form method="post" th:action="@{/reconstruccion/{r}/proyectos/{id}/aprobar(r=${ref},id=${p.id})}" class="formulario">
         <input type="hidden" name="version" th:value="${p.version}">
         <label>Presupuesto <input name="presupuesto" type="number" min="1" step="0.01" required></label>

@@ -1,95 +1,77 @@
-# Módulo de Reconstrucción
+# Módulo de Reconstrucción (UD-06)
 
-Implementación del módulo de Reconstrucción de la Plataforma para la Gestión de Desastres y Reconstrucción: casos de uso CU-01 a CU-09 y reglas RN-01 a RN-19, con arquitectura clean.
+Reconstrucción física de la Plataforma para la Gestión de Desastres y Reconstrucción. Cubre los casos de uso CU-01 a CU-09 y las reglas de negocio RN-01 a RN-21, con arquitectura limpia (hexagonal). Solo maneja activos físicos (viviendas, vías, puentes, escuelas…): no guarda datos de personas.
 
-- Backend: Java 17, Spring Boot 3.3, gRPC, PostgreSQL.
-- Interfaz: React 18 con Vite.
-- La justificación de cada tecnología está en `DECISIONES_TECNOLOGIA.md`.
+**Tecnología:** Java 17, Spring Boot 3.3, REST y gRPC, PostgreSQL. La justificación está en `DECISIONES_TECNOLOGIA.md` y en el ADR-26 del SAD.
 
-## Cómo ejecutarlo
+**Dos modos de ejecución:**
 
-Con Docker (recomendado):
+- **Integrado** (el que se entrega): corre dentro de la plataforma con `./iniciar.sh` desde `integracion/`. Valida el token contra el núcleo, lee los desastres del núcleo y las evaluaciones de `servidor`, y publica avisos en RabbitMQ. Su interfaz es el portal web (UD-09), que lo llama por gRPC.
+- **Independiente** (el taller original): `docker compose up --build` en esta carpeta. Usa datos de ejemplo, la interfaz React de `web/` y las cabeceras `X-Usuario`, `X-Rol` y `X-Organizacion` en lugar del token.
 
-```bash
-docker compose up --build
-```
+## Cómo probarlo
 
-| Qué | Dirección |
-| --- | --- |
-| Interfaz web | http://localhost:8087 |
-| API REST | http://localhost:8086/api/reconstruccion |
-| gRPC | localhost:9096 |
-
-La primera construcción descarga las dependencias de Maven y de npm, y corre las 25 pruebas del backend.
-
-Sin Docker (necesita Java 17 o superior, Maven y Node 20 o superior):
-
-```bash
-cd backend && mvn spring-boot:run      # usa H2 en memoria, no necesita PostgreSQL
-cd web && npm install && npm run dev   # interfaz en http://localhost:5173
-```
-
-Solo las pruebas de las reglas:
+Solo las reglas (31 pruebas unitarias, dominio y casos de uso en memoria):
 
 ```bash
 cd backend && mvn test
 ```
 
-## Recorrido de demostración (escenario E del enunciado)
+De punta a punta, dentro de la plataforma, desde `integracion/`. Son unas 80 comprobaciones: sesión, fases, reglas, versión esperada, eventos y gRPC con `grpcurl`:
 
-La interfaz trae cuatro usuarios de ejemplo en el selector de arriba a la derecha y un desastre con ocho evaluaciones de daño.
-
-1. Como **Carlos (autoridad)**, en «Sismo del Eje Cafetero 2026» pulse **Iniciar reconstrucción**. El desastre pasa de Caracterización a Reconstrucción (CU-01).
-2. Marque varias evaluaciones, incluida «Acueducto veredal», que está sin validar, y pulse **Crear proyectos**. Se crean los válidos y el inválido se reporta con RN-02 (CU-02, RN-18).
-3. Abra un proyecto y apruébelo con presupuesto, fuente de financiación y responsable (CU-03).
-4. Cambie a **Ana (responsable)**, abra el proyecto e inicie la ejecución con contratista y fechas (CU-04).
-5. Registre avance, un costo mayor que el presupuesto y una evidencia. El proyecto queda marcado con sobrecosto sin bloquear el registro (CU-05, RN-14).
-6. Vuelva a **Carlos** y modifique el presupuesto sin motivo: se rechaza con RN-12 y el intento aparece en la auditoría como rechazado. Repítalo con motivo (CU-06, RN-17).
-7. Como **Ana**, lleve el avance a 100 % y pulse **Finalizar** (CU-07, RN-15).
-8. Como **Luisa (auditora)**, revise la auditoría del proyecto (CU-08).
-9. Como **Carlos**, pulse **Cerrar desastre**: se rechaza con RN-04 mientras queden proyectos sin finalizar ni cancelar (CU-09).
-10. Como **Pedro (otra organización)**, compruebe que no ve los proyectos de la UNGRD (RN-10).
+```bash
+python servidor/scripts/verificar_reconstruccion.py
+```
 
 ## Estructura
 
 ```text
-reconstruccion/
-  backend/
-    src/main/java/com/pgdr/reconstruccion/
-      dominio/                    capa 1: entidades y reglas, sin framework
-      aplicacion/casosdeuso/      capa 2: un caso de uso por clase
-      aplicacion/puertos/         capa 2: interfaces hacia afuera
-      adaptadores/entrada/grpc/   capa 3: servicio gRPC
-      adaptadores/entrada/rest/   capa 3: API REST para la web
-      adaptadores/salida/persistencia/   capa 3: PostgreSQL, auditoría, eventos
-      infraestructura/            capa 4: configuración y datos de ejemplo
-    src/main/proto/reconstruccion.proto   contrato gRPC
-    src/main/resources/schema.sql         tablas
-    src/test/java/...                     pruebas de las reglas y dobles en memoria
-  web/                            interfaz React
-  compose.yaml
+backend/src/main/java/com/pgdr/reconstruccion/
+  dominio/                         capa 1: entidades y reglas, sin framework
+  aplicacion/casosdeuso/           capa 2: un caso de uso por clase
+  aplicacion/puertos/              capa 2: interfaces hacia afuera
+  adaptadores/entrada/rest/        capa 3: API REST y filtro de sesión
+  adaptadores/entrada/grpc/        capa 3: servicio gRPC e interceptor de sesión
+  adaptadores/salida/persistencia/ capa 3: PostgreSQL, auditoría y bandeja de salida
+  adaptadores/salida/plataforma/   capa 3: núcleo (desastres y fase) y servidor (evaluaciones)
+  adaptadores/salida/mensajeria/   capa 3: despacho de la bandeja de salida a RabbitMQ
+  infraestructura/                 capa 4: configuración
+backend/src/main/proto/reconstruccion.proto   contrato gRPC (el portal tiene una copia idéntica)
+backend/src/main/resources/schema.sql         tablas
 ```
 
-Regla de dependencia: `dominio` no importa nada de las otras carpetas; `aplicacion` solo importa `dominio`; los adaptadores importan `aplicacion` y `dominio`. Ninguna clase de `dominio` ni de `aplicacion` importa Spring, gRPC ni JDBC.
+**Regla de dependencia:** `dominio` no importa nada de las otras carpetas, y `aplicacion` solo importa `dominio`. Ninguna clase de esas dos capas importa Spring, gRPC ni JDBC.
 
 ## Dónde está cada regla
 
-| Regla | Clase |
-| --- | --- |
-| RN-01, RN-02 | `IniciarReconstruccion`, `EstadoDesastre`, `EvaluacionDano` |
-| RN-03 a RN-05 | `CerrarDesastre`, `EstadoDesastre` |
-| RN-06, RN-09, RN-18 | `CrearProyectos` |
-| RN-07, RN-08 | `Proyecto.proponer` |
-| RN-10 | `CasoDeUso.autorizar` y `CasoDeUso.cargarProyecto` |
-| RN-11 a RN-16 | `Proyecto`, `EstadoProyecto` |
-| RN-17 | `CasoDeUso.ejecutarAuditado`, `UnidadDeTrabajoSpring`, `AuditoriaJdbc` |
-| RN-19 | El módulo no tiene operaciones de pago; solo publica eventos en `BandejaDeSalidaJdbc` |
+| Regla | Qué exige | Dónde |
+| --- | --- | --- |
+| RN-01, RN-02 | Se entra a Reconstrucción desde Caracterización, con al menos una evaluación validada con daño moderado o superior | `IniciarReconstruccion` |
+| RN-03 a RN-05 | Se cierra desde Reconstrucción, sin proyectos abiertos; Cierre es terminal | `CerrarDesastre` |
+| RN-06, RN-18 | Proyectos solo en Reconstrucción; el lote crea los válidos y reporta los demás | `CrearProyectos` |
+| RN-07, RN-08 | El proyecto nace de evaluaciones del mismo desastre; destrucción total implica Reconstrucción | `Proyecto.proponer` |
+| RN-09 | Una evaluación origina a lo sumo un proyecto activo. Lo garantiza la base: tabla `evaluaciones_tomadas` | `CrearProyectos`, `RepositorioProyectosJdbc` |
+| RN-10 | Rol y organismo | `CasoDeUso.autorizar`, `CasoDeUso.cargarProyecto` |
+| RN-11 a RN-16 | Datos por estado, presupuesto, avance, sobrecosto, finalizar (100 %, evidencia y sin sobrecosto) y transiciones | `Proyecto`, `EstadoProyecto` |
+| RN-17 | Auditoría de cambios y de intentos rechazados | `CasoDeUso.ejecutarAuditado`, `AuditoriaJdbc` |
+| RN-19 | El módulo no tiene operaciones de pago; solo publica eventos | `BandejaDeSalidaJdbc` |
+| RN-20 | Quien formula un proyecto no puede aprobarlo | `Proyecto.aprobar` |
+| RN-21 | Solo el responsable asignado opera el proyecto, y cancelar es solo de la autoridad | `CasoDeUso.exigirResponsableAsignado`, `CambiarEstado` |
 
-## API REST
+**Concurrencia:**
+- Control optimista al guardar.
+- Además, versión esperada de punta a punta: `If-Match` en REST y `version_esperada` en gRPC. Si otro usuario cambió el proyecto, responde 409 o `ABORTED`.
 
-Todas las solicitudes llevan las cabeceras `X-Usuario`, `X-Rol` (`AUTORIDAD`, `RESPONSABLE` o `AUDITOR`) y `X-Organizacion`.
+**Avisos:**
+- Usan la bandeja de salida, en la misma transacción del cambio.
+- Se despachan a RabbitMQ: intercambio `reconstruccion.eventos`, cola `integracion.reconstruccion`.
+- Siguen el contrato C5. Hay ejemplos en `../evidencias/rol1-reconstruccion/ejemplos_eventos_C5.json`.
 
-| Método y ruta (bajo `/api/reconstruccion`) | Caso de uso |
+## API REST (bajo `/api/reconstruccion`)
+
+En modo integrado, cada solicitud lleva `Authorization: Bearer <token>`.
+
+| Método y ruta | Caso de uso |
 | --- | --- |
 | `GET /desastres` | CU-08 |
 | `POST /desastres/{id}/iniciar-reconstruccion` | CU-01 |
@@ -103,29 +85,24 @@ Todas las solicitudes llevan las cabeceras `X-Usuario`, `X-Rol` (`AUTORIDAD`, `R
 | `GET /desastres/{id}/seguimiento`, `GET /proyectos/{id}`, `GET /proyectos/{id}/auditoria`, `GET /desastres/{id}/auditoria` | CU-08 |
 | `POST /desastres/{id}/cerrar` | CU-09 |
 
-Errores: 422 con el código de la regla (`RN-xx`), 403 por rol u organización, 404 si no existe, 409 por cambio simultáneo y 400 por solicitud mal formada.
+**Errores:** 422 con el código de la regla (`RN-xx`), 403 por rol u organización, 404 si no existe, 409 por cambio simultáneo o versión vieja, y 400 por una solicitud mal formada.
 
-## gRPC
+## gRPC (puerto 9096)
 
-El contrato está en `backend/src/main/proto/reconstruccion.proto`. Ejemplo con `grpcurl`:
+Son 14 RPC: los nueve casos de uso, más `ConsultarEvaluaciones`. El portal web es su cliente. En modo integrado, el token va en el metadato `authorization`.
+
+Ejemplo con `grpcurl` desde la red de Docker, en el ambiente integrado:
 
 ```bash
-grpcurl -plaintext -import-path backend/src/main/proto -proto reconstruccion.proto \
-  -d '{"identidad":{"usuario":"carlos","rol":"AUTORIDAD","organizacion":"UNGRD"},"desastre_id":"11111111-1111-1111-1111-111111111111"}' \
-  localhost:9096 pgdr.reconstruccion.v1.ReconstruccionService/ConsultarSeguimiento
+docker run --rm --network arqui-integracion_default -v "$PWD/backend/src/main/proto:/protos" fullstorydev/grpcurl:v1.9.3 -plaintext -import-path /protos -proto reconstruccion.proto -H "authorization: Bearer $TOKEN" -d '{"desastre_id":"<uuid>"}' reconstruccion:9096 pgdr.reconstruccion.v1.ReconstruccionService/ConsultarSeguimiento
 ```
 
-Errores: `FAILED_PRECONDITION` para una regla de negocio, `PERMISSION_DENIED`, `NOT_FOUND`, `ABORTED` por cambio simultáneo e `INVALID_ARGUMENT`.
+**Errores:** `FAILED_PRECONDITION` por una regla de negocio, `PERMISSION_DENIED`, `UNAUTHENTICATED`, `NOT_FOUND`, `ABORTED` por cambio simultáneo e `INVALID_ARGUMENT`.
 
-## Estado de verificación (13 de noviembre de 2026)
+## Estado de verificación (15 de noviembre de 2026)
 
 | Parte | Estado |
 | --- | --- |
-| `docker compose up --build` | Ejecutado: construye, corre las 25 pruebas del backend y levanta base de datos, backend e interfaz |
-| Dominio y casos de uso (capas 1 y 2) | Las 25 pruebas pasan |
-| API REST, persistencia en PostgreSQL y configuración Spring | Probadas contra el sistema corriendo: 29 comprobaciones de CU-01 a CU-08 y de las reglas RN-01, RN-02, RN-04 y RN-06 a RN-18, todas correctas |
-| Interfaz React | Carga contra el backend real y muestra desastres, evaluaciones, proyectos, seguimiento y auditoría |
-| Servicio gRPC | Compila y queda registrado en el puerto 9096; no se ha invocado con un cliente |
-| Cierre exitoso del desastre (CU-09) | Probado solo el rechazo por RN-04; el cierre con todos los proyectos terminados no se ha ejecutado contra el sistema corriendo |
-
-`iniciar.command` hace el arranque con doble clic y deja la salida en `arranque.log`.
+| Dominio y casos de uso | 31 pruebas unitarias pasan |
+| Integrado con la plataforma | `verificar_reconstruccion.py` pasa: sesión, fases protegidas, reglas RN-01 a RN-21, versión esperada, avisos C5 y gRPC (con token, sin token, con token inventado y con un rol sin permiso) |
+| Portal como cliente gRPC | `verificar_portal.py` pasa: crear, aprobar a dos manos, ejecutar y finalizar desde el portal |

@@ -6,7 +6,7 @@ test_05_geojson_malformado (__main__.ApiTests.test_05_geojson_malformado) ... ok
 test_06_actualizacion_concurrente (__main__.ApiTests.test_06_actualizacion_concurrente) ... ok
 
 ----------------------------------------------------------------------
-Ran 6 tests in 1.871s
+Ran 6 tests in 2.046s
 
 OK
 test_01_campo_en_panorama_calor_geojson_y_detalle (__main__.IntegracionTests.test_01_campo_en_panorama_calor_geojson_y_detalle) ... ok
@@ -15,23 +15,23 @@ test_03_preliminar_y_foto (__main__.IntegracionTests.test_03_preliminar_y_foto) 
 test_04_importacion_no_pierde_evaluaciones (__main__.IntegracionTests.test_04_importacion_no_pierde_evaluaciones) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 0.773s
+Ran 4 tests in 0.625s
 
 OK
 OK modo inmediato: lote mixto, foto, conflictos, reintento y consulta.
-Observación local: acuse 49 ms, consulta completa 95 ms.
+Observación local: acuse 64 ms, consulta completa 114 ms.
 OK: login coordinador_demo
 OK: sin sesión responde 401
 OK: las cabeceras de identidad sin token no sirven
 OK: un token inventado responde 401
 OK: crear usuario EVALUADOR
-OK: login rec_evaluador_23776ee1b6
+OK: login rec_evaluador_a64673cbae
 OK: crear usuario CONSULTA
-OK: login rec_consulta_23776ee1b6
+OK: login rec_consulta_a64673cbae
 OK: crear usuario COORDINADOR
-OK: login rec_coordinador_23776ee1b6
+OK: login rec_coordinador_a64673cbae
 OK: crear usuario EVALUADOR
-OK: login rec_evaluador2_23776ee1b6
+OK: login rec_evaluador2_a64673cbae
 OK: desastre registrado en el núcleo
 OK: evaluación puente capturada en servidor
 OK: evaluación escuela capturada en servidor
@@ -49,6 +49,7 @@ OK: una versión base vieja responde 409
 OK: el módulo lista los desastres del núcleo
 OK: el desastre aparece una vez en el módulo
 OK: el módulo ve la fase nueva del núcleo
+OK: el coordinador no puede pasar a Reconstrucción llamando directo al núcleo
 OK: consulta no inicia la reconstrucción
 OK: falsificar el rol en una cabecera no da permisos
 OK: la autoridad inicia la reconstrucción (CU-01)
@@ -56,19 +57,21 @@ OK: catálogo de la plataforma
 OK: catálogo de la plataforma
 OK: la fase quedó guardada en el núcleo
 OK: el historial del núcleo conserva los cambios de fase
+OK: tampoco puede cerrar un desastre en Reconstrucción llamando directo al núcleo
 OK: el módulo lee las evaluaciones de servidor
 OK: el nivel de afectación se traduce a categoría de daño
 OK: el responsable no crea proyectos
 OK: el lote crea los válidos y reporta los demás (CU-02, RN-18)
 OK: daño leve se rechaza con RN-02 y evaluación inexistente con RN-07
 OK: una evaluación no origina dos proyectos activos (RN-09)
-OK: quien formuló el proyecto no lo aprueba (RN-19)
+OK: quien formuló el proyecto no lo aprueba (RN-20)
 OK: otra autoridad aprueba el proyecto (CU-03)
 OK: el proyecto guarda al formulador y el tipo de activo físico
 OK: consulta no inicia la ejecución
 OK: el responsable inicia la ejecución (CU-04)
-OK: un responsable no asignado no registra avance (RN-20)
-OK: el responsable registra avance (CU-05)
+OK: un responsable no asignado no registra avance (RN-21)
+OK: el responsable registra avance con la versión que vio (CU-05)
+OK: con una versión vieja (If-Match) el cambio se rechaza con 409
 OK: un costo mayor que el presupuesto se registra y marca sobrecosto (RN-14)
 OK: el presupuesto no cambia sin motivo (RN-12)
 OK: la autoridad modifica el presupuesto con motivo (CU-06)
@@ -97,7 +100,7 @@ OK: gRPC sin token responde Unauthenticated
 OK: gRPC con un token inventado responde Unauthenticated
 OK: gRPC respeta los roles (consulta no aprueba)
 
-Reconstrucción integrada: 76 comprobaciones correctas.
+Reconstrucción integrada: 79 comprobaciones correctas.
 OK: login único
 OK: registrar desastre
 OK: destinatario de avisos
@@ -129,22 +132,22 @@ OK: solicitud conserva instantánea de origen aunque cambie la evaluación
 OK: reintento posterior a otra corrección recupera solicitud original sin duplicar
 OK: consulta no corrige evaluaciones
 OK: consulta no cambia gravedad
-OK: aislamiento nuevo flujo GET /campo/evaluaciones/3b46b33f-4339-4981-ad02-7a05148ceebb/historial
-OK: aislamiento nuevo flujo PUT /campo/evaluaciones/3b46b33f-4339-4981-ad02-7a05148ceebb
-OK: aislamiento nuevo flujo POST /campo/evaluaciones/3b46b33f-4339-4981-ad02-7a05148ceebb/solicitudes
-OK: aislamiento nuevo flujo GET /desastres/EVOLUCION-4b6a6501/historial
+OK: aislamiento nuevo flujo GET /campo/evaluaciones/1a0b945b-51da-4305-8165-862fe09568d6/historial
+OK: aislamiento nuevo flujo PUT /campo/evaluaciones/1a0b945b-51da-4305-8165-862fe09568d6
+OK: aislamiento nuevo flujo POST /campo/evaluaciones/1a0b945b-51da-4305-8165-862fe09568d6/solicitudes
+OK: aislamiento nuevo flujo GET /desastres/EVOLUCION-898ca756/historial
 OK: SOAP rechaza credenciales inválidas
 OK: token SOAP funciona en mapas REST
 OK: logout SOAP revoca sesión REST
-{"resultado": "APROBADO", "desastre": "EVOLUCION-4b6a6501", "evaluacion": "3b46b33f-4339-4981-ad02-7a05148ceebb", "solicitud": 7}
+{"resultado": "APROBADO", "desastre": "EVOLUCION-898ca756", "evaluacion": "1a0b945b-51da-4305-8165-862fe09568d6", "solicitud": 10}
 OK: mapas requieren sesión
 OK: catálogo requiere sesión
 OK: clave incorrecta rechazada
 OK: login coordinador_demo
 OK: crear rol EVALUADOR
-OK: login evaluador_2d710e11b7
+OK: login evaluador_762389af5b
 OK: crear rol CONSULTA
-OK: login consulta_2d710e11b7
+OK: login consulta_762389af5b
 OK: suscripción del organismo
 OK: evaluador no crea desastre
 OK: consulta no crea desastre
@@ -160,15 +163,15 @@ OK: identidad procede del token, no del JSON
 OK: foto conservada y autorizada
 OK: foto no es pública
 OK: reintento móvil idéntico no duplica
-OK: mapa/calor/GeoJSON /api/panorama?eventoId=UNIFICADO-2d710e11b7
-OK: mapa/calor/GeoJSON /api/campo/sitios?eventoId=UNIFICADO-2d710e11b7
-OK: mapa/calor/GeoJSON /api/panorama/geojson?eventoId=UNIFICADO-2d710e11b7
+OK: mapa/calor/GeoJSON /api/panorama?eventoId=UNIFICADO-762389af5b
+OK: mapa/calor/GeoJSON /api/campo/sitios?eventoId=UNIFICADO-762389af5b
+OK: mapa/calor/GeoJSON /api/panorama/geojson?eventoId=UNIFICADO-762389af5b
 OK: DAL original conserva creación
 OK: evaluador no modifica puntos de coordinación
-OK: login otro_2d710e11b7
-OK: aislamiento de detalle /api/campo/evaluaciones/a21406d6-3fab-4364-bb80-48203456d7f3
-OK: aislamiento de detalle /api/campo/evaluaciones/a21406d6-3fab-4364-bb80-48203456d7f3/foto
-OK: aislamiento de detalle /api/afectaciones/a37d6bd2-1b1f-421b-bdae-15cf48775f8e
+OK: login otro_762389af5b
+OK: aislamiento de detalle /api/campo/evaluaciones/d21d4708-0363-491e-a3b4-a0f67d2f3729
+OK: aislamiento de detalle /api/campo/evaluaciones/d21d4708-0363-491e-a3b4-a0f67d2f3729/foto
+OK: aislamiento de detalle /api/afectaciones/b046f424-6fb0-48bd-bd88-5779b7d1b6c5
 OK: aislamiento de consulta /api/desastres
 OK: aislamiento de consulta /api/panorama
 OK: aislamiento de consulta /api/campo/sitios
@@ -199,7 +202,7 @@ OK: logout integrado
 OK: token revocado no accede a mapas
 OK: logout integrado
 OK: token revocado no accede a mapas
-{"resultado": "APROBADO", "desastre": "UNIFICADO-2d710e11b7", "evaluacion": "a21406d6-3fab-4364-bb80-48203456d7f3", "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e"}
+{"resultado": "APROBADO", "desastre": "UNIFICADO-762389af5b", "evaluacion": "d21d4708-0363-491e-a3b4-a0f67d2f3729", "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e"}
 OK: login del coordinador
 OK: crear usuario EVALUADOR
 OK: crear usuario CONSULTA
@@ -227,9 +230,9 @@ OK: el coordinador ve la lista y puede registrar
 OK: el coordinador crea un usuario EVALUADOR
 OK: el coordinador crea un usuario CONSULTA
 OK: el coordinador crea un usuario COORDINADOR
-OK: inicia sesión en el portal: portal_evaluador_d50b5168
-OK: inicia sesión en el portal: portal_consulta_d50b5168
-OK: inicia sesión en el portal: portal_coordinador_d50b5168
+OK: inicia sesión en el portal: portal_evaluador_2afb44b0
+OK: inicia sesión en el portal: portal_consulta_2afb44b0
+OK: inicia sesión en el portal: portal_coordinador_2afb44b0
 OK: CONSULTA no ve la acción de registrar
 OK: CONSULTA no administra usuarios
 OK: el coordinador registra un desastre
@@ -251,19 +254,20 @@ OK: el tablero valida la referencia
 OK: el coordinador inicia la reconstrucción
 OK: el portal lista las evaluaciones disponibles para crear proyectos
 OK: el coordinador crea un proyecto desde la evaluación
-OK: quien formuló el proyecto no lo aprueba (RN-19)
+OK: quien formuló el proyecto no lo aprueba (RN-20)
 OK: un segundo coordinador aprueba el proyecto
 OK: el responsable asignado: iniciar
 OK: el responsable asignado: avance
 OK: el responsable asignado: evidencia
 OK: el responsable asignado: estado
+OK: un formulario abierto con una versión vieja no pisa el cambio de otro
 OK: la auditoría muestra el intento rechazado y los cambios
 OK: el tablero refleja el proyecto finalizado
 OK: el mapa general incluye el desastre caracterizado
 OK: cerrar sesión
 OK: después de salir el portal pide sesión otra vez
 
-Portal MVC: 43 comprobaciones correctas.
+Portal MVC: 44 comprobaciones correctas.
 OK: el catálogo interno exige la clave de integración
 OK: una clave de integración equivocada se rechaza
 OK: una clave casi igual también se rechaza

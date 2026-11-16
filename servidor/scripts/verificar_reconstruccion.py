@@ -98,12 +98,12 @@ s,b=req('POST',L,{'proyectos':[{'nombre':'Repetido','tipo':'REPARACION','evaluac
 # --- CU-03 a CU-07 ---
 P=R+'/proyectos/'+puente;inicio={'contratista':'Consorcio Vial','inicio':'2026-12-01','fin':'2027-06-30'}
 aprobacion={'presupuesto':500000000,'fuenteFinanciacion':'Fondo de reconstrucción','responsable':'rec_evaluador_'+tag}
-s,b=req('POST',P+'/aprobar',aprobacion,t);check(s==422 and b.get('regla')=='RN-19','quien formuló el proyecto no lo aprueba (RN-19)',(s,b))
+s,b=req('POST',P+'/aprobar',aprobacion,t);check(s==422 and b.get('regla')=='RN-20','quien formuló el proyecto no lo aprueba (RN-20)',(s,b))
 s,b=req('POST',P+'/aprobar',aprobacion,t2);check(s==200 and b['estado']=='APROBADO','otra autoridad aprueba el proyecto (CU-03)',(s,b))
 check(b.get('formulador')==root['usuario'] and b.get('tipoActivo')=='Puente','el proyecto guarda al formulador y el tipo de activo físico',b)
 s,b=req('POST',P+'/iniciar',inicio,cons);check(s==403,'consulta no inicia la ejecución',(s,b))
 s,b=req('POST',P+'/iniciar',inicio,resp);check(s==200 and b['estado']=='EN_EJECUCION','el responsable inicia la ejecución (CU-04)',(s,b))
-s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp2);check(s==403,'un responsable no asignado no registra avance (RN-20)',(s,b))
+s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp2);check(s==403,'un responsable no asignado no registra avance (RN-21)',(s,b))
 s,b=req('GET',P,token=resp);vista=b['version']
 s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp,{'If-Match':'"'+str(vista)+'"'});check(s==200,'el responsable registra avance con la versión que vio (CU-05)',(s,b))
 s,b=req('POST',P+'/avance',{'porcentaje':70,'descripcion':'Con datos viejos'},resp,{'If-Match':'"'+str(vista)+'"'});check(s==409 and b.get('codigo')=='CONFLICTO_DE_VERSION','con una versión vieja (If-Match) el cambio se rechaza con 409',(s,b))

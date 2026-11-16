@@ -9,7 +9,7 @@ Container(clientes, "Clientes REST", "Scripts y otros módulos", $tags="construi
 Container_Boundary(rec, "UD-06 Reconstrucción · Spring Boot 3.3") {
   Component(rest, "Adaptador REST", "ReconstruccionController, FiltroSesion", "Valida el token contra el núcleo; If-Match = versión esperada", $tags="construido")
   Component(grpc, "Adaptador gRPC", "ReconstruccionGrpcService, InterceptorSesion", "14 RPC; token en el metadato; version_esperada", $tags="construido")
-  Component(cu, "Casos de uso", "CU-01 a CU-09", "Permisos por rol (RN-10, RN-20), auditoría de cambios y rechazos (RN-17), transacción", $tags="construido")
+  Component(cu, "Casos de uso", "CU-01 a CU-09", "Permisos por rol (RN-10, RN-21), auditoría de cambios y rechazos (RN-17), transacción", $tags="construido")
   Component(dom, "Dominio", "Proyecto, EstadoProyecto, EvaluacionDano", "Reglas sin framework: aprobador distinto, sin sobrecosto al finalizar, tipo de activo", $tags="construido")
   Component(repo, "Repositorio de proyectos", "Spring JDBC", "Control optimista; evaluaciones_tomadas garantiza RN-09", $tags="construido")
   Component(bandeja, "Bandeja de salida y despachador", "Spring JDBC, Spring AMQP", "Aviso en la misma transacción; envío con SKIP LOCKED (contrato C5)", $tags="construido")

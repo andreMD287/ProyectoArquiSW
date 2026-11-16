@@ -148,10 +148,10 @@ class ProyectoTest {
     }
 
     @Test
-    void rn19_quienFormulaNoAprueba() {
+    void rn20_quienFormulaNoAprueba() {
         Proyecto p = Proyecto.proponer(UUID.randomUUID(), DESASTRE, "UNGRD", "Puente La Vega", null,
                 List.of(evaluacion(NivelDano.GRAVE, true)), "carlos");
-        assertEquals("RN-19", regla(() -> p.aprobar(BigDecimal.TEN, "Fondo", "ana", "Carlos")));
+        assertEquals("RN-20", regla(() -> p.aprobar(BigDecimal.TEN, "Fondo", "ana", "Carlos")));
         p.aprobar(BigDecimal.TEN, "Fondo", "ana", "maria");
         assertEquals(EstadoProyecto.APROBADO, p.estado());
         assertTrue(p.esResponsable("ana"));

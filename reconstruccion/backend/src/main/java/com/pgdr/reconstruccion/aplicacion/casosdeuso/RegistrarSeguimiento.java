@@ -6,7 +6,7 @@ import com.pgdr.reconstruccion.dominio.Rol;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/** CU-05: registrar avance, costos, documentación y evidencias (RN-13, RN-14, RN-20). */
+/** CU-05: registrar avance, costos, documentación y evidencias (RN-13, RN-14, RN-21). */
 public class RegistrarSeguimiento extends CasoDeUso {
     public RegistrarSeguimiento(Dependencias d) {
         super(d);

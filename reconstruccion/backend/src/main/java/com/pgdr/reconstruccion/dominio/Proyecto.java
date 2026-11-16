@@ -67,7 +67,7 @@ public class Proyecto {
 
     /**
      * CU-02 con el usuario que formula el proyecto. Se guarda para exigir, al aprobar, que otra
-     * persona lo apruebe (RN-19). El tipo de activo físico se toma de las evaluaciones: si todas
+     * persona lo apruebe (RN-20). El tipo de activo físico se toma de las evaluaciones: si todas
      * son del mismo tipo (vivienda, vía, puente…) el proyecto queda con ese tipo; si no, VARIOS.
      */
     public static Proyecto proponer(UUID id, UUID desastreId, String organizacion, String nombre,
@@ -124,11 +124,11 @@ public class Proyecto {
         aprobar(presupuesto, fuenteFinanciacion, responsable, null);
     }
 
-    /** CU-03 con el usuario que aprueba. RN-19: quien formuló el proyecto no puede aprobarlo. */
+    /** CU-03 con el usuario que aprueba. RN-20: quien formuló el proyecto no puede aprobarlo. */
     public void aprobar(BigDecimal presupuesto, String fuenteFinanciacion, String responsable, String aprobador) {
         exigirTransicion(EstadoProyecto.APROBADO);
         if (formulador != null && aprobador != null && formulador.equalsIgnoreCase(aprobador.trim()))
-            throw new ReglaVioladaException("RN-19",
+            throw new ReglaVioladaException("RN-20",
                     "Quien formuló el proyecto no puede aprobarlo: la aprobación exige a otra persona.");
         if (presupuesto == null || presupuesto.signum() <= 0)
             throw new ReglaVioladaException("RN-12", "El presupuesto debe ser mayor que cero.");
@@ -281,7 +281,7 @@ public class Proyecto {
     public String formulador() { return formulador; }
     public String tipoActivo() { return tipoActivo; }
 
-    /** RN-20: el responsable asignado al aprobar es el único RESPONSABLE que opera el proyecto. */
+    /** RN-21: el responsable asignado al aprobar es el único RESPONSABLE que opera el proyecto. */
     public boolean esResponsable(String usuario) {
         return responsable != null && usuario != null && responsable.equalsIgnoreCase(usuario.trim());
     }

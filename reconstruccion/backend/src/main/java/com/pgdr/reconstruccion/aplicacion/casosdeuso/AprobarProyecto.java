@@ -7,7 +7,7 @@ import com.pgdr.reconstruccion.dominio.Rol;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/** CU-03: asignar presupuesto, fuente de financiación y responsable, y aprobar (RN-10 a RN-12, RN-19). */
+/** CU-03: asignar presupuesto, fuente de financiación y responsable, y aprobar (RN-10 a RN-12, RN-20). */
 public class AprobarProyecto extends CasoDeUso {
     public AprobarProyecto(Dependencias d) {
         super(d);

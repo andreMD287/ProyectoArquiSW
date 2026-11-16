@@ -6,7 +6,7 @@ import com.pgdr.reconstruccion.dominio.Proyecto;
 import com.pgdr.reconstruccion.dominio.Rol;
 import java.util.UUID;
 
-/** CU-07: suspender, reanudar, finalizar o cancelar (RN-15 a RN-17, RN-20). Cancelar es solo de la autoridad. */
+/** CU-07: suspender, reanudar, finalizar o cancelar (RN-15 a RN-17, RN-21). Cancelar es solo de la autoridad. */
 public class CambiarEstado extends CasoDeUso {
     public CambiarEstado(Dependencias d) {
         super(d);

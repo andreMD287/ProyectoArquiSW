@@ -167,7 +167,7 @@ pid = re.search(r'/reconstruccion/' + re.escape(ref) + r'/proyectos/([0-9a-f-]{3
 P = f'/reconstruccion/{ref}/proyectos/{pid}'
 aprobacion = {'presupuesto': '1000000', 'fuente': 'Fondo de reconstrucción', 'responsable': f'portal_evaluador_{tag}'}
 s, _, b = coord.seguir('POST', P + '/aprobar', aprobacion)
-check(s == 200 and 'RN-19' in b, 'quien formuló el proyecto no lo aprueba (RN-19)', avisos(b))
+check(s == 200 and 'RN-20' in b, 'quien formuló el proyecto no lo aprueba (RN-20)', avisos(b))
 s, _, b = coord2.seguir('POST', P + '/aprobar', aprobacion)
 check(s == 200 and 'Proyecto aprobado' in b and 'APROBADO' in b, 'un segundo coordinador aprueba el proyecto', avisos(b))
 pasos = [('iniciar', {'contratista': 'Consorcio Vial', 'inicio': '2026-12-01', 'fin': '2027-03-31'}, 'Ejecución iniciada'),

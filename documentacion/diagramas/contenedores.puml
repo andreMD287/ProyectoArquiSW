@@ -16,7 +16,7 @@ System_Boundary(plataforma, "Plataforma para la Gestión de Desastres y Reconstr
   ContainerDb(bdnucleo, "Base del núcleo", "PostgreSQL 17", "", $tags="bd")
   Container(servidor, "UD-03 Campo y mapas", "ASP.NET Core 10", "Evaluaciones de daño versionadas, fotos, mapa; copia de lectura del catálogo", $tags="construido")
   ContainerDb(bdservidor, "Base de servidor", "PostgreSQL 17", "", $tags="bd")
-  Container(rec, "UD-06 Reconstrucción", "Spring Boot 3.3, REST y gRPC", "Proyectos de reconstrucción física (RN-01 a RN-20)", $tags="construido")
+  Container(rec, "UD-06 Reconstrucción", "Spring Boot 3.3, REST y gRPC", "Proyectos de reconstrucción física (RN-01 a RN-21)", $tags="construido")
   ContainerDb(bdrec, "Base de Reconstrucción", "PostgreSQL 17", "", $tags="bd")
   Container(notif, "UD-04 Notificaciones", "Jakarta EE en Payara 6", "Avisos por suscriptor y por correo", $tags="construido")
   ContainerQueue(mq, "Cola de mensajes", "RabbitMQ 4.1", "", $tags="construido")

@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
 /** Casos de uso CU-01 a CU-09 (capa 2) con los puertos sustituidos por dobles en memoria. */
 class CasosDeUsoTest {
     private static final Actor AUTORIDAD = new Actor("carlos", Rol.AUTORIDAD, "UNGRD");
-    /** Segunda autoridad del organismo: aprueba lo que formula la primera (RN-19). */
+    /** Segunda autoridad del organismo: aprueba lo que formula la primera (RN-20). */
     private static final Actor AUTORIDAD_2 = new Actor("maria", Rol.AUTORIDAD, "UNGRD");
     private static final Actor OTRO_RESPONSABLE = new Actor("jorge", Rol.RESPONSABLE, "UNGRD");
     private static final Actor RESPONSABLE = new Actor("ana", Rol.RESPONSABLE, "UNGRD");
@@ -238,11 +238,11 @@ class CasosDeUsoTest {
     }
 
     @Test
-    void rn19_quienFormulaElProyectoNoLoAprueba() {
+    void rn20_quienFormulaElProyectoNoLoAprueba() {
         new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
         Proyecto p = crear(puente);
         assertEquals("carlos", p.formulador());
-        assertEquals("RN-19", regla(() -> new AprobarProyecto(d).ejecutar(AUTORIDAD, p.id(), new BigDecimal("1000"),
+        assertEquals("RN-20", regla(() -> new AprobarProyecto(d).ejecutar(AUTORIDAD, p.id(), new BigDecimal("1000"),
                 "Fondo Nacional", "ana")));
         assertEquals(EstadoProyecto.PROPUESTO, d.proyectos().buscar(p.id()).orElseThrow().estado());
         assertEquals(EstadoProyecto.APROBADO, new AprobarProyecto(d).ejecutar(AUTORIDAD_2, p.id(),
@@ -264,7 +264,7 @@ class CasosDeUsoTest {
     }
 
     @Test
-    void rn20_soloLaAutoridadCancelaYSoloElResponsableAsignadoOpera() {
+    void rn21_soloLaAutoridadCancelaYSoloElResponsableAsignadoOpera() {
         new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
         Proyecto p = enEjecucion(puente);
         assertThrows(AccesoDenegadoException.class,

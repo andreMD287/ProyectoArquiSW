@@ -42,7 +42,7 @@ Los clientes usan `/api/auth/login`, `/api/auth/me`, `/api/auth/logout` y `/api/
 
 > Fuera de alcance según el profesor (gestión de recursos). El portal ya no la ofrece; su código se retirará del núcleo y de servidor cuando el equipo lo acuerde.
 
-Acceso: http://127.0.0.1:18085/solicitudes.html. También se llega desde los mapas y desde el detalle de una evaluación vinculada.
+La página `solicitudes.html` ya no se sirve: el portal reemplazó la web estática.
 
 Se reutilizan el dominio, los puertos y el EJB SolicitudServicio del ZIP `gestion-emergencias 2.zip`, junto con sus 19 pruebas. La carpeta descomprimida del mismo nombre contenía otra entrega (Taller 3); por eso se usó el ZIP de solicitudes. El almacenamiento en memoria se conserva solo para las pruebas originales y se reemplaza en ejecución por un adaptador JPA/PostgreSQL dentro del núcleo existente.
 

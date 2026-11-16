@@ -72,7 +72,7 @@
   - Bandeja de salida hacia RabbitMQ, con el formato de aviso del contrato C5.
 - **Justificación.**
   - Mismo lenguaje que el núcleo y el portal para el back-office en línea.
-  - Las reglas viven en el dominio, sin dependencias del framework (RN-01 a RN-20), y se prueban en memoria: 31 pruebas.
+  - Las reglas viven en el dominio, sin dependencias del framework (RN-01 a RN-21), y se prueban en memoria: 31 pruebas.
   - gRPC da un contrato tipado y eficiente entre servicios Java.
 - **Consecuencias.**
   - Una tercera base de datos y un tercer contenedor de aplicación.

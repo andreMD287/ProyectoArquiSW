@@ -30,10 +30,10 @@ abstract class CasoDeUso {
             throw new AccesoDenegadoException("El rol " + actor.rol() + " no puede ejecutar esta operación.");
     }
 
-    /** RN-20: un RESPONSABLE solo opera el proyecto que tiene asignado desde la aprobación. */
+    /** RN-21: un RESPONSABLE solo opera el proyecto que tiene asignado desde la aprobación. */
     protected void exigirResponsableAsignado(Actor actor, Proyecto p) {
         if (actor.rol() == Rol.RESPONSABLE && !p.esResponsable(actor.usuario()))
-            throw new AccesoDenegadoException("RN-20: el proyecto está asignado a otro responsable.");
+            throw new AccesoDenegadoException("RN-21: el proyecto está asignado a otro responsable.");
     }
 
     /**

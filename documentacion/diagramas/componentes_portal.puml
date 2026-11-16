@@ -1,0 +1,39 @@
+@startuml componentes_portal
+!include <C4/C4_Component>
+!include estilo.iuml
+LAYOUT_TOP_DOWN()
+title Componentes del portal web, UD-09 (C4 nivel 3): MVC y servlet multihilo
+
+Person(usuario, "Usuario", "Coordinador, evaluador o consulta")
+Container_Boundary(portal, "UD-09 Portal web · Spring Boot 3.3 en Tomcat") {
+  Component(front, "DispatcherServlet", "Spring MVC", "Controlador frontal: recibe cada solicitud y la pasa al controlador", $tags="construido")
+  Component(interceptor, "InterceptorSesion", "HandlerInterceptor", "Sin sesión válida lleva al inicio de sesión", $tags="construido")
+  Component(ctrl, "Controladores", "@Controller", "Sesion, Desastres, Evaluaciones, Mapa, Reconstruccion, Usuarios", $tags="construido")
+  Component(vistas, "Vistas", "Plantillas Thymeleaf, Leaflet", "HTML generado en el servidor; mapa con capas", $tags="construido")
+  Component(servlet, "TableroServlet", "@WebServlet asyncSupported", "GET /tablero: startAsync, junta tres fuentes, responde parcial si una falla y 503 si el pool está lleno", $tags="construido")
+  Component(tablero, "Tablero y pool", "ThreadPoolExecutor (16 hilos, cola 64)", "Lanza las tres consultas en paralelo, cada una con límite de 1,5 s", $tags="construido")
+  Component(cn, "NucleoCliente", "RestClient", "Sesión y desastres (token del usuario)", $tags="construido")
+  Component(cs, "ServidorCliente", "RestClient", "Evaluaciones y fotos", $tags="construido")
+  Component(cr, "ReconstruccionCliente", "Stub gRPC", "Proyectos; token en el metadato authorization", $tags="construido")
+}
+Container(nucleo, "UD-02 Núcleo", "Jakarta EE", $tags="construido")
+Container(servidor, "UD-03 Campo y mapas", "ASP.NET Core", $tags="construido")
+Container(rec, "UD-06 Reconstrucción", "Spring Boot, gRPC", $tags="construido")
+
+Rel(usuario, front, "Páginas", "HTTP")
+Rel(usuario, servlet, "Datos del mapa (JavaScript)", "HTTP/JSON")
+Rel(front, interceptor, "Verifica la sesión")
+Rel(front, ctrl, "Despacha")
+Rel(ctrl, vistas, "Modelo para la vista")
+Rel(ctrl, cn, "Usa")
+Rel(ctrl, cs, "Usa")
+Rel(ctrl, cr, "Usa")
+Rel(servlet, tablero, "Arma el tablero")
+Rel(tablero, cn, "Fuente 1")
+Rel(tablero, cs, "Fuente 2")
+Rel(tablero, cr, "Fuente 3")
+Rel(cn, nucleo, "REST/JSON")
+Rel(cs, servidor, "REST/JSON")
+Rel(cr, rec, "gRPC")
+SHOW_LEGEND()
+@enduml

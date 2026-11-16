@@ -1,0 +1,55 @@
+@startuml contenedores
+!include <C4/C4_Container>
+!include estilo.iuml
+LAYOUT_TOP_DOWN()
+title Contenedores de la plataforma (C4 nivel 2) · ambiente entregado, 15-nov-2026
+
+Person(coord, "Coordinador", "Registra desastres, inicia la reconstrucción y aprueba proyectos")
+Person(eval, "Evaluador de campo", "Caracteriza y evalúa daños; opera los proyectos asignados")
+Person(consulta, "Consulta", "Solo lectura")
+
+System_Boundary(plataforma, "Plataforma para la Gestión de Desastres y Reconstrucción") {
+  Container(entrada, "UD-01 Entrada", "Nginx 1.28", "Entrada única; límite de intentos de inicio de sesión", $tags="construido")
+  Container(portal, "UD-09 Portal web", "Spring Boot 3.3, Spring MVC, Thymeleaf", "Presentación MVC y TableroServlet asíncrono multihilo", $tags="construido")
+  Container(app, "App de campo", ".NET MAUI, SQLite (Android)", "Captura sin conexión y sincronización por lotes", $tags="construido")
+  Container(nucleo, "UD-02 Núcleo", "Jakarta EE en WildFly 41 (EJB, JPA, JTA)", "Identidad y sesiones, desastres y fases, auditoría, bandeja de salida", $tags="construido")
+  ContainerDb(bdnucleo, "Base del núcleo", "PostgreSQL 17", "", $tags="bd")
+  Container(servidor, "UD-03 Campo y mapas", "ASP.NET Core 10", "Evaluaciones de daño versionadas, fotos, mapa; copia de lectura del catálogo", $tags="construido")
+  ContainerDb(bdservidor, "Base de servidor", "PostgreSQL 17", "", $tags="bd")
+  Container(rec, "UD-06 Reconstrucción", "Spring Boot 3.3, REST y gRPC", "Proyectos de reconstrucción física (RN-01 a RN-20)", $tags="construido")
+  ContainerDb(bdrec, "Base de Reconstrucción", "PostgreSQL 17", "", $tags="bd")
+  Container(notif, "UD-04 Notificaciones", "Jakarta EE en Payara 6", "Avisos por suscriptor y por correo", $tags="construido")
+  ContainerQueue(mq, "Cola de mensajes", "RabbitMQ 4.1", "", $tags="construido")
+  Container(publica, "UD-07 Consulta pública", "ASP.NET Core", "Información pública derivada", $tags="disenado")
+  Container(integ, "UD-08 Integración", "Jakarta EE, RabbitMQ", "Un adaptador por sistema externo", $tags="disenado")
+}
+
+System_Ext(correo, "Servidor de correo", "SMTP (Mailpit en el laboratorio)")
+System_Ext(externos, "Sistemas externos SE-01 a SE-07", "Alertas, GIS, hospitales, recursos, personas, financiero, infraestructura")
+
+Rel(coord, entrada, "Usa", "HTTPS")
+Rel(eval, entrada, "Usa", "HTTPS")
+Rel(consulta, entrada, "Usa", "HTTPS")
+Rel(eval, app, "Captura con o sin señal")
+Rel(app, entrada, "Sincroniza lotes", "REST/JSON")
+Rel(entrada, portal, "/ (páginas y /tablero)", "HTTP")
+Rel(entrada, servidor, "/api/", "REST/JSON")
+Rel(entrada, rec, "/api/reconstruccion/", "REST/JSON")
+Rel(portal, nucleo, "Sesión y desastres", "REST/JSON con token")
+Rel(portal, servidor, "Evaluaciones", "REST/JSON con token")
+Rel(portal, rec, "Proyectos", "gRPC con token")
+Rel(servidor, nucleo, "Valida sesión, copia el catálogo", "REST/JSON")
+Rel(rec, nucleo, "Valida sesión, lee y cambia la fase", "REST/JSON")
+Rel(rec, servidor, "Lee evaluaciones", "REST/JSON")
+Rel(rec, mq, "Avisos del contrato C5", "AMQP", $tags="asincrono")
+Rel(nucleo, notif, "Bandeja de salida", "HTTP", $tags="asincrono")
+Rel(notif, mq, "Cola por suscriptor", "AMQP", $tags="asincrono")
+Rel(notif, correo, "Correo", "SMTP", $tags="asincrono")
+Rel(nucleo, bdnucleo, "Lee y escribe", "SQL (JTA)")
+Rel(servidor, bdservidor, "Lee y escribe", "SQL")
+Rel(rec, bdrec, "Lee y escribe", "SQL")
+Rel(integ, externos, "Adaptadores", "Colas y REST")
+Rel(publica, nucleo, "Copia pública derivada")
+
+SHOW_LEGEND()
+@enduml

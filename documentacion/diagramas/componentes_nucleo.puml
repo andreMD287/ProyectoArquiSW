@@ -1,0 +1,31 @@
+@startuml componentes_nucleo
+!include <C4/C4_Component>
+!include estilo.iuml
+LAYOUT_TOP_DOWN()
+title Componentes del núcleo, UD-02 (C4 nivel 3)
+
+Container(entrada, "Portal, servidor y Reconstrucción", "Clientes del núcleo", $tags="construido")
+Container(legado, "Clientes SOAP y EJB remoto", "Interoperabilidad del inicio de sesión", $tags="construido")
+Container_Boundary(nucleo, "UD-02 Núcleo · Jakarta EE en WildFly 41") {
+  Component(filtro, "TokenAuthFilter", "JAX-RS ContainerRequestFilter", "Valida el token en cada solicitud; clave de integración comparada en tiempo constante", $tags="construido")
+  Component(api, "Recursos REST", "JAX-RS", "auth, eventos (fase, caracterización C2, historial), integracion, desastres", $tags="construido")
+  Component(interop, "AutenticacionSoap e IdentidadProyectoBean", "JAX-WS, EJB @Remote", "El mismo inicio de sesión por SOAP y por EJB remoto", $tags="construido")
+  Component(auth, "AuthService", "EJB @Stateless", "PBKDF2, tokens de 8 h guardados como hash, usuarios por organismo", $tags="construido")
+  Component(reg, "RegistroIntegrado", "EJB @Stateless, JPA, JTA", "Registro, fases con transiciones protegidas, caracterización, historial con versión", $tags="construido")
+  Component(outbox, "PublicadorOutbox y BandejaOutbox", "EJB @Singleton con @Schedule", "Reclama avisos (SKIP LOCKED), los envía fuera de la transacción y purga sesiones", $tags="construido")
+}
+ContainerDb(bd, "Base del núcleo", "PostgreSQL 17", $tags="bd")
+Container(notif, "UD-04 Notificaciones", "Payara", $tags="construido")
+
+Rel(entrada, filtro, "REST/JSON con token", "HTTP")
+Rel(legado, interop, "SOAP o EJB remoto")
+Rel(filtro, api, "Identidad validada")
+Rel(api, auth, "Usa")
+Rel(api, reg, "Usa")
+Rel(interop, auth, "Usa")
+Rel(reg, bd, "Cambio, historial y aviso en una transacción", "JPA/JTA")
+Rel(auth, bd, "Usuarios y sesiones", "JPA")
+Rel(outbox, bd, "Reclama y marca", "SQL")
+Rel(outbox, notif, "Avisos de desastre", "HTTP", $tags="asincrono")
+SHOW_LEGEND()
+@enduml

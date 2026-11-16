@@ -1,0 +1,47 @@
+@startuml despliegue_entregado
+!include <C4/C4_Deployment>
+!include estilo.iuml
+title Despliegue entregado: Docker Compose en una máquina (arc42 §7.1)
+
+Deployment_Node(movil, "Teléfono Android", "Android 10 o superior") {
+  Container(app, "App de campo", ".NET MAUI, SQLite local", "Funciona sin conexión", $tags="construido")
+}
+Deployment_Node(equipo, "Equipo del laboratorio", "Windows o macOS con Docker Desktop") {
+  Deployment_Node(nav, "Navegador", "Chrome, Edge o Firefox") {
+    Container(pagina, "Páginas del portal", "HTML de Thymeleaf, Leaflet", "", $tags="construido")
+  }
+  Deployment_Node(red, "Red de Docker arqui-integracion_default", "Docker Compose; secretos en servidor/.env") {
+    Container(web, "web", "Nginx 1.28 · 127.0.0.1:18085", "", $tags="construido")
+    Container(portal, "portal", "Spring Boot 3.3 (Tomcat) · 8080", "", $tags="construido")
+    Container(nucleo, "nucleo", "WildFly 41 · 8080 (127.0.0.1:18092 para pruebas)", "", $tags="construido")
+    ContainerDb(database, "database", "PostgreSQL 17", "Base pgdrdb", $tags="bd")
+    Container(api, "api", "ASP.NET Core 10 · 8080", "", $tags="construido")
+    ContainerDb(db, "db", "PostgreSQL 17", "Base mapas", $tags="bd")
+    Container(rec, "reconstruccion", "Spring Boot 3.3 · REST 8086, gRPC 9096 (127.0.0.1:19096)", "", $tags="construido")
+    ContainerDb(recdb, "reconstruccion-db", "PostgreSQL 17", "Base reconstruccion", $tags="bd")
+    Container(desastres, "desastres", "Payara 6 · 8080", "", $tags="construido")
+    ContainerQueue(rabbit, "rabbitmq", "RabbitMQ 4.1 · 127.0.0.1:15683-15684", "", $tags="construido")
+    Container(mailpit, "mailpit", "Mailpit · 127.0.0.1:18026", "Buzón de pruebas", $tags="construido")
+  }
+}
+
+Rel(pagina, web, "HTTP", "18085")
+Rel(app, web, "REST/JSON", "18085 (red local)")
+Rel(web, portal, "/", "HTTP")
+Rel(web, api, "/api/", "HTTP")
+Rel(web, rec, "/api/reconstruccion/", "HTTP")
+Rel(portal, nucleo, "REST")
+Rel(portal, api, "REST")
+Rel(portal, rec, "gRPC 9096")
+Rel(api, nucleo, "REST")
+Rel(rec, nucleo, "REST")
+Rel(rec, api, "REST")
+Rel(nucleo, database, "JDBC")
+Rel(api, db, "Npgsql")
+Rel(rec, recdb, "JDBC")
+Rel(nucleo, desastres, "HTTP", $tags="asincrono")
+Rel(rec, rabbit, "AMQP", $tags="asincrono")
+Rel(desastres, rabbit, "AMQP", $tags="asincrono")
+Rel(desastres, mailpit, "SMTP", $tags="asincrono")
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,39 @@
+@startuml componentes_reconstruccion
+!include <C4/C4_Component>
+!include estilo.iuml
+LAYOUT_TOP_DOWN()
+title Componentes de Reconstrucción, UD-06 (C4 nivel 3): arquitectura hexagonal
+
+Container(portal, "UD-09 Portal web", "Spring MVC", $tags="construido")
+Container(clientes, "Clientes REST", "Scripts y otros módulos", $tags="construido")
+Container_Boundary(rec, "UD-06 Reconstrucción · Spring Boot 3.3") {
+  Component(rest, "Adaptador REST", "ReconstruccionController, FiltroSesion", "Valida el token contra el núcleo; If-Match = versión esperada", $tags="construido")
+  Component(grpc, "Adaptador gRPC", "ReconstruccionGrpcService, InterceptorSesion", "14 RPC; token en el metadato; version_esperada", $tags="construido")
+  Component(cu, "Casos de uso", "CU-01 a CU-09", "Permisos por rol (RN-10, RN-20), auditoría de cambios y rechazos (RN-17), transacción", $tags="construido")
+  Component(dom, "Dominio", "Proyecto, EstadoProyecto, EvaluacionDano", "Reglas sin framework: aprobador distinto, sin sobrecosto al finalizar, tipo de activo", $tags="construido")
+  Component(repo, "Repositorio de proyectos", "Spring JDBC", "Control optimista; evaluaciones_tomadas garantiza RN-09", $tags="construido")
+  Component(bandeja, "Bandeja de salida y despachador", "Spring JDBC, Spring AMQP", "Aviso en la misma transacción; envío con SKIP LOCKED (contrato C5)", $tags="construido")
+  Component(desn, "DesastresNucleo", "HTTP", "Lee el catálogo y pide el cambio de fase como módulo", $tags="construido")
+  Component(evals, "EvaluacionesServidor", "HTTP", "Lee las evaluaciones con el token del usuario", $tags="construido")
+}
+ContainerDb(bd, "Base de Reconstrucción", "PostgreSQL 17", $tags="bd")
+Container(nucleo, "UD-02 Núcleo", "Jakarta EE", $tags="construido")
+Container(servidor, "UD-03 Campo y mapas", "ASP.NET Core", $tags="construido")
+ContainerQueue(mq, "RabbitMQ", "reconstruccion.eventos a integracion.reconstruccion", $tags="construido")
+
+Rel(portal, grpc, "Proyectos", "gRPC")
+Rel(clientes, rest, "API", "REST/JSON")
+Rel(rest, cu, "Llama")
+Rel(grpc, cu, "Llama")
+Rel(cu, dom, "Aplica reglas")
+Rel(cu, repo, "Puerto RepositorioProyectos")
+Rel(cu, bandeja, "Puerto PublicadorEventos")
+Rel(cu, desn, "Puerto GestionDesastres")
+Rel(cu, evals, "Puerto ConsultaEvaluaciones")
+Rel(repo, bd, "SQL")
+Rel(bandeja, bd, "SQL")
+Rel(bandeja, mq, "AMQP", $tags="asincrono")
+Rel(desn, nucleo, "REST (token, y clave de integración para la fase)")
+Rel(evals, servidor, "REST")
+SHOW_LEGEND()
+@enduml

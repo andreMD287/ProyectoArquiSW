@@ -1,0 +1,41 @@
+@startuml secuencia_tablero
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam sequenceMessageAlign center
+title Tablero de un desastre: servlet asíncrono con tres fuentes en paralelo (ADR-24)
+
+actor "Usuario" as U
+participant "Navegador\n(tablero.js)" as N
+participant "Nginx\n(UD-01)" as E
+participant "TableroServlet\n(hilo de Tomcat)" as S
+participant "Pool del tablero\n(16 hilos, cola 64)" as P
+participant "Núcleo\n(UD-02)" as NU
+participant "servidor\n(UD-03)" as SV
+participant "Reconstrucción\n(UD-06)" as R
+
+U -> N : abre /desastres/REF
+N -> E : GET /tablero?desastre=REF (cookie de sesión)
+E -> S : GET /tablero
+S -> S : valida la sesión y llama a startAsync()
+S -> P : tres tareas (pool lleno: 503 con Retry-After)
+note right of S : el hilo de Tomcat queda libre\nmientras se espera la red
+par en paralelo, cada una con límite de 1,5 s
+  P -> NU : GET /eventos/REF (token)
+  NU --> P : fase, nivel, ubicación y radio
+else
+  P -> SV : GET /api/panorama?clase=EVALUACION&eventoId=REF (token)
+  SV --> P : evaluaciones del organismo
+else
+  P -> R : ConsultarSeguimiento (gRPC, token en el metadato)
+  R --> P : proyectos y avance ponderado
+end
+alt una fuente falla o vence su límite
+  P -> S : respuesta parcial, con fuentesNoDisponibles
+else todas responden
+  P -> S : respuesta completa, con el tiempo y el hilo de cada fuente
+end
+S --> E : 200 JSON y AsyncContext.complete()
+E --> N : 200 JSON
+N -> U : mapa con área, evaluaciones y proyectos,\nmás el aviso si faltó una fuente
+@enduml

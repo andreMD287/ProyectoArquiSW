@@ -1,0 +1,14 @@
+' Guía de diagramas del equipo: azul = construido, gris punteado = diseñado sin código,
+' gris claro = sistema externo. Flechas con la dirección de la llamada y el protocolo.
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam dpi 150
+AddElementTag("construido", $bgColor="#1d4ed8", $fontColor="#ffffff", $borderColor="#1e3a8a", $legendText="Construido (código en el repositorio)")
+AddElementTag("disenado", $bgColor="#f3f4f6", $fontColor="#374151", $borderColor="#6b7280", $borderStyle=DashedLine(), $legendText="Diseñado, sin código")
+AddElementTag("bd", $bgColor="#1e40af", $fontColor="#ffffff", $borderColor="#1e3a8a", $legendText="Base de datos construida")
+AddRelTag("asincrono", $lineStyle=DashedLine(), $legendText="Asíncrono (mensajes o bandeja de salida)")
+UpdateElementStyle("person", $legendText="Persona (rol)")
+UpdateElementStyle("external_system", $legendText="Sistema externo")
+UpdateBoundaryStyle("system", $legendText="Límite del sistema")
+UpdateBoundaryStyle("container", $legendText="Límite del contenedor")
+UpdateElementStyle("node", $legendText="Nodo de despliegue")

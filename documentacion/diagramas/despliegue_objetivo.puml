@@ -1,0 +1,45 @@
+@startuml despliegue_objetivo
+!include <C4/C4_Deployment>
+!include estilo.iuml
+title Despliegue objetivo: tres centros de datos (diseñado, sin montar)
+
+Person(usuarios, "Usuarios", "Portal web y app de campo")
+Deployment_Node(bal, "Balanceador global", "Dirige al centro disponible") {
+  Container(balanceo, "Balanceo", "Verifica la salud de cada centro", "", $tags="disenado")
+}
+Deployment_Node(ca, "Centro de datos A", "Primario de las bases") {
+  Container(a1, "Unidades sin estado", "Nginx, portal, núcleo, servidor, notificaciones, Reconstrucción, integración", "2 instancias por unidad crítica", $tags="disenado")
+  ContainerDb(a2, "PostgreSQL primario", "Una base por unidad", "", $tags="disenado")
+  ContainerQueue(a3, "RabbitMQ nodo A", "Colas replicadas", "", $tags="disenado")
+}
+Deployment_Node(cb, "Centro de datos B", "Réplica") {
+  Container(b1, "Unidades sin estado", "Mismas unidades", "", $tags="disenado")
+  ContainerDb(b2, "PostgreSQL réplica síncrona", "", "", $tags="disenado")
+  ContainerQueue(b3, "RabbitMQ nodo B", "", "", $tags="disenado")
+}
+Deployment_Node(cc, "Centro de datos C", "Solo lo crítico: mantiene la mayoría de 2 de 3") {
+  Container(c1, "Unidades críticas", "Nginx, portal, núcleo, servidor, notificaciones", "", $tags="disenado")
+  ContainerDb(c2, "PostgreSQL réplica síncrona", "", "", $tags="disenado")
+  ContainerQueue(c3, "RabbitMQ nodo C", "", "", $tags="disenado")
+}
+Deployment_Node(ais, "Copia aislada", "Ubicación aparte, sin acceso desde la operación") {
+  ContainerDb(copia, "Copias con versiones", "Cada 15 minutos", "", $tags="disenado")
+}
+
+Lay_R(ca, cb)
+Lay_R(cb, cc)
+Lay_D(ca, ais)
+Rel(usuarios, balanceo, "HTTPS")
+Rel(balanceo, a1, "HTTPS")
+Rel(balanceo, b1, "HTTPS")
+Rel(balanceo, c1, "HTTPS")
+Rel(a1, a2, "SQL")
+Rel(b1, a2, "SQL al primario")
+Rel(c1, a2, "SQL al primario")
+Rel(a2, b2, "Réplica síncrona (confirma con 1 de 2)")
+Rel(a2, c2, "Replicación síncrona")
+Rel(a3, b3, "Quórum de colas", $tags="asincrono")
+Rel(b3, c3, "Quórum de colas", $tags="asincrono")
+Rel(b2, copia, "Copia cada 15 min", $tags="asincrono")
+SHOW_LEGEND()
+@enduml

@@ -10,6 +10,14 @@ import java.util.UUID;
 public interface GestionDesastres {
     Optional<Desastre> buscar(UUID id);
 
+    /**
+     * Para consultas de solo lectura: puede devolver el desastre con unos segundos de atraso a cambio
+     * de no consultar al dueño en cada llamada. Las operaciones que cambian algo usan buscar().
+     */
+    default Optional<Desastre> buscarParaConsulta(UUID id) {
+        return buscar(id);
+    }
+
     List<Desastre> listar();
 
     void cambiarEstado(UUID id, EstadoDesastre nuevo);

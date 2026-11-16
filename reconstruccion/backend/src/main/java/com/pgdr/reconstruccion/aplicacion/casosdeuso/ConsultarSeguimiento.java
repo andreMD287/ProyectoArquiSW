@@ -34,7 +34,7 @@ public class ConsultarSeguimiento extends CasoDeUso {
 
     public List<EvaluacionDisponible> evaluaciones(Actor actor, UUID desastreId) {
         autorizar(actor, Rol.AUTORIDAD);
-        cargarDesastre(desastreId);
+        cargarDesastreParaConsulta(desastreId);
         return d.evaluaciones().porDesastre(desastreId).stream()
                 .filter(e -> e.organizacion().equals(actor.organizacion()))
                 .map(e -> new EvaluacionDisponible(e, e.esElegible(), d.proyectos().existeActivoParaEvaluacion(e.id())))
@@ -43,7 +43,7 @@ public class ConsultarSeguimiento extends CasoDeUso {
 
     public Consolidado consolidado(Actor actor, UUID desastreId) {
         autorizar(actor, Rol.AUTORIDAD, Rol.RESPONSABLE, Rol.AUDITOR);
-        Desastre desastre = cargarDesastre(desastreId);
+        Desastre desastre = cargarDesastreParaConsulta(desastreId);
         List<Proyecto> proyectos = d.proyectos().porDesastre(desastreId, actor.organizacion());
         Map<EstadoProyecto, Integer> porEstado = new EnumMap<>(EstadoProyecto.class);
         BigDecimal presupuesto = BigDecimal.ZERO;
@@ -84,7 +84,7 @@ public class ConsultarSeguimiento extends CasoDeUso {
 
     public List<RegistroAuditoria> auditoriaDeDesastre(Actor actor, UUID desastreId) {
         autorizar(actor, Rol.AUTORIDAD, Rol.AUDITOR);
-        cargarDesastre(desastreId);
+        cargarDesastreParaConsulta(desastreId);
         return d.auditoria().porDesastre(desastreId, actor.organizacion());
     }
 }

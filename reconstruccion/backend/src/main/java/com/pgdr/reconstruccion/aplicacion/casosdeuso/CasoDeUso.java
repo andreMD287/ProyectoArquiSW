@@ -83,6 +83,12 @@ abstract class CasoDeUso {
         return p;
     }
 
+    /** Solo para lecturas: admite un dato con unos segundos de atraso (ver GestionDesastres). */
+    protected Desastre cargarDesastreParaConsulta(UUID desastreId) {
+        return d.desastres().buscarParaConsulta(desastreId)
+                .orElseThrow(() -> new NoEncontradoException("No existe el desastre " + desastreId + "."));
+    }
+
     protected Desastre cargarDesastre(UUID desastreId) {
         return d.desastres().buscar(desastreId)
                 .orElseThrow(() -> new NoEncontradoException("No existe el desastre " + desastreId + "."));

@@ -46,14 +46,34 @@ public class DesastresNucleo implements GestionDesastres {
         return UUID.nameUUIDFromBytes(("desastre:" + referencia).getBytes(StandardCharsets.UTF_8));
     }
 
+    /** Vigencia de la copia del catálogo para consultas de solo lectura (tablero y seguimiento). */
+    private static final long VIGENCIA_MS = 3000;
+    private volatile JsonNode copia;
+    private volatile long copiaEn;
+
     /** Desastres del organismo de la sesión, tal como los tiene el núcleo en este momento. */
     public List<Entrada> catalogo() {
+        return catalogo(false);
+    }
+
+    /**
+     * Con admiteReciente, usa la copia de los últimos 3 s si existe: el tablero y el seguimiento no
+     * descargan el catálogo completo en cada consulta. Las decisiones de reglas usan siempre el dato fresco.
+     */
+    private List<Entrada> catalogo(boolean admiteReciente) {
         SesionActual.Sesion sesion = SesionActual.requerida();
-        PlataformaHttp.Respuesta r = plataforma.nucleoInterno("/integracion/catalogo");
-        if (r.estado() != 200 || r.cuerpo() == null || !r.cuerpo().isArray())
-            throw new NoDisponibleException("El núcleo no entregó el catálogo de desastres.");
+        long ahora = System.currentTimeMillis();
+        JsonNode crudo = copia;
+        if (!admiteReciente || crudo == null || ahora - copiaEn > VIGENCIA_MS) {
+            PlataformaHttp.Respuesta r = plataforma.nucleoInterno("/integracion/catalogo");
+            if (r.estado() != 200 || r.cuerpo() == null || !r.cuerpo().isArray())
+                throw new NoDisponibleException("El núcleo no entregó el catálogo de desastres.");
+            crudo = r.cuerpo();
+            copia = crudo;
+            copiaEn = ahora;
+        }
         List<Entrada> entradas = new ArrayList<>();
-        for (JsonNode fila : r.cuerpo()) {
+        for (JsonNode fila : crudo) {
             if (!sesion.organizacion().equals(fila.path("organizacionId").asText())) continue;
             JsonNode d = fila.path("desastre");
             String referencia = d.path("id").asText("");
@@ -75,6 +95,11 @@ public class DesastresNucleo implements GestionDesastres {
     }
 
     @Override
+    public Optional<Desastre> buscarParaConsulta(UUID id) {
+        return catalogo(true).stream().filter(e -> e.id().equals(id)).findFirst().map(DesastresNucleo::aDesastre);
+    }
+
+    @Override
     public List<Desastre> listar() {
         return catalogo().stream().map(DesastresNucleo::aDesastre).toList();
     }
@@ -91,6 +116,7 @@ public class DesastresNucleo implements GestionDesastres {
         String ruta = "/eventos/" + URLEncoder.encode(actual.referencia(), StandardCharsets.UTF_8) + "/fase";
         PlataformaHttp.Respuesta r = plataforma.nucleoComoModulo("PATCH", ruta, SesionActual.requerida().token(),
                 cuerpo.toString());
+        copia = null;   // la fase cambió (o pudo cambiar): la próxima consulta lee el catálogo fresco
         if (r.estado() == 200) return;
         if (r.estado() == 409)
             throw new ConflictoDeVersionException("El desastre cambió mientras se procesaba; vuelve a intentarlo.");

@@ -73,39 +73,49 @@ public class ReconstruccionCliente {
                 .setDesastreId(desastreId(ref).toString()).setProyecto(proyecto).build()));
     }
 
-    public ProyectoMsg aprobar(String token, String proyectoId, String presupuesto, String fuente, String responsable) {
-        return llamar(token, s -> s.aprobarProyecto(AprobarProyectoRequest.newBuilder().setProyectoId(proyectoId)
-                .setPresupuesto(presupuesto).setFuenteFinanciacion(fuente).setResponsable(responsable).build()));
+    public ProyectoMsg aprobar(String token, String proyectoId, String presupuesto, String fuente, String responsable, Long version) {
+        var b = AprobarProyectoRequest.newBuilder().setProyectoId(proyectoId)
+                .setPresupuesto(presupuesto).setFuenteFinanciacion(fuente).setResponsable(responsable);
+        if (version != null) b.setVersionEsperada(version);
+        return llamar(token, s -> s.aprobarProyecto(b.build()));
     }
 
-    public ProyectoMsg iniciarEjecucion(String token, String proyectoId, String contratista, String inicio, String fin) {
-        return llamar(token, s -> s.iniciarEjecucion(IniciarEjecucionRequest.newBuilder().setProyectoId(proyectoId)
-                .setContratista(contratista).setInicio(inicio).setFin(fin).build()));
+    public ProyectoMsg iniciarEjecucion(String token, String proyectoId, String contratista, String inicio, String fin, Long version) {
+        var b = IniciarEjecucionRequest.newBuilder().setProyectoId(proyectoId)
+                .setContratista(contratista).setInicio(inicio).setFin(fin);
+        if (version != null) b.setVersionEsperada(version);
+        return llamar(token, s -> s.iniciarEjecucion(b.build()));
     }
 
-    public ProyectoMsg avance(String token, String proyectoId, int porcentaje, String descripcion, String motivo) {
-        return llamar(token, s -> s.registrarAvance(RegistrarAvanceRequest.newBuilder().setProyectoId(proyectoId)
-                .setPorcentaje(porcentaje).setDescripcion(texto(descripcion)).setMotivoCorreccion(texto(motivo)).build()));
+    public ProyectoMsg avance(String token, String proyectoId, int porcentaje, String descripcion, String motivo, Long version) {
+        var b = RegistrarAvanceRequest.newBuilder().setProyectoId(proyectoId)
+                .setPorcentaje(porcentaje).setDescripcion(texto(descripcion)).setMotivoCorreccion(texto(motivo));
+        if (version != null) b.setVersionEsperada(version);
+        return llamar(token, s -> s.registrarAvance(b.build()));
     }
 
-    public ProyectoMsg costo(String token, String proyectoId, String valor, String descripcion) {
-        return llamar(token, s -> s.registrarCosto(RegistrarCostoRequest.newBuilder().setProyectoId(proyectoId)
-                .setValor(valor).setDescripcion(texto(descripcion)).build()));
+    public ProyectoMsg costo(String token, String proyectoId, String valor, String descripcion, Long version) {
+        var b = RegistrarCostoRequest.newBuilder().setProyectoId(proyectoId).setValor(valor).setDescripcion(texto(descripcion));
+        if (version != null) b.setVersionEsperada(version);
+        return llamar(token, s -> s.registrarCosto(b.build()));
     }
 
-    public ProyectoMsg evidencia(String token, String proyectoId, String descripcion) {
-        return llamar(token, s -> s.adjuntarEvidencia(AdjuntarEvidenciaRequest.newBuilder().setProyectoId(proyectoId)
-                .setDescripcion(texto(descripcion)).build()));
+    public ProyectoMsg evidencia(String token, String proyectoId, String descripcion, Long version) {
+        var b = AdjuntarEvidenciaRequest.newBuilder().setProyectoId(proyectoId).setDescripcion(texto(descripcion));
+        if (version != null) b.setVersionEsperada(version);
+        return llamar(token, s -> s.adjuntarEvidencia(b.build()));
     }
 
-    public ProyectoMsg presupuesto(String token, String proyectoId, String valor, String motivo) {
-        return llamar(token, s -> s.modificarPresupuesto(ModificarPresupuestoRequest.newBuilder().setProyectoId(proyectoId)
-                .setPresupuesto(valor).setMotivo(texto(motivo)).build()));
+    public ProyectoMsg presupuesto(String token, String proyectoId, String valor, String motivo, Long version) {
+        var b = ModificarPresupuestoRequest.newBuilder().setProyectoId(proyectoId).setPresupuesto(valor).setMotivo(texto(motivo));
+        if (version != null) b.setVersionEsperada(version);
+        return llamar(token, s -> s.modificarPresupuesto(b.build()));
     }
 
-    public ProyectoMsg estado(String token, String proyectoId, String estado, String motivo) {
-        return llamar(token, s -> s.cambiarEstado(CambiarEstadoRequest.newBuilder().setProyectoId(proyectoId)
-                .setEstado(estado).setMotivo(texto(motivo)).build()));
+    public ProyectoMsg estado(String token, String proyectoId, String estado, String motivo, Long version) {
+        var b = CambiarEstadoRequest.newBuilder().setProyectoId(proyectoId).setEstado(estado).setMotivo(texto(motivo));
+        if (version != null) b.setVersionEsperada(version);
+        return llamar(token, s -> s.cambiarEstado(b.build()));
     }
 
     public AuditoriaResponse auditoria(String token, String proyectoId) {

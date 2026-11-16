@@ -15,9 +15,16 @@ public class AprobarProyecto extends CasoDeUso {
 
     public Proyecto ejecutar(Actor actor, UUID proyectoId, BigDecimal presupuesto, String fuenteFinanciacion,
                              String responsable) {
+        return ejecutar(actor, proyectoId, presupuesto, fuenteFinanciacion, responsable, null);
+    }
+
+    /** Con versionEsperada, rechaza el cambio si otro usuario modificó el proyecto desde que lo vio. */
+    public Proyecto ejecutar(Actor actor, UUID proyectoId, BigDecimal presupuesto, String fuenteFinanciacion,
+                             String responsable,
+                             Long versionEsperada) {
         autorizar(actor, Rol.AUTORIDAD);
         return ejecutarAuditado(actor, "APROBAR_PROYECTO", PROYECTO, proyectoId, null, null, () -> {
-            Proyecto p = cargarProyecto(actor, proyectoId);
+            Proyecto p = cargarProyecto(actor, proyectoId, versionEsperada);
             EstadoProyecto anterior = p.estado();
             p.aprobar(presupuesto, fuenteFinanciacion, responsable, actor.usuario());
             d.proyectos().actualizar(p);

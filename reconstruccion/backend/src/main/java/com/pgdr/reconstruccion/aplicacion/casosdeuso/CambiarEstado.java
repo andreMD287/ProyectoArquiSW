@@ -13,10 +13,16 @@ public class CambiarEstado extends CasoDeUso {
     }
 
     public Proyecto ejecutar(Actor actor, UUID proyectoId, EstadoProyecto destino, String motivo) {
+        return ejecutar(actor, proyectoId, destino, motivo, null);
+    }
+
+    /** Con versionEsperada, rechaza el cambio si otro usuario modificó el proyecto desde que lo vio. */
+    public Proyecto ejecutar(Actor actor, UUID proyectoId, EstadoProyecto destino, String motivo,
+                             Long versionEsperada) {
         autorizar(actor, Rol.AUTORIDAD, Rol.RESPONSABLE);
         if (destino == EstadoProyecto.CANCELADO) autorizar(actor, Rol.AUTORIDAD);
         return ejecutarAuditado(actor, "CAMBIAR_ESTADO", PROYECTO, proyectoId, null, motivo, () -> {
-            Proyecto p = cargarProyecto(actor, proyectoId);
+            Proyecto p = cargarProyecto(actor, proyectoId, versionEsperada);
             exigirResponsableAsignado(actor, p);
             EstadoProyecto anterior = p.cambiarEstado(destino, motivo);
             d.proyectos().actualizar(p);

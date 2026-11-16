@@ -14,9 +14,15 @@ public class IniciarEjecucion extends CasoDeUso {
     }
 
     public Proyecto ejecutar(Actor actor, UUID proyectoId, String contratista, LocalDate inicio, LocalDate fin) {
+        return ejecutar(actor, proyectoId, contratista, inicio, fin, null);
+    }
+
+    /** Con versionEsperada, rechaza el cambio si otro usuario modificó el proyecto desde que lo vio. */
+    public Proyecto ejecutar(Actor actor, UUID proyectoId, String contratista, LocalDate inicio, LocalDate fin,
+                             Long versionEsperada) {
         autorizar(actor, Rol.RESPONSABLE);
         return ejecutarAuditado(actor, "INICIAR_EJECUCION", PROYECTO, proyectoId, null, null, () -> {
-            Proyecto p = cargarProyecto(actor, proyectoId);
+            Proyecto p = cargarProyecto(actor, proyectoId, versionEsperada);
             exigirResponsableAsignado(actor, p);
             EstadoProyecto anterior = p.estado();
             p.iniciarEjecucion(contratista, inicio, fin);

@@ -81,6 +81,7 @@ message AprobarProyectoRequest {
   string presupuesto = 3;
   string fuente_financiacion = 4;
   string responsable = 5;
+  optional int64 version_esperada = 10;   // versión del proyecto que vio el cliente
 }
 
 message IniciarEjecucionRequest {
@@ -89,6 +90,7 @@ message IniciarEjecucionRequest {
   string contratista = 3;
   string inicio = 4;
   string fin = 5;
+  optional int64 version_esperada = 10;   // versión del proyecto que vio el cliente
 }
 
 message RegistrarAvanceRequest {
@@ -97,6 +99,7 @@ message RegistrarAvanceRequest {
   int32 porcentaje = 3;
   string descripcion = 4;
   string motivo_correccion = 5;
+  optional int64 version_esperada = 10;   // versión del proyecto que vio el cliente
 }
 
 message RegistrarCostoRequest {
@@ -104,12 +107,14 @@ message RegistrarCostoRequest {
   string proyecto_id = 2;
   string valor = 3;
   string descripcion = 4;
+  optional int64 version_esperada = 10;   // versión del proyecto que vio el cliente
 }
 
 message AdjuntarEvidenciaRequest {
   Identidad identidad = 1;
   string proyecto_id = 2;
   string descripcion = 3;
+  optional int64 version_esperada = 10;   // versión del proyecto que vio el cliente
 }
 
 message ModificarPresupuestoRequest {
@@ -117,6 +122,7 @@ message ModificarPresupuestoRequest {
   string proyecto_id = 2;
   string presupuesto = 3;
   string motivo = 4;
+  optional int64 version_esperada = 10;   // versión del proyecto que vio el cliente
 }
 
 message CambiarEstadoRequest {
@@ -124,6 +130,7 @@ message CambiarEstadoRequest {
   string proyecto_id = 2;
   string estado = 3;                  // SUSPENDIDO, EN_EJECUCION, FINALIZADO o CANCELADO
   string motivo = 4;
+  optional int64 version_esperada = 10;   // versión del proyecto que vio el cliente
 }
 
 message SeguimientoMsg {

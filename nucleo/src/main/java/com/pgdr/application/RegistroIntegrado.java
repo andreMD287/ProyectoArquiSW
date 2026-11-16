@@ -117,7 +117,18 @@ public class RegistroIntegrado {
   "CARACTERIZACION",List.of("RECONSTRUCCION","CIERRE"),
   "RECONSTRUCCION",List.of("CIERRE"),
   "CIERRE",List.of());
+ /**
+  * Pasar a Reconstrucción y cerrar un desastre en Reconstrucción dependen de reglas que verifica el
+  * módulo de Reconstrucción (RN-01, RN-02: hay daños que reconstruir; RN-04: no quedan proyectos
+  * abiertos). Por eso esas dos transiciones solo se aceptan cuando las pide ese módulo.
+  */
+ static boolean exigeReconstruccion(String actual,String destino){
+  return "RECONSTRUCCION".equals(destino)||("RECONSTRUCCION".equals(actual)&&"CIERRE".equals(destino));
+ }
  public JsonObject cambiarFase(Identidad actor,String ref,UUID cambio,long base,String fase,String motivo){
+  return cambiarFase(actor,ref,cambio,base,fase,motivo,false);
+ }
+ public JsonObject cambiarFase(Identidad actor,String ref,UUID cambio,long base,String fase,String motivo,boolean desdeReconstruccion){
   if(!actor.puedeRegistrarDesastre())throw new jakarta.ws.rs.ForbiddenException();
   if(cambio==null || base<0 || motivo==null || motivo.isBlank() || motivo.length()>500 || fase==null || !FASES.containsKey(fase))throw new ValidacionException("Versión, fase y motivo válidos requeridos");
   UUID id=resolver(ref,actor);
@@ -126,8 +137,10 @@ public class RegistroIntegrado {
   var prev=em.createNativeQuery("SELECT huella,nuevo FROM desastre_cambios WHERE organizacion_id=?1 AND id=?2").setParameter(1,actor.organizacionId()).setParameter(2,cambio).getResultList();
   if(!prev.isEmpty()){Object[] row=(Object[])prev.get(0);if(!huella.equals(row[0].toString()))throw new CambioConflicto();return leer(row[1].toString());}
   JsonObject antes=datos(id);
-  if(antes.getJsonNumber("version").longValue()!=base)throw new CambioConflicto();
   if(!FASES.getOrDefault(antes.getString("fase","REGISTRO"),List.of()).contains(fase))throw new ValidacionException("Transición de fase no permitida");
+  if(exigeReconstruccion(antes.getString("fase","REGISTRO"),fase)&&!desdeReconstruccion)
+   throw new ValidacionException("Esta transición la hace el módulo de Reconstrucción, que verifica sus reglas (RN-01, RN-02 y RN-04)");
+  if(antes.getJsonNumber("version").longValue()!=base)throw new CambioConflicto();
   JsonObject despues=Json.createObjectBuilder(antes).add("fase",fase).add("version",base+1).build();
   em.createNativeQuery("UPDATE desastres SET version=version+1 WHERE id=?1").setParameter(1,id).executeUpdate();
   em.createNativeQuery("INSERT INTO desastres_integrados(desastre_id,referencia,datos_json,fase) VALUES (?1,?2,?3,?4) ON CONFLICT(desastre_id) DO UPDATE SET datos_json=EXCLUDED.datos_json,fase=EXCLUDED.fase").setParameter(1,id).setParameter(2,ref).setParameter(3,despues.toString()).setParameter(4,fase).executeUpdate();

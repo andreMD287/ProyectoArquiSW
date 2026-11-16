@@ -116,43 +116,43 @@ public class ReconstruccionGrpcService extends ReconstruccionServiceGrpc.Reconst
     @Override
     public void aprobarProyecto(AprobarProyectoRequest r, StreamObserver<ProyectoMsg> o) {
         responder(o, () -> proyecto(aprobarProyecto.ejecutar(actor(r.getIdentidad()), uuid(r.getProyectoId()),
-                dinero(r.getPresupuesto()), r.getFuenteFinanciacion(), r.getResponsable())));
+                dinero(r.getPresupuesto()), r.getFuenteFinanciacion(), r.getResponsable(), version(r.hasVersionEsperada(), r.getVersionEsperada()))));
     }
 
     @Override
     public void iniciarEjecucion(IniciarEjecucionRequest r, StreamObserver<ProyectoMsg> o) {
         responder(o, () -> proyecto(iniciarEjecucion.ejecutar(actor(r.getIdentidad()), uuid(r.getProyectoId()),
-                r.getContratista(), fecha(r.getInicio()), fecha(r.getFin()))));
+                r.getContratista(), fecha(r.getInicio()), fecha(r.getFin()), version(r.hasVersionEsperada(), r.getVersionEsperada()))));
     }
 
     @Override
     public void registrarAvance(RegistrarAvanceRequest r, StreamObserver<ProyectoMsg> o) {
         responder(o, () -> proyecto(registrarSeguimiento.avance(actor(r.getIdentidad()), uuid(r.getProyectoId()),
-                r.getPorcentaje(), r.getDescripcion(), r.getMotivoCorreccion())));
+                r.getPorcentaje(), r.getDescripcion(), r.getMotivoCorreccion(), version(r.hasVersionEsperada(), r.getVersionEsperada()))));
     }
 
     @Override
     public void registrarCosto(RegistrarCostoRequest r, StreamObserver<ProyectoMsg> o) {
         responder(o, () -> proyecto(registrarSeguimiento.costo(actor(r.getIdentidad()), uuid(r.getProyectoId()),
-                dinero(r.getValor()), r.getDescripcion())));
+                dinero(r.getValor()), r.getDescripcion(), version(r.hasVersionEsperada(), r.getVersionEsperada()))));
     }
 
     @Override
     public void adjuntarEvidencia(AdjuntarEvidenciaRequest r, StreamObserver<ProyectoMsg> o) {
         responder(o, () -> proyecto(registrarSeguimiento.evidencia(actor(r.getIdentidad()), uuid(r.getProyectoId()),
-                r.getDescripcion())));
+                r.getDescripcion(), version(r.hasVersionEsperada(), r.getVersionEsperada()))));
     }
 
     @Override
     public void modificarPresupuesto(ModificarPresupuestoRequest r, StreamObserver<ProyectoMsg> o) {
         responder(o, () -> proyecto(modificarPresupuesto.ejecutar(actor(r.getIdentidad()), uuid(r.getProyectoId()),
-                dinero(r.getPresupuesto()), r.getMotivo())));
+                dinero(r.getPresupuesto()), r.getMotivo(), version(r.hasVersionEsperada(), r.getVersionEsperada()))));
     }
 
     @Override
     public void cambiarEstado(CambiarEstadoRequest r, StreamObserver<ProyectoMsg> o) {
         responder(o, () -> proyecto(cambiarEstado.ejecutar(actor(r.getIdentidad()), uuid(r.getProyectoId()),
-                EstadoProyecto.valueOf(r.getEstado()), r.getMotivo())));
+                EstadoProyecto.valueOf(r.getEstado()), r.getMotivo(), version(r.hasVersionEsperada(), r.getVersionEsperada()))));
     }
 
     @Override
@@ -208,6 +208,10 @@ public class ReconstruccionGrpcService extends ReconstruccionServiceGrpc.Reconst
     }
 
     // ---- traducción de errores a estados gRPC ----
+
+    private static Long version(boolean enviada, long valor) {
+        return enviada ? valor : null;
+    }
 
     private static <T> void responder(StreamObserver<T> observador, Supplier<T> trabajo) {
         try {

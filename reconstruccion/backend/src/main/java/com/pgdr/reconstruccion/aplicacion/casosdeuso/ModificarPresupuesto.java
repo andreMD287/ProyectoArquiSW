@@ -13,9 +13,15 @@ public class ModificarPresupuesto extends CasoDeUso {
     }
 
     public Proyecto ejecutar(Actor actor, UUID proyectoId, BigDecimal nuevo, String motivo) {
+        return ejecutar(actor, proyectoId, nuevo, motivo, null);
+    }
+
+    /** Con versionEsperada, rechaza el cambio si otro usuario modificó el proyecto desde que lo vio. */
+    public Proyecto ejecutar(Actor actor, UUID proyectoId, BigDecimal nuevo, String motivo,
+                             Long versionEsperada) {
         autorizar(actor, Rol.AUTORIDAD);
         return ejecutarAuditado(actor, "MODIFICAR_PRESUPUESTO", PROYECTO, proyectoId, null, motivo, () -> {
-            Proyecto p = cargarProyecto(actor, proyectoId);
+            Proyecto p = cargarProyecto(actor, proyectoId, versionEsperada);
             BigDecimal anterior = p.modificarPresupuesto(nuevo, motivo);
             d.proyectos().actualizar(p);
             auditar(actor, "MODIFICAR_PRESUPUESTO", PROYECTO, p.id(), p.desastreId(), anterior.toPlainString(),

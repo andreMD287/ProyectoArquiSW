@@ -46,6 +46,17 @@ public class PlataformaHttp {
         return enviar(solicitud, metodo, cuerpo, "El núcleo");
     }
 
+    /**
+     * Llamada al núcleo en nombre del usuario y como módulo de Reconstrucción: lleva su token y la
+     * clave de integración. El núcleo la exige para las transiciones de fase que dependen de las
+     * reglas de este módulo (pasar a Reconstrucción y cerrar).
+     */
+    public Respuesta nucleoComoModulo(String metodo, String ruta, String token, String cuerpo) {
+        HttpRequest.Builder solicitud = HttpRequest.newBuilder(URI.create(nucleo + ruta))
+                .header("Authorization", "Bearer " + token).header("X-Integracion-Key", clave);
+        return enviar(solicitud, metodo, cuerpo, "El núcleo");
+    }
+
     /** Llamada interna al núcleo: lleva la clave de integración, no un token de usuario. */
     public Respuesta nucleoInterno(String ruta) {
         HttpRequest.Builder solicitud = HttpRequest.newBuilder(URI.create(nucleo + ruta))

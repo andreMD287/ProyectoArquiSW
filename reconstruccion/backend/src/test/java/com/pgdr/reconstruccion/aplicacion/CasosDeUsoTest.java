@@ -293,6 +293,18 @@ class CasosDeUsoTest {
     }
 
     @Test
+    void conVersionEsperadaViejaElCambioSeRechazaSinAplicarse() {
+        new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
+        Proyecto p = enEjecucion(puente);
+        long vista = p.version();
+        new RegistrarSeguimiento(d).avance(RESPONSABLE, p.id(), 30, "Cimentación", null, vista);
+        assertThrows(ConflictoDeVersionException.class,
+                () -> new RegistrarSeguimiento(d).avance(RESPONSABLE, p.id(), 50, "Con datos viejos", null, vista));
+        assertEquals(30, d.proyectos().buscar(p.id()).orElseThrow().avance());
+        assertEquals(50, new RegistrarSeguimiento(d).avance(RESPONSABLE, p.id(), 50, "Con datos frescos", null, vista + 1).avance());
+    }
+
+    @Test
     void escenarioE_30EscuelasY12Puentes() {
         new IniciarReconstruccion(d).ejecutar(AUTORIDAD, desastre.id());
         List<CrearProyectos.Solicitud> lote = new ArrayList<>();

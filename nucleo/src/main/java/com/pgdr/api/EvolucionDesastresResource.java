@@ -41,7 +41,9 @@ public class EvolucionDesastresResource {
  }
  @PATCH @Path("{id}/fase") public Response cambiarFase(@PathParam("id") String id,JsonObject b){
   if(!actor().puedeRegistrarDesastre())return Response.status(403).build();
-  try{return Response.ok(registro.cambiarFase(actor(),id,UUID.fromString(b.getString("cambioId")),b.getJsonNumber("versionBase").longValueExact(),b.getString("fase"),b.getString("motivo"))).build();}
+  // Solo el módulo de Reconstrucción manda la clave de integración junto con el token del usuario.
+  boolean desdeReconstruccion=TokenAuthFilter.claveIntegracionValida(req.getHeader("X-Integracion-Key"));
+  try{return Response.ok(registro.cambiarFase(actor(),id,UUID.fromString(b.getString("cambioId")),b.getJsonNumber("versionBase").longValueExact(),b.getString("fase"),b.getString("motivo"),desdeReconstruccion)).build();}
   catch(RegistroIntegrado.CambioConflicto e){return Response.status(409).entity(Map.of("error","VERSION_O_CAMBIO_EN_CONFLICTO")).build();}
   catch(ValidacionException | IllegalArgumentException | NullPointerException | ClassCastException | ArithmeticException e){return Response.status(400).entity(Map.of("error",e.getMessage()==null?"Datos del cambio inválidos":e.getMessage())).build();}
  }

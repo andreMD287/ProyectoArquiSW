@@ -174,9 +174,14 @@ pasos = [('iniciar', {'contratista': 'Consorcio Vial', 'inicio': '2026-12-01', '
          ('avance', {'porcentaje': '100', 'descripcion': 'Obra terminada'}, 'Avance registrado'),
          ('evidencia', {'descripcion': 'Acta de entrega 1'}, 'Evidencia adjunta'),
          ('estado', {'estado': 'FINALIZADO'}, 'FINALIZADO')]
+s, _, b = coord.seguir('GET', P)
+version_vista = re.search(r'name="version" value="(\d+)"', b).group(1)
+pasos[0][1]['version'] = version_vista
 for accion, datos, esperado in pasos:
     s, _, b = evaluador.seguir('POST', P + '/' + accion, datos)
     check(s == 200 and esperado in b, 'el responsable asignado: ' + accion, avisos(b))
+s, _, b = evaluador.seguir('POST', P + '/evidencia', {'descripcion': 'Formulario viejo', 'version': version_vista})
+check(s == 200 and 'cambió' in b, 'un formulario abierto con una versión vieja no pisa el cambio de otro', avisos(b))
 s, _, b = coord.seguir('GET', P)
 check(s == 200 and 'Auditoría' in b and 'RECHAZADO' in b, 'la auditoría muestra el intento rechazado y los cambios', s)
 s, _, b = coord.seguir('GET', f'/tablero?desastre={ref}')

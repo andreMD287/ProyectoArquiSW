@@ -1,5 +1,6 @@
 package com.pgdr.reconstruccion.aplicacion.casosdeuso;
 
+import com.pgdr.reconstruccion.aplicacion.puertos.ConflictoDeVersionException;
 import com.pgdr.reconstruccion.dominio.Actor;
 import com.pgdr.reconstruccion.dominio.Desastre;
 import com.pgdr.reconstruccion.dominio.Proyecto;
@@ -59,6 +60,18 @@ abstract class CasoDeUso {
         datos.put("desastreId", desastreId.toString());
         datos.put("organizacion", actor.organizacion());
         return datos;
+    }
+
+    /**
+     * Control de concurrencia de punta a punta: si el cliente envía la versión que vio y el proyecto
+     * ya cambió, se rechaza antes de aplicar nada (además del control optimista al guardar).
+     */
+    protected Proyecto cargarProyecto(Actor actor, UUID proyectoId, Long versionEsperada) {
+        Proyecto p = cargarProyecto(actor, proyectoId);
+        if (versionEsperada != null && versionEsperada != p.version())
+            throw new ConflictoDeVersionException("El proyecto cambió (va en la versión " + p.version()
+                    + " y usted vio la " + versionEsperada + "). Consulte de nuevo y reintente.");
+        return p;
     }
 
     /** RN-10: cada organización ve y modifica solo sus proyectos. */

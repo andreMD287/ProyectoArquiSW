@@ -89,24 +89,25 @@ public class ReconstruccionController {
                          @RequestParam(required = false) String fin, @RequestParam(required = false) Integer porcentaje,
                          @RequestParam(required = false) String valor, @RequestParam(required = false) String descripcion,
                          @RequestParam(required = false) String motivo, @RequestParam(required = false) String estado,
+                         @RequestParam(required = false) Long version,
                          RedirectAttributes flash) {
         String t = sesion.token();
         String destino = "/reconstruccion/" + ref + "/proyectos/" + id;
         return switch (accion) {
             case "aprobar" -> Acciones.ejecutar(flash, destino, "Proyecto aprobado.",
-                    () -> reconstruccion.aprobar(t, id, presupuesto, fuente, responsable));
+                    () -> reconstruccion.aprobar(t, id, presupuesto, fuente, responsable, version));
             case "iniciar" -> Acciones.ejecutar(flash, destino, "Ejecución iniciada.",
-                    () -> reconstruccion.iniciarEjecucion(t, id, contratista, inicio, fin));
+                    () -> reconstruccion.iniciarEjecucion(t, id, contratista, inicio, fin, version));
             case "avance" -> Acciones.ejecutar(flash, destino, "Avance registrado.",
-                    () -> reconstruccion.avance(t, id, porcentaje == null ? -1 : porcentaje, descripcion, motivo));
+                    () -> reconstruccion.avance(t, id, porcentaje == null ? -1 : porcentaje, descripcion, motivo, version));
             case "costo" -> Acciones.ejecutar(flash, destino, "Costo registrado.",
-                    () -> reconstruccion.costo(t, id, valor, descripcion));
+                    () -> reconstruccion.costo(t, id, valor, descripcion, version));
             case "evidencia" -> Acciones.ejecutar(flash, destino, "Evidencia adjunta.",
-                    () -> reconstruccion.evidencia(t, id, descripcion));
+                    () -> reconstruccion.evidencia(t, id, descripcion, version));
             case "presupuesto" -> Acciones.ejecutar(flash, destino, "Presupuesto modificado.",
-                    () -> reconstruccion.presupuesto(t, id, presupuesto, motivo));
+                    () -> reconstruccion.presupuesto(t, id, presupuesto, motivo, version));
             case "estado" -> Acciones.ejecutar(flash, destino, "Estado cambiado a " + estado + ".",
-                    () -> reconstruccion.estado(t, id, estado, motivo));
+                    () -> reconstruccion.estado(t, id, estado, motivo, version));
             default -> throw new ErrorServicio(404, "Acción desconocida.", null);
         };
     }

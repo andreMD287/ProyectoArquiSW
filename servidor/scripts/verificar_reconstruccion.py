@@ -74,6 +74,8 @@ s,b=req('PATCH',F,cuerpo,t);check(s==200 and b['fase']=='CARACTERIZACION','el n�
 s,b=req('PATCH',F,cuerpo,t);check(s==200 and b['fase']=='CARACTERIZACION','repetir el mismo cambio no lo aplica dos veces',(s,b))
 s,b=req('PATCH',F,{'cambioId':uid(),'versionBase':c['version'],'fase':'CIERRE','motivo':'Versión vieja'},t);check(s==409,'una versión base vieja responde 409',(s,b))
 check(desastre_rec()['estado']=='CARACTERIZACION','el módulo ve la fase nueva del núcleo')
+# Las transiciones que dependen de las reglas de Reconstrucción no se pueden pedir directo al núcleo.
+s,b=req('PATCH',F,{'cambioId':uid(),'versionBase':c['version']+1,'fase':'RECONSTRUCCION','motivo':'Saltarse RN-01 y RN-02'},t);check(s==400 and 'Reconstrucción' in str(b),'el coordinador no puede pasar a Reconstrucción llamando directo al núcleo',(s,b))
 # --- CU-01 ---
 I=R+f'/desastres/{did}/iniciar-reconstruccion'
 s,b=req('POST',I,token=cons);check(s==403,'consulta no inicia la reconstrucción',(s,b))
@@ -81,6 +83,7 @@ s,b=req('POST',I,token=cons,extra={'X-Rol':'AUTORIDAD','X-Usuario':'falso'});che
 s,b=req('POST',I,token=t);check(s==200 and b['estado']=='RECONSTRUCCION','la autoridad inicia la reconstrucción (CU-01)',(s,b))
 c2=catalogo_hasta(lambda c:c.get('fase')=='RECONSTRUCCION');check(c2.get('fase')=='RECONSTRUCCION','la fase quedó guardada en el núcleo',c2)
 s,b=req('GET',f"/desastres/{d['id']}/historial",token=t);check(s==200 and [x['nuevo'].get('fase') for x in b][-2:]==['CARACTERIZACION','RECONSTRUCCION'],'el historial del núcleo conserva los cambios de fase',(s,b))
+s,b=req('PATCH',F,{'cambioId':uid(),'versionBase':c2['version'],'fase':'CIERRE','motivo':'Saltarse RN-04'},t);check(s==400 and 'Reconstrucción' in str(b),'tampoco puede cerrar un desastre en Reconstrucción llamando directo al núcleo',(s,b))
 # --- CU-02 ---
 s,b=req('GET',R+f'/desastres/{did}/evaluaciones',token=t);check(s==200 and {x['id'] for x in b}>=set(ev.values()),'el módulo lee las evaluaciones de servidor',(s,b))
 niveles={x['id']:x['nivel'] for x in b}
@@ -101,7 +104,9 @@ check(b.get('formulador')==root['usuario'] and b.get('tipoActivo')=='Puente','el
 s,b=req('POST',P+'/iniciar',inicio,cons);check(s==403,'consulta no inicia la ejecución',(s,b))
 s,b=req('POST',P+'/iniciar',inicio,resp);check(s==200 and b['estado']=='EN_EJECUCION','el responsable inicia la ejecución (CU-04)',(s,b))
 s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp2);check(s==403,'un responsable no asignado no registra avance (RN-20)',(s,b))
-s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp);check(s==200,'el responsable registra avance (CU-05)',(s,b))
+s,b=req('GET',P,token=resp);vista=b['version']
+s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp,{'If-Match':'"'+str(vista)+'"'});check(s==200,'el responsable registra avance con la versión que vio (CU-05)',(s,b))
+s,b=req('POST',P+'/avance',{'porcentaje':70,'descripcion':'Con datos viejos'},resp,{'If-Match':'"'+str(vista)+'"'});check(s==409 and b.get('codigo')=='CONFLICTO_DE_VERSION','con una versión vieja (If-Match) el cambio se rechaza con 409',(s,b))
 s,b=req('POST',P+'/costo',{'valor':600000000,'descripcion':'Acta 1'},resp);check(s==200,'un costo mayor que el presupuesto se registra y marca sobrecosto (RN-14)',(s,b))
 s,b=req('POST',P+'/presupuesto',{'presupuesto':650000000,'motivo':''},t);check(s==422 and b.get('regla')=='RN-12','el presupuesto no cambia sin motivo (RN-12)',(s,b))
 s,b=req('POST',P+'/presupuesto',{'presupuesto':650000000,'motivo':'Mayor cantidad de obra'},t);check(s==200,'la autoridad modifica el presupuesto con motivo (CU-06)',(s,b))

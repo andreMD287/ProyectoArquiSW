@@ -146,56 +146,63 @@ public class ReconstruccionController {
     @PostMapping("/proyectos/{id}/aprobar")
     public ProyectoVista aprobar(@PathVariable UUID id, @RequestBody SolicitudAprobar s,
                                  @RequestHeader("X-Usuario") String usuario, @RequestHeader("X-Rol") String rol,
-                                 @RequestHeader("X-Organizacion") String org) {
+                                 @RequestHeader("X-Organizacion") String org,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch) {
         return ProyectoVista.de(aprobarProyecto.ejecutar(actor(usuario, rol, org), id, s.presupuesto(),
-                s.fuenteFinanciacion(), s.responsable()));
+                s.fuenteFinanciacion(), s.responsable(), version(ifMatch)));
     }
 
     @PostMapping("/proyectos/{id}/iniciar")
     public ProyectoVista iniciar(@PathVariable UUID id, @RequestBody SolicitudIniciar s,
                                  @RequestHeader("X-Usuario") String usuario, @RequestHeader("X-Rol") String rol,
-                                 @RequestHeader("X-Organizacion") String org) {
+                                 @RequestHeader("X-Organizacion") String org,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch) {
         return ProyectoVista.de(iniciarEjecucion.ejecutar(actor(usuario, rol, org), id, s.contratista(),
-                fecha(s.inicio()), fecha(s.fin())));
+                fecha(s.inicio()), fecha(s.fin()), version(ifMatch)));
     }
 
     @PostMapping("/proyectos/{id}/presupuesto")
     public ProyectoVista presupuesto(@PathVariable UUID id, @RequestBody SolicitudPresupuesto s,
                                      @RequestHeader("X-Usuario") String usuario, @RequestHeader("X-Rol") String rol,
-                                     @RequestHeader("X-Organizacion") String org) {
-        return ProyectoVista.de(modificarPresupuesto.ejecutar(actor(usuario, rol, org), id, s.presupuesto(), s.motivo()));
+                                     @RequestHeader("X-Organizacion") String org,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch) {
+        return ProyectoVista.de(modificarPresupuesto.ejecutar(actor(usuario, rol, org), id, s.presupuesto(), s.motivo(), version(ifMatch)));
     }
 
     @PostMapping("/proyectos/{id}/avance")
     public ProyectoVista avance(@PathVariable UUID id, @RequestBody SolicitudAvance s,
                                 @RequestHeader("X-Usuario") String usuario, @RequestHeader("X-Rol") String rol,
-                                @RequestHeader("X-Organizacion") String org) {
+                                @RequestHeader("X-Organizacion") String org,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch) {
         if (s.porcentaje() == null) throw new IllegalArgumentException("Falta el porcentaje de avance.");
         return ProyectoVista.de(registrarSeguimiento.avance(actor(usuario, rol, org), id, s.porcentaje(),
-                s.descripcion(), s.motivoCorreccion()));
+                s.descripcion(), s.motivoCorreccion(), version(ifMatch)));
     }
 
     @PostMapping("/proyectos/{id}/costo")
     public ProyectoVista costo(@PathVariable UUID id, @RequestBody SolicitudCosto s,
                                @RequestHeader("X-Usuario") String usuario, @RequestHeader("X-Rol") String rol,
-                               @RequestHeader("X-Organizacion") String org) {
-        return ProyectoVista.de(registrarSeguimiento.costo(actor(usuario, rol, org), id, s.valor(), s.descripcion()));
+                               @RequestHeader("X-Organizacion") String org,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch) {
+        return ProyectoVista.de(registrarSeguimiento.costo(actor(usuario, rol, org), id, s.valor(), s.descripcion(), version(ifMatch)));
     }
 
     @PostMapping("/proyectos/{id}/evidencia")
     public ProyectoVista evidencia(@PathVariable UUID id, @RequestBody SolicitudEvidencia s,
                                    @RequestHeader("X-Usuario") String usuario, @RequestHeader("X-Rol") String rol,
-                                   @RequestHeader("X-Organizacion") String org) {
-        return ProyectoVista.de(registrarSeguimiento.evidencia(actor(usuario, rol, org), id, s.descripcion()));
+                                   @RequestHeader("X-Organizacion") String org,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch) {
+        return ProyectoVista.de(registrarSeguimiento.evidencia(actor(usuario, rol, org), id, s.descripcion(), version(ifMatch)));
     }
 
     @PostMapping("/proyectos/{id}/estado")
     public ProyectoVista estado(@PathVariable UUID id, @RequestBody SolicitudEstado s,
                                 @RequestHeader("X-Usuario") String usuario, @RequestHeader("X-Rol") String rol,
-                                @RequestHeader("X-Organizacion") String org) {
+                                @RequestHeader("X-Organizacion") String org,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch) {
         if (s.estado() == null) throw new IllegalArgumentException("Falta el estado de destino.");
         return ProyectoVista.de(cambiarEstado.ejecutar(actor(usuario, rol, org), id,
-                EstadoProyecto.valueOf(s.estado()), s.motivo()));
+                EstadoProyecto.valueOf(s.estado()), s.motivo(), version(ifMatch)));
     }
 
     @GetMapping("/proyectos/{id}/auditoria")
@@ -207,5 +214,16 @@ public class ReconstruccionController {
 
     private static LocalDate fecha(String texto) {
         return texto == null || texto.isBlank() ? null : LocalDate.parse(texto);
+    }
+
+    /** If-Match con la versión del proyecto ("3", W/"3" o 3). Sin la cabecera no hay control previo. */
+    private static Long version(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) return null;
+        String v = ifMatch.trim().replace("W/", "").replace("\"", "");
+        try {
+            return Long.parseLong(v);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("If-Match debe traer la versión del proyecto.");
+        }
     }
 }

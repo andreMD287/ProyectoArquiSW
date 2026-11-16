@@ -13,9 +13,15 @@ public class RegistrarSeguimiento extends CasoDeUso {
     }
 
     public Proyecto avance(Actor actor, UUID proyectoId, int porcentaje, String descripcion, String motivoCorreccion) {
+        return avance(actor, proyectoId, porcentaje, descripcion, motivoCorreccion, null);
+    }
+
+    /** Con versionEsperada, rechaza el cambio si otro usuario modificó el proyecto desde que lo vio. */
+    public Proyecto avance(Actor actor, UUID proyectoId, int porcentaje, String descripcion, String motivoCorreccion,
+                             Long versionEsperada) {
         autorizar(actor, Rol.RESPONSABLE);
         return ejecutarAuditado(actor, "REGISTRAR_AVANCE", PROYECTO, proyectoId, null, motivoCorreccion, () -> {
-            Proyecto p = cargarProyecto(actor, proyectoId);
+            Proyecto p = cargarProyecto(actor, proyectoId, versionEsperada);
             exigirResponsableAsignado(actor, p);
             int anterior = p.registrarAvance(porcentaje, descripcion, motivoCorreccion, d.reloj().ahora(), actor.usuario());
             d.proyectos().actualizar(p);
@@ -26,9 +32,15 @@ public class RegistrarSeguimiento extends CasoDeUso {
     }
 
     public Proyecto costo(Actor actor, UUID proyectoId, BigDecimal valor, String descripcion) {
+        return costo(actor, proyectoId, valor, descripcion, null);
+    }
+
+    /** Con versionEsperada, rechaza el cambio si otro usuario modificó el proyecto desde que lo vio. */
+    public Proyecto costo(Actor actor, UUID proyectoId, BigDecimal valor, String descripcion,
+                             Long versionEsperada) {
         autorizar(actor, Rol.RESPONSABLE);
         return ejecutarAuditado(actor, "REGISTRAR_COSTO", PROYECTO, proyectoId, null, null, () -> {
-            Proyecto p = cargarProyecto(actor, proyectoId);
+            Proyecto p = cargarProyecto(actor, proyectoId, versionEsperada);
             exigirResponsableAsignado(actor, p);
             BigDecimal anterior = p.costoAcumulado();
             boolean nuevoSobrecosto = p.registrarCosto(valor, descripcion, d.reloj().ahora(), actor.usuario());
@@ -43,9 +55,15 @@ public class RegistrarSeguimiento extends CasoDeUso {
     }
 
     public Proyecto evidencia(Actor actor, UUID proyectoId, String descripcion) {
+        return evidencia(actor, proyectoId, descripcion, null);
+    }
+
+    /** Con versionEsperada, rechaza el cambio si otro usuario modificó el proyecto desde que lo vio. */
+    public Proyecto evidencia(Actor actor, UUID proyectoId, String descripcion,
+                             Long versionEsperada) {
         autorizar(actor, Rol.RESPONSABLE);
         return ejecutarAuditado(actor, "ADJUNTAR_EVIDENCIA", PROYECTO, proyectoId, null, null, () -> {
-            Proyecto p = cargarProyecto(actor, proyectoId);
+            Proyecto p = cargarProyecto(actor, proyectoId, versionEsperada);
             exigirResponsableAsignado(actor, p);
             p.adjuntarEvidencia(descripcion, d.reloj().ahora(), actor.usuario());
             d.proyectos().actualizar(p);

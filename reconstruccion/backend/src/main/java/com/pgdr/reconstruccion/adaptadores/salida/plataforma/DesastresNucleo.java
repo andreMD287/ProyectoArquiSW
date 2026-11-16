@@ -89,7 +89,7 @@ public class DesastresNucleo implements GestionDesastres {
         cuerpo.put("fase", nuevo.name());
         cuerpo.put("motivo", "Cambio pedido desde el módulo de Reconstrucción");
         String ruta = "/eventos/" + URLEncoder.encode(actual.referencia(), StandardCharsets.UTF_8) + "/fase";
-        PlataformaHttp.Respuesta r = plataforma.nucleo("PATCH", ruta, SesionActual.requerida().token(),
+        PlataformaHttp.Respuesta r = plataforma.nucleoComoModulo("PATCH", ruta, SesionActual.requerida().token(),
                 cuerpo.toString());
         if (r.estado() == 200) return;
         if (r.estado() == 409)

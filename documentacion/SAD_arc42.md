@@ -1,8 +1,8 @@
-# SAD v2.1 · Plataforma para la Gestión de Desastres y Reconstrucción
+# SAD v2.2 · Plataforma para la Gestión de Desastres y Reconstrucción
 
 **Documento de arquitectura de software, organizado según arc42**
 
-**Versión:** 2.1 · **Fecha:** 17 de noviembre de 2026
+**Versión:** 2.2 · **Fecha:** 17 de noviembre de 2026
 
 **Equipo:** Andrés Barrios, Nicolás Parra, Thomás López, André Landinez
 
@@ -16,6 +16,7 @@
 | 1.0 | 10-nov-2026 | Ocho unidades de despliegue, vistas 4+1 y 22 decisiones. Responde al SRS v1.0 |
 | 2.0 | 15-nov-2026 | Reorganizado según arc42. Agrega el portal web MVC (UD-09) con su servlet multihilo y registra Reconstrucción (UD-06) como construida en Spring Boot con REST y gRPC. Retira UD-05. Adopta las cuatro fases del desastre. Agrega ADR-23 a ADR-29. Separa el ambiente entregado del despliegue objetivo |
 | 2.1 | 17-nov-2026 | Toda la presentación pasa a .NET, por aclaración del profesor: el portal se rehace en ASP.NET Core Razor Pages (ADR-23) y el servlet multihilo queda en un servicio de tablero en Java, UD-10, que el portal consume (ADR-24) |
+| 2.2 | 17-nov-2026 | C1 y C2 construidos en `servidor`; consumo de los avisos de Reconstrucción en notificaciones (ADR-27); textos de ADR-25 y ADR-27 |
 
 ## Cómo se cubren las vistas 4+1 y los entregables del enunciado
 
@@ -44,7 +45,7 @@ Este documento describe la arquitectura de la Plataforma para la Gestión de Des
 
 | Mínimo del proyecto | Qué se entrega | Dónde |
 | --- | --- | --- |
-| a. App móvil que recolecta y caracteriza | App de campo .NET MAUI con SQLite: captura sin conexión y sincronización. Caracterizar desde la app está en curso | §6.4, §8.5 |
+| a. App móvil que recolecta y caracteriza | App de campo .NET MAUI con SQLite: captura sin conexión y sincronización. `servidor` ya ofrece la caracterización (C2) y el catálogo de tipos de activo (C1); la pantalla de la app que los usa está en curso | §6.4, §8.5 |
 | b. Reconstrucción física | UD-06 Reconstrucción, en Spring Boot con REST y gRPC | §5.3, §6.5 |
 | c. Mapa con desastres, evaluaciones y proyectos | Tablero del desastre en el portal (UD-09), armado por el servlet multihilo del servicio de tablero (UD-10) | §6.6 |
 | d. Evaluación de daños | Evaluaciones versionadas con fotografía en `servidor` (UD-03) | §5.3, §6.4 |
@@ -238,7 +239,7 @@ De Sahana Eden, analizada en el SRS, se toman la plataforma web como punto comú
 | UD-01 | Entrada (`web`) | Nginx 1.28 | SRV-01: acceso único; enruta y limita tamaño e intentos de inicio de sesión | Ninguno | Crítica | Construida |
 | UD-02 | Núcleo (`nucleo`) | Java 21, Jakarta EE, WildFly 41 | SRV-02 identidad y sesiones; SRV-03 desastres (registro, nivel, fases, caracterización); SRV-12 auditoría; bandeja de salida | Base `pgdrdb` | Crítica | Construida; delimitación, consolidación, coordinación y auditoría consolidada diseñadas |
 | UD-03 | Campo y mapas (`servidor`) | ASP.NET Core 10 | SRV-05 evaluaciones; SRV-06 fotos; mapa; copia del catálogo de desastres; API de la app | Base `mapas` | Crítica | Construida; validación y duplicados diseñados |
-| UD-04 | Notificaciones (`desastres`) | Java 17, Jakarta EE, Payara 6 | SRV-04: cola por suscriptor, correo, registro de entregas; entrada de alertas | Registro de entregas (archivo) | Crítica | Construida; consumo continuo en curso |
+| UD-04 | Notificaciones (`desastres`) | Java 17, Jakarta EE, Payara 6 | SRV-04: cola por suscriptor, correo, registro de entregas; entrada de alertas | Registro de entregas y bandeja de entrada (archivos) | Crítica | Construida, con consumo de los avisos de Reconstrucción (ADR-27) |
 | UD-05 | Personas afectadas | — | SRV-07 | — | — | Retirada (ADR-28) |
 | UD-06 | Reconstrucción (`reconstruccion`) | Java 17, Spring Boot 3.3, REST y gRPC | SRV-09: proyectos de reconstrucción física; RN-01 a RN-21 | Base `reconstruccion` | Degradable | Construida |
 | UD-07 | Consulta pública | ASP.NET Core | SRV-10: copia pública de solo lectura | Copia derivada | Degradable | Diseñada |
@@ -322,7 +323,7 @@ Todo cambio de fase exige motivo y guarda versión, valor anterior y nuevo, y au
 
 | Aspecto | Construido | Diseñado o en curso |
 | --- | --- | --- |
-| Datos | Identificador del dispositivo, desastre, evaluador y organismo de la sesión, ubicación, activo en texto, nivel de afectación 1 a 5, descripción, foto y versión | Tipo de activo con catálogo (C1), en curso |
+| Datos | Identificador del dispositivo, desastre, evaluador y organismo de la sesión, ubicación, tipo de activo con catálogo (C1) y activo en texto, nivel de afectación 1 a 5, descripción, foto y versión | Elegir el tipo de activo en la app, en curso |
 | Estados | Preliminar (sin desastre) y Registrada | Validada por un coordinador distinto del evaluador, Devuelta y Duplicada |
 | Evidencias | Una foto JPEG o PNG de hasta 5 MB; correcciones con historial que no tocan la captura original | Documentos PDF; hasta cinco evidencias |
 | Uso | Mapa de calor y panorama | Estimación de costo y prioridad por zona |
@@ -398,7 +399,7 @@ sequenceDiagram
 | Margen | 1,3 s |
 | **Total (QA-REN-03)** | **5,0 s** |
 
-Con avisos aislados, la versión 1.0 midió 2,7 s y 3,2 s, con un ciclo de 5 s que hoy es de 1 s. Con 10 alertas simultáneas aún no se cumple, porque el consumidor toma un mensaje por segundo de cada cola (ADR-27, en curso).
+Con avisos aislados, la versión 1.0 midió 2,7 s y 3,2 s, con un ciclo de 5 s que hoy es de 1 s. Desde el 18-nov el consumidor procesa hasta 20 mensajes por cola en cada ciclo de 1 s, en vez de uno (ADR-27). Con 10 alertas simultáneas no está medido.
 
 | Situación | Qué hace la plataforma |
 | --- | --- |
@@ -692,7 +693,7 @@ Códigos HTTP: 200 o 201 aplicada; 202 recibida para proceso diferido; 401 sin c
 | Unidad | Operaciones construidas | Requisitos |
 | --- | --- | --- |
 | Núcleo | `/auth/login`, `/auth/me`, `/auth/logout` y `/auth/usuarios` (la app y los scripts los usan como `/api/auth/...` a través de `servidor`). `GET /eventos`, `GET /eventos/{id}` y su `/historial`. `PATCH /eventos/{id}/gravedad`, `/fase` y `/caracterizacion`. Registro del desastre. Catálogo interno `/integracion/catalogo`, con clave de integración. Inicio de sesión SOAP y EJB remoto | FC-07; RF-GD-01, 03, 05, 06, 07, 13, 14 |
-| `servidor` | `GET /api/desastres`, `/api/catalogos`; `POST /api/campo/lotes`; `GET` y `PUT /api/campo/evaluaciones/{id}`, con `/historial`, `/foto` y `/desastre`; `GET /api/panorama`; `/api/salud` | RF-ED-01 a 03, 07, 08, 11 a 14 |
+| `servidor` | `GET /api/desastres`, `/api/catalogos` (con `tiposActivo`, C1); `PATCH /api/desastres/{id}/caracterizacion` (C2), `/fase` y `/gravedad`; `POST /api/campo/lotes`; `GET` y `PUT /api/campo/evaluaciones/{id}`, con `/historial`, `/foto` y `/desastre`; `GET /api/panorama`; `/api/salud` | RF-ED-01 a 03, 07, 08, 11 a 14 |
 | Reconstrucción REST | Bajo `/api/reconstruccion`: desastres (iniciar reconstrucción, cerrar, evaluaciones, seguimiento, auditoría) y proyectos (crear, aprobar, iniciar, presupuesto, avance, costo, evidencia, estado, auditoría) | RF-RE-01 a 06 |
 | Reconstrucción gRPC | `ReconstruccionService`, 14 RPC: `IniciarReconstruccion`, `CrearProyecto`, `CrearProyectosEnLote`, `AprobarProyecto`, `IniciarEjecucion`, `RegistrarAvance`, `RegistrarCosto`, `AdjuntarEvidencia`, `ModificarPresupuesto`, `CambiarEstado`, `ConsultarSeguimiento`, `ConsultarAuditoria`, `CerrarDesastre`, `ConsultarEvaluaciones` | RF-RE-01 a 06 |
 | Portal | Páginas Razor y `GET /tablero?desastre=` (JSON del mapa, que reenvía al servicio de tablero) | Mínimos a, b, c y d |
@@ -703,16 +704,16 @@ Diseñadas, sin código: validación y duplicados de evaluaciones, documentos PD
 
 | Contrato entre unidades | Qué fija | Estado |
 | --- | --- | --- |
-| C1 Tipos de activo | Nueve códigos (vivienda, edificio público, escuela, centro de salud, vía, puente, red de agua, red de energía, otro), obligatorios en cada evaluación | En curso; Reconstrucción usa por ahora el texto del activo |
-| C2 Caracterización | `PATCH /eventos/{id}/caracterizacion` (§5.3) | Construido en el núcleo; reenvío desde `servidor` y la app en curso |
+| C1 Tipos de activo | Nueve códigos (vivienda, edificio público, escuela, centro de salud, vía, puente, red de agua, red de energía, otro) en la tabla configurable `tipos_activo`, publicados en `GET /api/catalogos`. La evaluación guarda el código tal como llega; al leerse, uno desconocido o ausente queda como OTRO y se conserva el original, para no perder capturas de apps anteriores ni romper la idempotencia | Construido en `servidor`, el tablero y Reconstrucción; elegirlo en la app, en curso |
+| C2 Caracterización | `PATCH /eventos/{id}/caracterizacion` en el núcleo (§5.3), que `servidor` ofrece a la app como `PATCH /api/desastres/{id}/caracterizacion` y reenvía tal cual (200, 409 con la versión actual, 403, 404) | Construido en el núcleo y en `servidor`; la pantalla de la app, en curso |
 | C3 Resumen de evaluaciones | Totales por nivel y por tipo de activo | Opcional: el tablero lo arma con `/api/panorama` |
 | C4 Sesión | Token Bearer validado con `/auth/me`; 401 vencido, 403 sin permiso | Construido |
-| C5 Eventos de Reconstrucción | `idEvento` (también es el id del mensaje AMQP), `tipo`, `ocurridoEn`, `desastreId` (el UUID que usa Reconstrucción), `proyectoId`, `organismoId` y `datos`; intercambio `reconstruccion.eventos`, cola `integracion.reconstruccion` | Publicación construida; consumo en curso |
+| C5 Eventos de Reconstrucción | `idEvento` (también es el id del mensaje AMQP), `tipo`, `ocurridoEn`, `desastreId` (el UUID que usa Reconstrucción), `proyectoId`, `organismoId` y `datos`; intercambio `reconstruccion.eventos`, cola `integracion.reconstruccion` | Publicación y consumo construidos (ADR-27) |
 
 | Aviso | Origen y canal | Estado |
 | --- | --- | --- |
 | `DESASTRE_REGISTRADO`, `DESASTRE_GRAVEDAD_CAMBIADA` | Núcleo → bandeja de salida → notificaciones → cola por suscriptor (`sistema.<id>`) y correo | Construido |
-| `PROYECTO_CREADO`, `PROYECTO_APROBADO`, `PROYECTO_ESTADO_CAMBIADO`, `PROYECTO_CON_SOBRECOSTO`, `PRESUPUESTO_MODIFICADO`, `DESASTRE_EN_RECONSTRUCCION`, `DESASTRE_CERRADO` | Reconstrucción → bandeja de salida → C5 | Publicación construida; consumo en curso |
+| `PROYECTO_CREADO`, `PROYECTO_APROBADO`, `PROYECTO_ESTADO_CAMBIADO`, `PROYECTO_CON_SOBRECOSTO`, `PRESUPUESTO_MODIFICADO`, `DESASTRE_EN_RECONSTRUCCION`, `DESASTRE_CERRADO` | Reconstrucción → bandeja de salida → C5 → notificaciones | Construido: correo para `PROYECTO_APROBADO`, `PROYECTO_CON_SOBRECOSTO` y `DESASTRE_CERRADO`; los demás se registran sin correo |
 | Alerta externa | SE-01 → intercambio `desastres.entrada`, cola `desastres.registro` | Cola construida; adaptadores diseñados |
 | Fase cambiada por el coordinador, delimitación, tarea, sistema externo caído | Núcleo y UD-08 | Diseñado |
 
@@ -726,7 +727,7 @@ Cada cola tiene su `<cola>.reintento`, que devuelve el mensaje a los 5 s, y su `
 - SQLite es la fuente de verdad local. Catálogo y capturas se separan por organismo, y las capturas también por usuario.
 - Sin conexión se captura y se corrige. Cada operación lleva un identificador del dispositivo y la versión base (ADR-04). Ante un conflicto, el evaluador elige y su decisión es una operación nueva.
 - El dispositivo no borra una captura hasta la confirmación. Revocar la sesión de un dispositivo perdido impide sincronizar, pero no borra lo guardado; por eso solo guarda catálogos y capturas del propio usuario. **Limitación:** el SQLite no va cifrado.
-- **En curso:** sincronizar al recuperar la red, al volver a la app y al guardar, con una franja de estado y pendientes; tratar el 401 aparte de la falta de red y reanudar tras un nuevo inicio de sesión, porque un evaluador puede pasar más de 8 horas sin señal; elegir el tipo de activo (C1); y caracterizar el desastre desde la app (C2).
+- **En curso (Rol 2, 18-nov):** tratar el 401 aparte de la falta de red y reanudar tras un nuevo inicio de sesión, porque un evaluador puede pasar más de 8 horas sin señal; elegir el tipo de activo (C1); y caracterizar el desastre desde la app (C2). Lo que necesitan del lado de `servidor` ya está construido y probado (`verificar_caracterizacion.py`).
 - **Evidencia:** `verificar_android_instrumentado.py` ejecuta en el emulador la desconexión real, la persistencia, el conflicto y su resolución.
 
 ### 8.6 Concurrencia y consistencia
@@ -953,7 +954,7 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Decisión.** UD-09 Portal web en ASP.NET Core 10 con Razor Pages, como única interfaz web (§5.2.2). Cada pantalla es una página: la vista `.cshtml` y su `PageModel`. Consume los servicios ya desplegados sin reescribir su lógica: REST con el núcleo, con `servidor` y con el servicio de tablero, y gRPC con Reconstrucción, con el cliente generado del mismo `reconstruccion.proto`.
 - **Justificación.**
   - Las pantallas son formularios y listas. Razor Pages las organiza por página sobre la misma base de MVC (enlace de modelo, validación y resultados), con menos piezas que controladores y vistas por separado.
-  - Patrón: el `PageModel` expone las propiedades que la vista enlaza (`[BindProperty]`, validadas con anotaciones) y atiende los comandos (`OnGet`, `OnPost…`). Hace de modelo de vista, por eso se documenta como MVVM del lado del servidor. Microsoft no le pone nombre de patrón: la clasificación es del equipo. La app MAUI usa el mismo patrón.
+  - Patrón: el `PageModel` expone las propiedades que la vista enlaza (`[BindProperty]`, validadas con anotaciones) y atiende los comandos (`OnGet`, `OnPost…`). Hace de modelo de vista, por eso se documenta como MVVM del lado del servidor. Microsoft no le pone nombre de patrón: la clasificación es del equipo. La app MAUI adopta el mismo patrón de forma progresiva (ADR-25).
   - Misma plataforma que `servidor` (ASP.NET Core 10): no agrega tecnología.
   - Sin estado de vista por usuario, lo que favorece el escenario B. El token queda en el servidor y los formularios traen protección antifalsificación (CSRF) por defecto.
   - Sigue el consejo del profesor de desplegar y consumir: solo cambió la capa de presentación; los servicios de negocio siguen igual.
@@ -970,11 +971,25 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Justificación.** Sin carga tarda lo de la fuente más lenta; una fuente caída no tumba el tablero; el pool limita la presión sobre los servicios. Las tres cosas están medidas (§6.6).
 - **Consecuencias.** Trade-off medido: con 20 clientes en una sola máquina el paralelo no gana (p95 de 366 frente a 355 ms), porque los servicios de atrás ya están saturados. El salto del portal al servicio de tablero cuesta unos 6 ms en p95 con un cliente. Puntos de sensibilidad: el tamaño del pool, la cola, el límite por fuente y la vigencia de la copia del catálogo en Reconstrucción.
 
-#### ADR-25 — Operación sin conexión con .NET MAUI y SQLite · Construido; mejoras en curso
+#### ADR-25 — Operación sin conexión con .NET MAUI y SQLite · Construido; caracterización desde la app en curso
 
-- **Requisitos.** Restricción del curso (componentes .NET para desconectados); QA-DIS-03, QA-CNF-01; mínimo a.
-- **Decisión.** La app de campo es .NET MAUI con SQLite como fuente de verdad local. Sincroniza por lotes idempotentes al recuperar la red y muestra los conflictos de versión sin sobrescribirlos.
-- **Contexto, alternativas, justificación y consecuencias.** Pendiente: texto de Rol 2.
+- **Requisitos.** Restricción del curso (componentes .NET para operar sin conexión); CON-08; QA-DIS-03, QA-CNF-01; mínimos a y d.
+- **Contexto.** Los evaluadores trabajan donde no hay señal y pueden pasar más de un turno sin conexión. Capturar no puede depender de la red, y lo capturado no puede perderse ni duplicarse al sincronizar. El TallerNetCore tenía la app en Flutter.
+- **Alternativas.**
+  - Flutter, del TallerNetCore: funciona sin conexión, pero no es .NET.
+  - Aplicación web progresiva con el almacenamiento del navegador: menos control sobre el almacenamiento, la cámara y el GPS sin conexión.
+  - Modelo desconectado de ADO.NET (DataSet y DataAdapter, clase 16): resuelve una caché local, pero no la app móvil ni la reconciliación de versiones.
+  - .NET MAUI con SQLite.
+- **Decisión.** App de campo en .NET MAUI (Android) con SQLite como fuente de verdad local.
+  - Cada operación lleva un identificador estable generado en el dispositivo y la versión base (ADR-04).
+  - Sincroniza por lotes de hasta 20 operaciones contra `POST /api/campo/lotes`, que es idempotente: un lote reenviado responde lo mismo y no duplica.
+  - Un conflicto de versión se muestra y decide el evaluador; nunca se sobrescribe.
+  - El token va en el almacenamiento seguro del dispositivo; un 401 pide sesión sin borrar lo pendiente.
+- **Justificación.** Nada se pierde (QA-DIS-03): la captura no se borra hasta que `servidor` la confirma. Lo repetido no se duplica y los conflictos son explícitos. Comparte la plataforma .NET y los contratos con `servidor`, y cumple la restricción del curso.
+- **Consecuencias.**
+  - A favor: `verificar_android_instrumentado.py` prueba en el emulador la desconexión real, la persistencia, el conflicto y su resolución; `verificar_campo.py` prueba los lotes y su idempotencia.
+  - En contra: solo Android. El SQLite no va cifrado (riesgo aceptado; SQLCipher como mejora). El primer inicio de sesión exige conexión, y con más de 8 horas sin señal el token vence y hay que entrar de nuevo antes de sincronizar. La pantalla de captura aún no separa un modelo de vista (MVVM, ADR-23): se adapta de forma progresiva.
+- *Borrador de Rol 1 para revisión de Rol 2.*
 
 #### ADR-26 — Reconstrucción en Spring Boot con REST y gRPC interno · Construido
 
@@ -985,11 +1000,20 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Justificación.** Mismo lenguaje que el núcleo y el servicio de tablero; reglas RN-01 a RN-21 en un dominio sin framework, probado en memoria; contrato gRPC tipado entre servicios Java.
 - **Consecuencias.** Una tercera base y un tercer servidor de aplicación. El refresco del tablero reemplaza el tiempo real (SignalR) del taller. No guarda datos de personas.
 
-#### ADR-27 — Consumo continuo de RabbitMQ en notificaciones · En curso
+#### ADR-27 — Consumo de avisos en notificaciones con bandeja de entrada y deduplicación · Construido
 
-- **Requisitos.** QA-REN-03 (10 alertas simultáneas en menos de 5 s); QA-RES-02.
-- **Decisión.** Notificaciones consume cada cola de forma continua, en lugar de tomar un mensaje por segundo con un temporizador, y consume también la cola `integracion.reconstruccion` (C5).
-- **Contexto, alternativas, justificación y consecuencias.** Pendiente: texto de Rol 2.
+- **Requisitos.** QA-REN-03 (alerta crítica en menos de 5 s, con 10 simultáneas); QA-RES-02; contrato C5.
+- **Contexto.** Reconstrucción publicaba sus avisos (C5) en `integracion.reconstruccion`, pero nadie los consumía. Notificaciones, que viene del Taller 3, tomaba un mensaje por segundo de cada cola con un temporizador y guarda su estado en un archivo. Un aviso puede llegar repetido, porque la bandeja de salida entrega al menos una vez, y el consumidor puede reiniciarse a mitad de un aviso.
+- **Alternativas.** Un MDB con JMS sobre RabbitMQ (adaptador de recursos en Payara: más configuración y otra pieza que mantener); un consumidor continuo con `basicConsume`; el temporizador con `basicGet` por lotes, sobre el reintento y la cola de errores que ya existían; un servicio aparte.
+- **Decisión.** En `desastres`, `ConsumidorReconstruccion` lee la cola cada 2 s, hasta 20 avisos por ciclo, con el mismo mecanismo del taller: confirmación manual, reintento a los 5 s hasta 5 veces y cola `.errores`.
+  - Una bandeja de entrada persistente guarda el estado de cada `idEvento`: RECIBIDO, ENVIADO, SIN_CORREO, PENDIENTE o FALLIDO. Un aviso ya atendido se descarta, también después de un reinicio.
+  - Envía correo a los sistemas suscritos del organismo, o a la dirección de coordinación si no hay, para `PROYECTO_APROBADO`, `PROYECTO_CON_SOBRECOSTO` y `DESASTRE_CERRADO`. Los demás tipos se registran sin correo.
+  - El procesador de alertas del taller pasa a tomar hasta 20 mensajes por cola en cada ciclo de 1 s, en vez de uno.
+- **Justificación.** Reutiliza lo que ya estaba probado (reintento y errores) con un cambio pequeño. La deduplicación por `idEvento` hace idempotente un proceso que recibe al menos una vez. Un aviso mal formado va a `.errores` y no bloquea la cola.
+- **Consecuencias.**
+  - Medido: `verificar_reconstruccion.py` comprueba el correo de aprobación, sobrecosto y cierre, que reenviar el mismo aviso no genera otro correo y que uno mal formado queda en `.errores` con la cola vacía al final.
+  - En contra: entrega al menos una vez, así que si el proceso cae entre enviar y marcar, un correo puede repetirse una vez. La bandeja vive en un archivo: una sola instancia activa (ADR-22). El sondeo agrega hasta 2 s. Las 10 alertas simultáneas no están medidas.
+  - Al activarlo se procesaron los avisos acumulados por las pruebas; los del formato anterior a C5 quedaron en `.errores`, como mal formados.
 
 #### ADR-28 — Personas afectadas, recursos y donaciones como sistemas externos · Aplicado
 
@@ -1040,7 +1064,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | QA-ESC-02 | Unidad propia para campo; fotos después; incorporación diferida | 13, 18 | `verificar_campo.py`; sin prueba con 500 equipos |
 | QA-REN-01 | Copias de lectura; consultas en paralelo | 03, 24, 29 | Tablero: p95 de 50 ms con 1 cliente y de 366 ms con 20 |
 | QA-REN-02 | Presupuesto por tramo; resultado en la misma llamada | 02, 29 | 22 ms con poca carga (versión 1.0) |
-| QA-REN-03 | Bandeja de salida; cola por suscriptor; consumo continuo | 02, 15, 27 | 2,7 s y 3,2 s con avisos aislados (versión 1.0); 10 simultáneas pendiente |
+| QA-REN-03 | Bandeja de salida; cola por suscriptor; consumo por lotes con deduplicación | 02, 15, 27 | 2,7 s y 3,2 s con avisos aislados (versión 1.0); 10 simultáneas sin medir |
 | QA-RES-01 | Adaptador con corte de circuito y cola | 07, 21 | Cola por suscriptor y bandeja de salida verificadas |
 | QA-RES-02 | Procesos separados; respuesta parcial | 11, 16, 24 | 60 de 60 respuestas parciales con Reconstrucción caída |
 | QA-INT-01, QA-INT-02, QA-EXT-01 | Adaptadores; REST, gRPC, SOAP y EJB remoto | 07, 17, 26 | Prueba gRPC con `grpcurl`; prueba de EJB remoto; suscripción de sistemas |
@@ -1056,7 +1080,8 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Modo degradado de `servidor` sin código | Sin núcleo, `servidor` rechaza todo, incluido el mapa | Abierto | Implementarlo; mientras tanto, redundancia del núcleo |
 | El núcleo valida cada sesión | Si se satura o cae, lo sienten todas las unidades | Abierto | Redundancia; medir la validación bajo carga |
 | UD-07 Consulta pública y UD-08 Integración sin código | La parte ciudadana del Escenario B y los adaptadores de A y C solo están en diseño | Aceptado | Empezar por SE-01, SE-02 y SE-06 |
-| Notificaciones toma un mensaje por segundo por cola y guarda las entregas en un archivo | No cumple 10 alertas simultáneas; una sola instancia | Abierto, en curso | ADR-27 y ADR-22 |
+| Notificaciones guarda las entregas y la bandeja de entrada en archivos | Una sola instancia activa; 10 alertas simultáneas sin medir | Abierto | Pasar a PostgreSQL (ADR-22) y medir |
+| Entrega de avisos al menos una vez | Si notificaciones cae entre enviar y marcar, un correo puede repetirse una vez | Aceptado | Documentado (ADR-27) |
 | El servicio de notificaciones no autentica a quien lo llama | Dentro de la red de Docker, cualquiera podría publicar o suscribirse | Abierto, en curso | Clave de servicio en sus rutas |
 | SQLite del móvil sin cifrar | Un dispositivo perdido expone las capturas de su usuario | Aceptado como limitación | SQLCipher |
 | Clave EJB como argumento de construcción del núcleo | Queda en el historial de la imagen | Aceptado para el laboratorio | Pasarla en tiempo de ejecución |
@@ -1066,7 +1091,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Tokens de sesión del portal en memoria | Varias instancias exigen afinidad; un reinicio del portal pide entrar de nuevo | Abierto | Afinidad en la entrada o almacén compartido (por ejemplo, Redis) |
 | Sin pruebas de carga de 10.000 usuarios ni de 500 equipos con fotos | Metas de escala sin evidencia | Abierto | Prueba con red real |
 | Validación de evaluaciones sin código | Reconstrucción toma como validada una evaluación vinculada a un desastre | Abierto | Validación por un coordinador distinto |
-| C1 (tipo de activo) y C2 desde la app, en curso | Proyectos clasificados con texto libre; la app aún no caracteriza | En curso | Ajustar el adaptador de Reconstrucción al publicarse C1 |
+| La app aún no caracteriza ni elige el tipo de activo | Sin la versión nueva de la app, el mínimo a se cumple desde el portal y las capturas quedan como OTRO | En curso (Rol 2, 18-nov) | `servidor`, el tablero y Reconstrucción ya usan C1 y C2 |
 | Un cambio de fase del coordinador no emite aviso | Los organismos no se enteran de un cierre directo | Abierto | Emitirlo desde la bandeja de salida |
 | Sin TLS ni cifrado en reposo; puertos de prueba en 127.0.0.1 | Datos en claro dentro de la máquina | Aceptado para el laboratorio | Despliegue objetivo; cerrar el puerto del núcleo tras C2 |
 | Catálogos fijos; consolidación, dos fechas, coordinación y auditoría consolidada sin código | QA-MOD-01, QA-CNF-02 y QA-TRZ-02 solo en diseño | Abierto | ADR-05, 06, 08, 19 y 20 |

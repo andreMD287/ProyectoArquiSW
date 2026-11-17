@@ -1,6 +1,6 @@
 """Prueba real del módulo de Reconstrucción integrado: sesión del núcleo, fase del desastre en el
 núcleo, evaluaciones de servidor, proyectos y avisos en RabbitMQ. Crea datos sintéticos."""
-import os,json,uuid,time,base64,urllib.request,urllib.error,subprocess
+import os,json,uuid,time,base64,urllib.parse,urllib.request,urllib.error,subprocess
 from pathlib import Path
 BASE=os.environ.get('MAPAS_URL','http://127.0.0.1:18085')
 C=['docker','compose','-f',str(Path(__file__).resolve().parents[1]/'compose.yaml')]
@@ -135,16 +135,51 @@ for _ in range(20):
  if pendientes()==0:break
  time.sleep(1)
 check(pendientes()==0,'la bandeja de salida quedó despachada')
-q=urllib.request.Request('http://127.0.0.1:15684/api/queues/%2F/integracion.reconstruccion',headers={'Authorization':'Basic '+base64.b64encode((os.environ.get('RABBIT_USUARIO','taller')+':'+os.environ.get('RABBIT_CLAVE','taller-local')).encode()).decode()})
-for _ in range(15):
- with urllib.request.urlopen(q,timeout=10) as r:cola=json.loads(r.read())
- if cola.get('messages',0)>0:break
- time.sleep(1)
-check(cola.get('messages',0)>0,'los avisos llegaron a la cola de integración en RabbitMQ',cola.get('messages'))
+RABBIT={'Authorization':'Basic '+base64.b64encode((os.environ.get('RABBIT_USUARIO','taller')+':'+os.environ.get('RABBIT_CLAVE','taller-local')).encode()).decode(),'Content-Type':'application/json'}
+def cola(nombre):
+ with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:15684/api/queues/%2F/'+nombre,headers=RABBIT),timeout=10) as r:return json.loads(r.read())
+def publicar(texto):
+ cuerpo=json.dumps({'properties':{'message_id':uid(),'content_type':'application/json'},'routing_key':'integracion.reconstruccion','payload':texto,'payload_encoding':'string'}).encode()
+ with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:15684/api/exchanges/%2F/amq.default/publish',cuerpo,RABBIT,method='POST'),timeout=10) as r:return json.loads(r.read()).get('routed')
+def correos(asunto):
+ # Mailpit busca por palabras: se busca por la última palabra del asunto (única por prueba) y se cuenta el asunto exacto.
+ clave=asunto.replace('(',' ').replace(')',' ').split()[-1]
+ with urllib.request.urlopen('http://127.0.0.1:18026/api/v1/search?query='+urllib.parse.quote(clave)+'&limit=200',timeout=10) as r:
+  return sum(1 for m in json.loads(r.read()).get('messages',[]) if m.get('Subject')==asunto)
 # El aviso de la aprobación, tal como salió de la bandeja de salida hacia RabbitMQ (contrato C5).
 fila=subprocess.check_output(C+['exec','-T','reconstruccion-db','psql','-At','-U','reconstruccion','-d','reconstruccion','-c',f"SELECT payload_json FROM outbox_eventos WHERE tipo='PROYECTO_APROBADO' AND agregado_id='{puente}'"],text=True,encoding='utf-8').strip()
 aviso=json.loads(fila)
 check(all(k in aviso for k in ['idEvento','tipo','ocurridoEn','desastreId','proyectoId','organismoId','datos']) and aviso['proyectoId']==puente and aviso['datos'].get('tipoActivo')=='PUENTE','el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)',aviso)
+# --- Consumo de los avisos en notificaciones (ADR-27): correo, deduplicación y cola de errores ---
+nombre_puente=aviso['datos']['nombre']
+for _ in range(30):
+ if correos('Proyecto aprobado: '+nombre_puente)>=1 and correos('Sobrecosto en el proyecto: '+nombre_puente)>=1:break
+ time.sleep(1)
+def estable(asunto):
+ # Un aviso va a cada sistema suscrito del organismo: se espera a que termine de enviar todos.
+ previo=-1
+ for _ in range(20):
+  n=correos(asunto)
+  if n==previo and n>0:return n
+  previo=n;time.sleep(1)
+ return previo
+aprobados=estable('Proyecto aprobado: '+nombre_puente)
+check(aprobados>=1,'notificaciones consume el aviso y envía el correo de proyecto aprobado a los sistemas del organismo (Mailpit)',aprobados)
+check(correos('Sobrecosto en el proyecto: '+nombre_puente)>=1,'también avisa por correo el sobrecosto',correos('Sobrecosto en el proyecto: '+nombre_puente))
+for _ in range(30):
+ if correos('Desastre cerrado: reconstrucción terminada ('+did+')')>=1:break
+ time.sleep(1)
+check(correos('Desastre cerrado: reconstrucción terminada ('+did+')')>=1,'y el cierre del desastre',did)
+check(publicar(fila)==True,'se reenvía a la cola el mismo aviso de aprobación (repetido)')
+antes_errores=cola('integracion.reconstruccion.errores').get('messages',0)
+check(publicar('esto no es un aviso')==True,'se publica un aviso mal formado')
+for _ in range(20):
+ if cola('integracion.reconstruccion').get('messages',1)==0 and cola('integracion.reconstruccion.errores').get('messages',0)>antes_errores:break
+ time.sleep(1)
+time.sleep(3)
+check(correos('Proyecto aprobado: '+nombre_puente)==aprobados,'el aviso repetido no genera más correos (deduplicación por idEvento)',(aprobados,correos('Proyecto aprobado: '+nombre_puente)))
+check(cola('integracion.reconstruccion.errores').get('messages',0)>antes_errores,'el aviso mal formado queda en la cola de errores sin bloquear la cola',cola('integracion.reconstruccion.errores').get('messages'))
+check(cola('integracion.reconstruccion').get('messages',1)==0,'la cola de integración queda vacía: todo se consumió',cola('integracion.reconstruccion').get('messages'))
 # --- gRPC con un cliente real (grpcurl en un contenedor de la misma red) ---
 PROTO=str(Path(__file__).resolve().parents[2]/'reconstruccion'/'backend'/'src'/'main'/'proto')
 def grpc(metodo,cuerpo,token=None):

@@ -21,6 +21,8 @@ public class RabbitMensajes implements NotificadorMensajes {
     public static final String REGISTRO = "desastres.registro";
     public static final String SALIDA = "desastres.notificaciones";
     public static final String CORREO = "desastres.correo";
+    /** Cola de avisos de Reconstrucción (contrato C5). Se declara igual que en Reconstrucción. */
+    public static final String RECONSTRUCCION = "integracion.reconstruccion";
     private static final Logger LOG = Logger.getLogger(RabbitMensajes.class.getName());
     private Connection conexion;
 
@@ -45,6 +47,7 @@ public class RabbitMensajes implements NotificadorMensajes {
             c.exchangeDeclare(SALIDA, "topic", true);
             declararCola(c, REGISTRO);
             declararCola(c, CORREO);
+            declararCola(c, RECONSTRUCCION);
             c.queueBind(REGISTRO, ENTRADA, "desastre.reportado");
             return c;
         } catch (Exception e) { c.abort(); throw e; }
@@ -90,11 +93,12 @@ public class RabbitMensajes implements NotificadorMensajes {
             confirmar(c);
         } catch (Exception e) { throw new IllegalStateException("No se pudo confirmar la notificacion", e); }
     }
-    public void consumir(String cola, Consumer<String> procesador) {
+    /** Atiende una entrega de la cola. Devuelve false si la cola estaba vacía o no se pudo leer. */
+    public boolean consumir(String cola, Consumer<String> procesador) {
         try (Channel c = abrir()) {
             // Una entrega por ciclo limita trabajo y evita reintentos continuos de una dependencia caída.
             GetResponse entrega = c.basicGet(cola, false);
-            if (entrega == null) return;
+            if (entrega == null) return false;
             String texto = new String(entrega.getBody(), StandardCharsets.UTF_8);
             try {
                 procesador.accept(texto);
@@ -112,9 +116,11 @@ public class RabbitMensajes implements NotificadorMensajes {
                 c.basicAck(entrega.getEnvelope().getDeliveryTag(), false);
                 LOG.warning("Mensaje enviado a " + destino + ": " + error.getClass().getSimpleName());
             }
+            return true;
         } catch (Exception e) {
             // Cerrar el canal devuelve automáticamente cualquier entrega sin ACK a su cola.
             LOG.warning("Consumo pendiente en " + cola + ": " + e.getClass().getSimpleName());
+            return false;
         }
     }
     private boolean causaInvalida(Throwable error) {

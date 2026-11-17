@@ -6,6 +6,7 @@ public sealed class EvaluacionPendiente
 {
     [System.Text.Json.Serialization.JsonIgnore] public long VersionServidor {get;set;}
     [System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] public string? Activo {get;set;}
+    public string TipoActivo { get; set; } = "OTRO";
     [System.Text.Json.Serialization.JsonIgnore] public string? OrganizacionLocal {get;set;}
     [System.Text.Json.Serialization.JsonIgnore] public string? UsuarioLocal {get;set;}
     [PrimaryKey]
@@ -44,7 +45,15 @@ public sealed class AlmacenCampo
     public AlmacenCampo(string ruta)
     {
         baseLocal = new SQLiteAsyncConnection(ruta);
-        inicializacion = new(async()=>{var result=await baseLocal.CreateTableAsync<EvaluacionPendiente>();await baseLocal.CreateTableAsync<RevisionLocal>();return result;});
+        inicializacion = new(async()=>{
+            var result=await baseLocal.CreateTableAsync<EvaluacionPendiente>();
+            await baseLocal.CreateTableAsync<RevisionLocal>();
+            await baseLocal.CreateTableAsync<CaracterizacionPendiente>();
+            await baseLocal.CreateTableAsync<TipoActivoLocal>();
+            // Registros anteriores a C1 no se descartan: quedan normalizados como OTRO.
+            await baseLocal.ExecuteAsync("UPDATE EvaluacionPendiente SET TipoActivo='OTRO' WHERE TipoActivo IS NULL OR TRIM(TipoActivo)=''");
+            return result;
+        });
     }
 
     public async Task<List<DesastreLocal>> DesastresAsync()
@@ -61,6 +70,86 @@ public sealed class AlmacenCampo
         await baseLocal.RunInTransactionAsync(db => {
             db.Execute("DELETE FROM DesastreLocal WHERE OrganizacionLocal = ?",SesionCampo.Organizacion);
             foreach(var d in copia)db.InsertOrReplace(d);
+        });
+    }
+
+    public async Task<List<TipoActivoLocal>> TiposActivoAsync()
+    {
+        await inicializacion.Value;
+        var locales = await baseLocal.Table<TipoActivoLocal>().OrderBy(x => x.Nombre).ToListAsync();
+        if (locales.Count > 0) return locales;
+        // Referencia provisional de la versión C1. GET /api/catalogos la reemplaza.
+        return new List<TipoActivoLocal>
+        {
+            new(){Codigo="VIVIENDA",Nombre="Vivienda"},
+            new(){Codigo="EDIFICIO_PUBLICO",Nombre="Edificio público"},
+            new(){Codigo="ESCUELA",Nombre="Escuela"},
+            new(){Codigo="CENTRO_SALUD",Nombre="Centro de salud"},
+            new(){Codigo="VIA",Nombre="Vía"},
+            new(){Codigo="PUENTE",Nombre="Puente"},
+            new(){Codigo="RED_AGUA",Nombre="Red de agua"},
+            new(){Codigo="RED_ENERGIA",Nombre="Red de energía"},
+            new(){Codigo="OTRO",Nombre="Otro"}
+        };
+    }
+
+    public async Task GuardarTiposActivoAsync(IEnumerable<TipoActivoLocal> tipos)
+    {
+        await inicializacion.Value;
+        var copia = tipos.Where(t => !string.IsNullOrWhiteSpace(t.Codigo))
+            .GroupBy(t => t.Codigo, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First()).ToArray();
+        if (copia.Length == 0) throw new InvalidDataException("El servidor no devolvió tipos de activo.");
+        await baseLocal.RunInTransactionAsync(db => {
+            db.Execute("DELETE FROM TipoActivoLocal");
+            foreach (var tipo in copia) db.InsertOrReplace(tipo);
+        });
+    }
+
+    public async Task GuardarCaracterizacionAsync(CaracterizacionPendiente c)
+    {
+        await inicializacion.Value;
+        if (string.IsNullOrWhiteSpace(c.DesastreId) || c.RadioKm <= 0 || c.RadioKm > 500 ||
+            !double.IsFinite(c.Latitud) || Math.Abs(c.Latitud) > 90 ||
+            !double.IsFinite(c.Longitud) || Math.Abs(c.Longitud) > 180 ||
+            (c.Nivel.HasValue && (c.Nivel < 1 || c.Nivel > 4)) || c.Descripcion.Length > 2000)
+            throw new ArgumentException("Caracterización inválida.");
+        await baseLocal.InsertAsync(c);
+    }
+
+    public async Task<List<CaracterizacionPendiente>> CaracterizacionesAsync()
+    {
+        await inicializacion.Value;
+        return await baseLocal.QueryAsync<CaracterizacionPendiente>(
+            "SELECT * FROM CaracterizacionPendiente WHERE OrganizacionLocal=? AND UsuarioLocal=? ORDER BY CapturadaEnUtc DESC",
+            SesionCampo.Organizacion, SesionCampo.Usuario);
+    }
+
+    public async Task ResultadoCaracterizacionAsync(CaracterizacionPendiente c, string estado,
+        string? motivo = null, long? versionActual = null)
+    {
+        await inicializacion.Value;
+        c.Estado = estado;
+        c.Motivo = motivo;
+        c.VersionActual = versionActual;
+        await baseLocal.UpdateAsync(c);
+    }
+
+    // Cada rebased crea una captura NUEVA, con una clave nueva. La anterior se archiva.
+    // Se llama exclusivamente después de una decisión explícita del usuario.
+    public async Task NuevaVersionCaracterizacionAsync(CaracterizacionPendiente anterior, long version)
+    {
+        await inicializacion.Value;
+        var nueva = new CaracterizacionPendiente {
+            OrganizacionLocal=anterior.OrganizacionLocal, UsuarioLocal=anterior.UsuarioLocal,
+            DesastreId=anterior.DesastreId, Latitud=anterior.Latitud, Longitud=anterior.Longitud,
+            RadioKm=anterior.RadioKm, Nivel=anterior.Nivel, Descripcion=anterior.Descripcion,
+            VersionBase=version
+        };
+        await baseLocal.RunInTransactionAsync(db => {
+            anterior.Estado="archivada";
+            db.Update(anterior);
+            db.Insert(nueva);
         });
     }
 
@@ -122,6 +211,12 @@ public sealed class DesastreLocal
     public string Ubicacion { get; set; } = "";
     public string Descripcion { get; set; } = "";
     public string Severidad { get; set; } = "";
+    public string Fase { get; set; } = "";
+    public long Version { get; set; }
+    public double? Latitud { get; set; }
+    public double? Longitud { get; set; }
+    public double? RadioKm { get; set; }
+    public int? Nivel { get; set; }
     public string Fecha { get; set; } = "";
 }
 

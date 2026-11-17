@@ -1,0 +1,74 @@
+{
+  "fecha": "2026-11-17T20:27:13+00:00",
+  "ambiente": "Docker Compose en una máquina",
+  "equipo": "Windows-11-10.0.26200-SP0",
+  "desastre": "MEDICION-83b6ea2f",
+  "limites": "pool del tablero 16 hilos y cola 64; límite por fuente 1500 ms; límite total 3000 ms",
+  "resultados": [
+    {
+      "escenario": "paralelo-1-cliente",
+      "solicitudes": 100,
+      "concurrencia": 1,
+      "exitosas": 100,
+      "no_exitosas": {},
+      "respuestas_parciales": 0,
+      "p50_ms": 26.7,
+      "p95_ms": 49.7,
+      "max_ms": 66.5,
+      "media_ms": 30.0,
+      "solicitudes_por_segundo": 33.1
+    },
+    {
+      "escenario": "secuencial-1-cliente",
+      "solicitudes": 100,
+      "concurrencia": 1,
+      "exitosas": 100,
+      "no_exitosas": {},
+      "respuestas_parciales": 0,
+      "p50_ms": 40.5,
+      "p95_ms": 63.7,
+      "max_ms": 133.1,
+      "media_ms": 46.0,
+      "solicitudes_por_segundo": 21.7
+    },
+    {
+      "escenario": "paralelo",
+      "solicitudes": 300,
+      "concurrencia": 20,
+      "exitosas": 300,
+      "no_exitosas": {},
+      "respuestas_parciales": 0,
+      "p50_ms": 223.0,
+      "p95_ms": 365.5,
+      "max_ms": 573.3,
+      "media_ms": 235.6,
+      "solicitudes_por_segundo": 82.0
+    },
+    {
+      "escenario": "secuencial",
+      "solicitudes": 300,
+      "concurrencia": 20,
+      "exitosas": 300,
+      "no_exitosas": {},
+      "respuestas_parciales": 0,
+      "p50_ms": 182.4,
+      "p95_ms": 355.0,
+      "max_ms": 467.7,
+      "media_ms": 199.3,
+      "solicitudes_por_segundo": 98.4
+    },
+    {
+      "escenario": "sin-reconstruccion",
+      "solicitudes": 60,
+      "concurrencia": 20,
+      "exitosas": 60,
+      "no_exitosas": {},
+      "respuestas_parciales": 60,
+      "p50_ms": 1514.9,
+      "p95_ms": 1527.8,
+      "max_ms": 1530.1,
+      "media_ms": 1516.7,
+      "solicitudes_por_segundo": 13.1
+    }
+  ]
+}

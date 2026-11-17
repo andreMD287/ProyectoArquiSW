@@ -40,8 +40,8 @@ resp,cons,t2,resp2=roles['EVALUADOR'],roles['CONSULTA'],roles['COORDINADOR'],rol
 d={'id':'RECON-'+tag,'tipo':'TERREMOTO','ubicacion':'Zona sintética '+tag,'descripcion':'Prueba de reconstrucción','severidad':'ALTA','fecha':'2026-11-14T12:00:00Z'}
 s,b=req('POST','/desastres',d,t);check(s==201,'desastre registrado en el núcleo',(s,b))
 ev={}
-for clave,nivel,activo in [('puente',4,'Puente'),('escuela',5,'Escuela'),('leve',2,'Vivienda')]:
- op={'operacionId':uid(),'evaluacionId':uid(),'eventoId':d['id'],'nivelAfectacion':nivel,'latitud':4.6,'longitud':-74.1,'capturadaEnUtc':'2026-11-14T12:05:00Z','descripcion':'Evaluación '+clave,'activo':activo}
+for clave,nivel,activo,tipo in [('puente',4,'Puente','PUENTE'),('escuela',5,'Escuela','ESCUELA'),('leve',2,'Vivienda','VIVIENDA')]:
+ op={'operacionId':uid(),'evaluacionId':uid(),'eventoId':d['id'],'nivelAfectacion':nivel,'latitud':4.6,'longitud':-74.1,'capturadaEnUtc':'2026-11-14T12:05:00Z','descripcion':'Evaluación '+clave,'activo':activo,'tipoActivo':tipo}
  s,b=req('POST','/campo/lotes',{'operaciones':[op]},resp);check(s in [200,202],'evaluación '+clave+' capturada en servidor',(s,b));ev[clave]=op['evaluacionId']
 def desastre_rec(token=t):
  s,b=req('GET',R+'/desastres',token=token);check(s==200,'el módulo lista los desastres del núcleo',(s,b))
@@ -100,7 +100,7 @@ P=R+'/proyectos/'+puente;inicio={'contratista':'Consorcio Vial','inicio':'2026-1
 aprobacion={'presupuesto':500000000,'fuenteFinanciacion':'Fondo de reconstrucción','responsable':'rec_evaluador_'+tag}
 s,b=req('POST',P+'/aprobar',aprobacion,t);check(s==422 and b.get('regla')=='RN-20','quien formuló el proyecto no lo aprueba (RN-20)',(s,b))
 s,b=req('POST',P+'/aprobar',aprobacion,t2);check(s==200 and b['estado']=='APROBADO','otra autoridad aprueba el proyecto (CU-03)',(s,b))
-check(b.get('formulador')==root['usuario'] and b.get('tipoActivo')=='Puente','el proyecto guarda al formulador y el tipo de activo físico',b)
+check(b.get('formulador')==root['usuario'] and b.get('tipoActivo')=='PUENTE','el proyecto guarda al formulador y el tipo de activo físico (código C1)',b)
 s,b=req('POST',P+'/iniciar',inicio,cons);check(s==403,'consulta no inicia la ejecución',(s,b))
 s,b=req('POST',P+'/iniciar',inicio,resp);check(s==200 and b['estado']=='EN_EJECUCION','el responsable inicia la ejecución (CU-04)',(s,b))
 s,b=req('POST',P+'/avance',{'porcentaje':60,'descripcion':'Pilas terminadas'},resp2);check(s==403,'un responsable no asignado no registra avance (RN-21)',(s,b))
@@ -144,7 +144,7 @@ check(cola.get('messages',0)>0,'los avisos llegaron a la cola de integración en
 # El aviso de la aprobación, tal como salió de la bandeja de salida hacia RabbitMQ (contrato C5).
 fila=subprocess.check_output(C+['exec','-T','reconstruccion-db','psql','-At','-U','reconstruccion','-d','reconstruccion','-c',f"SELECT payload_json FROM outbox_eventos WHERE tipo='PROYECTO_APROBADO' AND agregado_id='{puente}'"],text=True,encoding='utf-8').strip()
 aviso=json.loads(fila)
-check(all(k in aviso for k in ['idEvento','tipo','ocurridoEn','desastreId','proyectoId','organismoId','datos']) and aviso['proyectoId']==puente and aviso['datos'].get('tipoActivo')=='Puente','el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)',aviso)
+check(all(k in aviso for k in ['idEvento','tipo','ocurridoEn','desastreId','proyectoId','organismoId','datos']) and aviso['proyectoId']==puente and aviso['datos'].get('tipoActivo')=='PUENTE','el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)',aviso)
 # --- gRPC con un cliente real (grpcurl en un contenedor de la misma red) ---
 PROTO=str(Path(__file__).resolve().parents[2]/'reconstruccion'/'backend'/'src'/'main'/'proto')
 def grpc(metodo,cuerpo,token=None):

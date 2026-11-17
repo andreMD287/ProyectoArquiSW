@@ -37,7 +37,8 @@ public static class Autenticacion {
    bool write=ctx.Request.Method is not ("GET" or "HEAD");
    var rol=ctx.Items["rol"]?.ToString();
    bool propia=path is "/api/auth/logout";
-   bool evaluacion=path.StartsWith("/api/campo/") || path=="/api/solicitudes" && ctx.Request.Method=="POST";
+   bool caracterizacion=ctx.Request.Method=="PATCH" && path.StartsWith("/api/desastres/") && path.EndsWith("/caracterizacion");
+   bool evaluacion=path.StartsWith("/api/campo/") || path=="/api/solicitudes" && ctx.Request.Method=="POST" || caracterizacion;
    if(write && !propia && (rol=="CONSULTA" || !evaluacion && rol!="COORDINADOR")) {ctx.Response.StatusCode=403;return;}
   }catch(Exception e) when(e is HttpRequestException or TaskCanceledException or JsonException){ctx.Response.StatusCode=503;return;}
   await next(ctx);

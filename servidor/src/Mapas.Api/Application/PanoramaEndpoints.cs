@@ -8,7 +8,8 @@ public sealed record PuntoPanorama(Guid Id, string Clase, string Titulo, string?
     string? Severidad, int? NivelAfectacion, string? EventoId, string Descripcion,
     double Latitud, double Longitud, Guid? Version, DateTimeOffset RegistradaEn,
     string? Evaluador = null, string? Organizacion = null, string? Activo = null,
-    Guid? EvidenciaId = null, string? EstadoVinculo = null, EventoDesastre? Desastre = null);
+    Guid? EvidenciaId = null, string? EstadoVinculo = null, EventoDesastre? Desastre = null,
+    string? TipoActivo = null, string? TipoActivoNombre = null, string? TipoActivoOriginal = null);
 
 public static class PanoramaEndpoints
 {
@@ -30,20 +31,23 @@ public static class PanoramaEndpoints
                     type = "Feature", id = p.Id,
                     geometry = new { type = "Point", coordinates = new[] { p.Longitud, p.Latitud } },
                     properties = new { p.Clase, p.Titulo, p.Tipo, p.Severidad, p.NivelAfectacion,
-                        p.EventoId, p.Descripcion, p.RegistradaEn, p.Evaluador, p.Organizacion, p.Activo, p.EvidenciaId, p.EstadoVinculo, p.Desastre }
+                        p.EventoId, p.Descripcion, p.RegistradaEn, p.Evaluador, p.Organizacion, p.Activo, p.EvidenciaId, p.EstadoVinculo, p.Desastre,
+                        p.TipoActivo, p.TipoActivoNombre, p.TipoActivoOriginal }
                 })
             }, contentType: "application/geo+json");
         });
 
-        app.MapGet("/api/campo/evaluaciones/{id:guid}", async (Guid id, CampoRepository campo, EvaluacionesVersionadas versiones, CancellationToken ct) =>
+        app.MapGet("/api/campo/evaluaciones/{id:guid}", async (Guid id, CampoRepository campo, EvaluacionesVersionadas versiones, TiposActivo tipos, CancellationToken ct) =>
         {
             var op = await campo.Buscar(id, ct);
             if (op is null) return Results.NotFound();
             var vinculo = await campo.ConsultarVinculo(id, ct);
+            var tipo = tipos.Normalizar(op.TipoActivo);
             return Results.Ok(new {
                 version = await versiones.Version(id,ct), op.EvaluacionId, vinculo.EventoId, eventoOriginalId = op.EventoId, vinculo.EstadoVinculo, vinculo.Desastre, op.NivelAfectacion, op.Latitud, op.Longitud,
                 op.CapturadaEnUtc, op.Descripcion, op.FuenteUbicacion, op.EvidenciaId,
-                op.Evaluador, op.Organizacion, op.Activo
+                op.Evaluador, op.Organizacion, op.Activo,
+                tipoActivo = tipo.Codigo, tipoActivoNombre = tipo.Nombre, tipoActivoOriginal = tipo.Original
             });
         });
         app.MapGet("/api/campo/evaluaciones/{id:guid}/foto", async (Guid id, CampoRepository campo, CancellationToken ct) =>

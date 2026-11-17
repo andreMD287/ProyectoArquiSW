@@ -163,7 +163,8 @@ check(any(x['desastre']['id'] == ref for x in cat['desastres']), 'el desastre ll
 evaluaciones = {}
 for nombre, nivel, lat, lon in [('Puente', 4, 4.611, -74.082), ('Escuela', 5, 4.605, -74.079)]:
     op = {'operacionId': str(uuid.uuid4()), 'evaluacionId': str(uuid.uuid4()), 'eventoId': ref, 'nivelAfectacion': nivel,
-          'latitud': lat, 'longitud': lon, 'capturadaEnUtc': '2026-11-15T12:05:00Z', 'descripcion': 'Daño en ' + nombre, 'activo': nombre}
+          'latitud': lat, 'longitud': lon, 'capturadaEnUtc': '2026-11-15T12:05:00Z', 'descripcion': 'Daño en ' + nombre, 'activo': nombre,
+          'tipoActivo': nombre.upper()}
     s, b2 = api('POST', '/campo/lotes', {'operaciones': [op]}, token_eval)
     check(s in (200, 202), 'evaluación de ' + nombre + ' capturada', (s, b2))
     evaluaciones[nombre] = op['evaluacionId']

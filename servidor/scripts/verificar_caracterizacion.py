@@ -1,5 +1,9 @@
-"""Prueba del contrato C2 en el núcleo: caracterización del desastre (ubicación, radio, nivel y
-descripción), con idempotencia, versión base, permisos por rol y paso automático a CARACTERIZACION.
+"""Prueba de los contratos C2 y C1.
+- C2 en el núcleo y a través de servidor (la ruta que usa la app de campo): caracterización del
+  desastre (ubicación, radio, nivel y descripción), con idempotencia, versión base, permisos por rol,
+  paso automático a CARACTERIZACION y la copia del catálogo en servidor con la caracterización.
+- C1 en servidor: catálogo de tipos de activo y normalización (un código desconocido o ausente queda
+  como OTRO, con el valor original), sin romper la idempotencia de los lotes.
 Crea datos sintéticos."""
 import json
 import os
@@ -97,4 +101,68 @@ for _ in range(40):
     time.sleep(0.5)
 check(propio and propio[0].get('fase') == 'CARACTERIZACION' and propio[0].get('version') == 2,
       'la copia de servidor recibe la fase y la versión nuevas', propio)
-print(f'\nCaracterización (C2): {total} comprobaciones correctas.')
+check(propio[0].get('latitud') == 4.6097 and propio[0].get('radioKm') == 9.0 and propio[0].get('nivel') == 3,
+      'la copia de servidor conserva la ubicación, el radio y el nivel (C2)', propio[0])
+
+# --- C2 a través de servidor: lo que usa la app de campo ---
+ref2 = 'CARAC2-' + tag
+s, b = req(ENTRADA, 'POST', '/desastres', dict(d, id=ref2), t)
+check(s == 201, 'segundo desastre registrado', (s, b))
+S = f'/desastres/{ref2}/caracterizacion'
+cuerpo2 = {'latitud': 4.71, 'longitud': -74.07, 'radioKm': 2.5, 'nivel': 2, 'descripcion': 'Caracterizado desde la app',
+           'versionBase': 0, 'claveIdempotencia': str(uuid.uuid4())}
+s, b = req(ENTRADA, 'PATCH', S, cuerpo2)
+check(s == 401, 'servidor exige sesión para caracterizar', s)
+s, b = req(ENTRADA, 'PATCH', S, cuerpo2, consulta)
+check(s == 403, 'servidor: CONSULTA no caracteriza', (s, b))
+s, b = req(ENTRADA, 'PATCH', S, cuerpo2, evaluador)
+check(s == 200 and b.get('fase') == 'CARACTERIZACION' and b.get('version') == 1 and b.get('radioKm') == 2.5,
+      'servidor reenvía la caracterización del evaluador al núcleo (C2)', (s, b))
+s2, b2 = req(ENTRADA, 'PATCH', S, cuerpo2, evaluador)
+check(s2 == 200 and b2 == b, 'servidor: repetir la misma clave devuelve el mismo resultado', (s2, b2))
+s, b = req(ENTRADA, 'PATCH', S, dict(cuerpo2, radioKm=4.0, claveIdempotencia=str(uuid.uuid4())), evaluador)
+check(s == 409 and b.get('error') == 'VERSION_DESACTUALIZADA' and b.get('versionActual') == 1,
+      'servidor no convierte el conflicto en éxito: 409 con la versión actual', (s, b))
+s, b = req(ENTRADA, 'PATCH', f'/desastres/NO-EXISTE-{tag}/caracterizacion', cuerpo2, evaluador)
+check(s == 404, 'servidor: un desastre inexistente responde 404', (s, b))
+
+# --- C1: tipos de activo físico ---
+s, b = req(ENTRADA, 'GET', '/catalogos', token=evaluador)
+codigos = [x['codigo'] for x in b.get('tiposActivo', [])] if s == 200 else []
+check(s == 200 and {'VIVIENDA', 'ESCUELA', 'PUENTE', 'VIA', 'OTRO'} <= set(codigos) and len(codigos) >= 9,
+      'el catálogo trae los tipos de activo (C1)', (s, codigos))
+for _ in range(40):
+    s, b = req(ENTRADA, 'GET', '/desastres', token=evaluador)
+    if s == 200 and any(x['desastre']['id'] == ref2 for x in b.get('desastres', [])):
+        break
+    time.sleep(0.5)
+ops = []
+for clave_op, tipo in [('puente', 'PUENTE'), ('torre', 'TORRE_ANTENA'), ('sin', None)]:
+    op = {'operacionId': str(uuid.uuid4()), 'evaluacionId': str(uuid.uuid4()), 'eventoId': ref2, 'nivelAfectacion': 4,
+          'latitud': 4.71, 'longitud': -74.07, 'capturadaEnUtc': '2026-11-17T12:00:00Z', 'descripcion': 'C1 ' + clave_op,
+          'activo': 'Activo ' + clave_op}
+    if tipo:
+        op['tipoActivo'] = tipo
+    ops.append(op)
+s, b = req(ENTRADA, 'POST', '/campo/lotes', {'operaciones': ops}, evaluador)
+check(s in (200, 202) and all(r['estado'] in ('recibida', 'incorporada') for r in b['resultados']),
+      'un lote con un código válido, uno desconocido y uno sin código se recibe completo', (s, b))
+s, b = req(ENTRADA, 'POST', '/campo/lotes', {'operaciones': ops}, evaluador)
+check(s in (200, 202) and all(r['estado'] in ('recibida', 'incorporada') for r in b['resultados']),
+      'reenviar el mismo lote no crea conflicto (idempotencia intacta)', b)
+for _ in range(20):
+    s, b = req(ENTRADA, 'GET', '/panorama?clase=EVALUACION&eventoId=' + ref2, token=evaluador)
+    if s == 200 and len(b) == 3:
+        break
+    time.sleep(0.5)
+por_desc = {x['descripcion']: x for x in b}
+check(por_desc['C1 puente']['tipoActivo'] == 'PUENTE' and por_desc['C1 puente']['tipoActivoNombre'] == 'Puente'
+      and por_desc['C1 puente'].get('tipoActivoOriginal') is None, 'un código válido se conserva', por_desc['C1 puente'])
+check(por_desc['C1 torre']['tipoActivo'] == 'OTRO' and por_desc['C1 torre']['tipoActivoOriginal'] == 'TORRE_ANTENA',
+      'un código desconocido queda como OTRO y se conserva el original', por_desc['C1 torre'])
+check(por_desc['C1 sin']['tipoActivo'] == 'OTRO' and por_desc['C1 sin'].get('tipoActivoOriginal') is None,
+      'una evaluación sin código (app anterior) queda como OTRO', por_desc['C1 sin'])
+s, b = req(ENTRADA, 'GET', '/campo/evaluaciones/' + ops[1]['evaluacionId'], token=evaluador)
+check(s == 200 and b['tipoActivo'] == 'OTRO' and b['tipoActivoOriginal'] == 'TORRE_ANTENA' and b['activo'] == 'Activo torre',
+      'el detalle de la evaluación trae el tipo normalizado, el original y el texto libre', b)
+print(f'\nCaracterización y tipos de activo (C2 y C1): {total} comprobaciones correctas.')

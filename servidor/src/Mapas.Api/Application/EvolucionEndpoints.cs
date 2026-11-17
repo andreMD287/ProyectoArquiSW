@@ -4,9 +4,10 @@ namespace Mapas.Api.Application;
 public static class EvolucionEndpoints{
  public static void MapearEvolucion(this WebApplication app){
   app.MapMethods("/api/desastres/{id}/{accion}",["GET","PATCH"],async(string id,string accion,HttpContext ctx,AccesoActual acceso,IHttpClientFactory factory,CancellationToken ct)=>{
-   if(accion is not ("historial" or "gravedad" or "fase"))return Results.NotFound();
+   if(accion is not ("historial" or "gravedad" or "fase" or "caracterizacion"))return Results.NotFound();
    using var req=new HttpRequestMessage(new HttpMethod(ctx.Request.Method),"eventos/"+Uri.EscapeDataString(id)+"/"+accion);req.Headers.TryAddWithoutValidation("Authorization",acceso.Token);
    if(ctx.Request.Method=="PATCH"){req.Content=new StreamContent(ctx.Request.Body);req.Content.Headers.ContentType=new("application/json");}
+   // El núcleo decide y responde (200, 409 con versionActual, 403, 404): se reenvía tal cual, sin convertir un error en éxito.
    using var response=await factory.CreateClient("nucleo").SendAsync(req,ct);return Results.Content(await response.Content.ReadAsStringAsync(ct),"application/json",statusCode:(int)response.StatusCode);
   });
   app.MapPost("/api/campo/evaluaciones/{id:guid}/solicitudes",async(Guid id,JsonElement input,CampoRepository campo,EvaluacionesVersionadas versiones,AccesoActual acceso,IHttpClientFactory factory,IConfiguration config,CancellationToken ct)=>{

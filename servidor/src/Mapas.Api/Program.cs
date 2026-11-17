@@ -19,6 +19,7 @@ builder.Services.AddScoped<IAfectacionesRepository, EfAfectacionesRepository>();
 builder.Services.AddScoped<AfectacionesService>();
 var diferida = builder.Configuration.GetValue<bool>("Campo:Diferida");
 builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connection));
+builder.Services.AddSingleton<TiposActivo>();
 builder.Services.AddSingleton<CampoRepository>();
 builder.Services.AddSingleton<EvaluacionesVersionadas>();
 builder.Services.AddHttpClient("desastres", client => {
@@ -57,6 +58,7 @@ using (var scope = app.Services.CreateScope())
     await db.Database.EnsureCreatedAsync();
 }
 await app.Services.GetRequiredService<CampoRepository>().Inicializar(app.Lifetime.ApplicationStopping);
+await app.Services.GetRequiredService<TiposActivo>().Inicializar(app.Lifetime.ApplicationStopping);
 await app.Services.GetRequiredService<DesastresCatalogo>().Inicializar(app.Lifetime.ApplicationStopping);
 await app.Services.GetRequiredService<EvaluacionesVersionadas>().Inicializar(app.Lifetime.ApplicationStopping);
 app.MapearAutenticacion();
@@ -67,7 +69,9 @@ app.MapearCampo(diferida);
 app.MapearPanorama();
 app.MapGet("/api/salud", async (MapasDb db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct) ? Results.Ok(new { estado = "LISTO" }) : Results.Problem(statusCode: 503));
-app.MapGet("/api/catalogos", () => new { tipos = AfectacionesService.Tipos, severidades = AfectacionesService.Severidades });
+// C1: tiposActivo sale de la tabla configurable tipos_activo.
+app.MapGet("/api/catalogos", async (TiposActivo tiposActivo, CancellationToken ct) =>
+    new { tipos = AfectacionesService.Tipos, severidades = AfectacionesService.Severidades, tiposActivo = await tiposActivo.Recargar(ct) });
 app.MapGet("/api/afectaciones", async (string? tipo, string? severidad, AfectacionesService service, CancellationToken ct) =>
     Results.Ok(await service.Listar(tipo, severidad, ct)));
 app.MapGet("/api/afectaciones/{id:guid}", async (Guid id, AfectacionesService service, CancellationToken ct) =>

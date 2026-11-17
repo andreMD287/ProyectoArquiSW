@@ -6,7 +6,9 @@ using Npgsql;
 
 namespace Mapas.Api.Infrastructure;
 
-public sealed record EventoDesastre(string Id, string Tipo, string Ubicacion, string Descripcion, string Severidad, string Fecha, long Version=0, string? EventoId=null, string? Clase=null, string? Fase=null);
+// Contrato C2: la copia conserva la caracterización del núcleo (nivel 1 a 4, ubicación y radio del área afectada).
+public sealed record EventoDesastre(string Id, string Tipo, string Ubicacion, string Descripcion, string Severidad, string Fecha, long Version=0, string? EventoId=null, string? Clase=null, string? Fase=null,
+    int? Nivel=null, double? Latitud=null, double? Longitud=null, double? RadioKm=null);
 public sealed record SistemaNotificacion(string Id, string Nombre, string Correo);
 public sealed record RegistroDesastre(EventoDesastre Desastre, string? RegistradoEn,
     bool NotificacionPublicada, SistemaNotificacion[] Destinatarios, string[] CorreosEnviados, string? OrganizacionId = null);

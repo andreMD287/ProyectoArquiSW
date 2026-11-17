@@ -49,6 +49,10 @@ public static class CampoEndpoints
             return "Se requieren identificadores y una referencia de evento de hasta 100 caracteres.";
         if (op.Evaluador?.Length > 120 || op.Organizacion?.Length > 120 || op.Activo?.Length > 120)
             return "Evaluador, organización y activo admiten hasta 120 caracteres.";
+        // C1: el código no se rechaza si es desconocido (una app sin conexión pudo quedar con un catálogo viejo);
+        // al leerse queda como OTRO y se conserva el original.
+        if (op.TipoActivo?.Length > 60)
+            return "El tipo de activo admite hasta 60 caracteres.";
         if (op.NivelAfectacion is not (>= 1 and <= 5) ||
             op.Latitud is not (>= -90 and <= 90) || op.Longitud is not (>= -180 and <= 180))
             return "Se requieren coordenadas válidas y nivel de afectación de 1 a 5.";
@@ -73,5 +77,6 @@ public sealed record OperacionCampo(Guid OperacionId, Guid EvaluacionId, string?
     string? Descripcion, string? FuenteUbicacion, Guid? EvidenciaId, string? FotoTipo, string? FotoSha256, byte[]? Foto,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Evaluador = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Organizacion = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Activo = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Activo = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TipoActivo = null);
 public sealed record ResultadoCampo(Guid OperacionId, string Estado, string? Motivo);

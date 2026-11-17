@@ -4,7 +4,7 @@ using Mapas.Api.Application;
 
 namespace Mapas.Api.Infrastructure;
 
-public sealed class CampoRepository(NpgsqlDataSource dataSource, AccesoActual acceso)
+public sealed class CampoRepository(NpgsqlDataSource dataSource, AccesoActual acceso, TiposActivo tipos)
 {
     public async Task Inicializar(CancellationToken ct)
     {
@@ -92,11 +92,12 @@ public sealed class CampoRepository(NpgsqlDataSource dataSource, AccesoActual ac
             var op = JsonSerializer.Deserialize<OperacionCampo>(rows.GetString(1), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
             var eventoId = rows.IsDBNull(3) ? null : rows.GetString(3);
             var desastre = rows.IsDBNull(4) ? null : JsonSerializer.Deserialize<EventoDesastre>(rows.GetString(4), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            var tipo = tipos.Normalizar(op.TipoActivo);
             puntos.Add(new(rows.GetGuid(0), "EVALUACION", op.Activo is { Length: > 0 } ? op.Activo : "Evaluación de daños",
                 null, null, op.NivelAfectacion, eventoId, op.Descripcion ?? "",
                 op.Latitud!.Value, op.Longitud!.Value, null, rows.GetFieldValue<DateTimeOffset>(2),
                 op.Evaluador, op.Organizacion, op.Activo, op.EvidenciaId,
-                EstadoVinculo(eventoId, desastre), desastre));
+                EstadoVinculo(eventoId, desastre), desastre, tipo.Codigo, tipo.Nombre, tipo.Original));
         }
         return puntos;
     }

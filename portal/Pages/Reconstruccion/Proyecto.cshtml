@@ -1,0 +1,180 @@
+@page "/reconstruccion/{referencia}/proyectos/{id}/{handler?}"
+@model Portal.Pages.Reconstruccion.ProyectoModel
+@{
+    ViewData["Titulo"] = "Proyecto de reconstrucción";
+    var p = Model.Proyecto;
+    var accion = $"/reconstruccion/{Model.Referencia}/proyectos/{p.Id}";
+    var sesion = Model.Sesion;
+}
+<main class="contenido">
+  <p><a href="/reconstruccion/@Model.Referencia">← Proyectos del desastre</a></p>
+  <div class="titulo-con-accion">
+    <h1>@p.Nombre</h1>
+    <span class="estado grande">@p.Estado</span>
+  </div>
+  <p class="tenue">@p.Tipo · activo: @p.TipoActivo · formulado por @Formato.OGuion(p.Formulador) · versión @p.Version</p>
+  <partial name="_Mensajes" />
+  @if (p.Sobrecosto)
+  {
+    <p class="aviso error">Sobrecosto: el costo acumulado supera el presupuesto. No se puede finalizar hasta ajustar el presupuesto con su motivo (RN-15).</p>
+  }
+
+  <section class="cifras">
+    <div><strong>@p.Avance %</strong><span>avance</span></div>
+    <div><strong>@Formato.Dinero(p.Presupuesto)</strong><span>presupuesto</span></div>
+    <div><strong>@Formato.Dinero(p.CostoAcumulado)</strong><span>costo acumulado</span></div>
+    <div><strong>@Formato.OGuion(p.Responsable)</strong><span>responsable</span></div>
+    <div><strong>@Formato.OGuion(p.Contratista)</strong><span>contratista</span></div>
+  </section>
+
+  <div class="columnas">
+    @* Autoridad (COORDINADOR) *@
+    @if (sesion.EsCoordinador && p.Estado == "PROPUESTO")
+    {
+    <section class="tarjeta">
+      <h2>Aprobar</h2>
+      <p class="tenue">Quien formuló el proyecto no puede aprobarlo (RN-20).</p>
+      <form method="post" action="@accion/aprobar" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <label>Presupuesto <input name="presupuesto" type="number" min="1" step="0.01" required></label>
+        <label>Fuente de financiación <input name="fuente" required maxlength="200"></label>
+        <label>Responsable (usuario evaluador) <input name="responsable" required maxlength="120"></label>
+        <button>Aprobar</button>
+      </form>
+    </section>
+    }
+    @if (sesion.EsCoordinador && p.Presupuesto != "" && Model.Abierto)
+    {
+    <section class="tarjeta">
+      <h2>Modificar presupuesto</h2>
+      <form method="post" action="@accion/presupuesto" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <label>Nuevo presupuesto <input name="presupuesto" type="number" min="1" step="0.01" required></label>
+        <label>Motivo <input name="motivo" required maxlength="500"></label>
+        <button>Modificar</button>
+      </form>
+    </section>
+    }
+    @if (sesion.EsCoordinador && Model.Abierto)
+    {
+    <section class="tarjeta">
+      <h2>Cancelar</h2>
+      <form method="post" action="@accion/estado" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <input type="hidden" name="estado" value="CANCELADO">
+        <label>Motivo <input name="motivo" required maxlength="500"></label>
+        <button class="secundario">Cancelar proyecto</button>
+      </form>
+    </section>
+    }
+
+    @* Responsable asignado (EVALUADOR) *@
+    @if (sesion.EsEvaluador && p.Estado == "APROBADO")
+    {
+    <section class="tarjeta">
+      <h2>Iniciar ejecución</h2>
+      <form method="post" action="@accion/iniciar" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <label>Contratista <input name="contratista" required maxlength="200"></label>
+        <div class="fila">
+          <label>Inicio <input name="inicio" type="date" required></label>
+          <label>Fin <input name="fin" type="date" required></label>
+        </div>
+        <button>Iniciar</button>
+      </form>
+    </section>
+    }
+    @if (sesion.EsEvaluador && p.Estado == "EN_EJECUCION")
+    {
+    <section class="tarjeta">
+      <h2>Seguimiento</h2>
+      <form method="post" action="@accion/avance" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <div class="fila">
+          <label>Avance (%) <input name="porcentaje" type="number" min="0" max="100" required value="@p.Avance"></label>
+          <label>Descripción <input name="descripcion" maxlength="500"></label>
+        </div>
+        <label>Motivo de corrección (si el avance baja) <input name="motivo" maxlength="500"></label>
+        <button>Registrar avance</button>
+      </form>
+      <form method="post" action="@accion/costo" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <div class="fila">
+          <label>Costo <input name="valor" type="number" min="0.01" step="0.01" required></label>
+          <label>Soporte <input name="descripcion" maxlength="500" placeholder="Acta n.º"></label>
+        </div>
+        <button>Registrar costo</button>
+      </form>
+      <form method="post" action="@accion/evidencia" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <label>Evidencia (acta, informe, enlace) <input name="descripcion" required maxlength="500"></label>
+        <button>Adjuntar evidencia</button>
+      </form>
+    </section>
+    }
+    @if (sesion.EsEvaluador && (p.Estado == "EN_EJECUCION" || p.Estado == "SUSPENDIDO"))
+    {
+    <section class="tarjeta">
+      <h2>Cambiar estado</h2>
+      <form method="post" action="@accion/estado" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="version" value="@p.Version">
+        <label>Estado
+          <select name="estado">
+            @if (p.Estado == "EN_EJECUCION")
+            {
+              <option value="FINALIZADO">Finalizar (100 %, con evidencia y sin sobrecosto)</option>
+              <option value="SUSPENDIDO">Suspender</option>
+            }
+            else
+            {
+              <option value="EN_EJECUCION">Reanudar</option>
+            }
+          </select>
+        </label>
+        <label>Motivo (obligatorio para suspender) <input name="motivo" maxlength="500"></label>
+        <button>Cambiar</button>
+      </form>
+    </section>
+    }
+  </div>
+
+  <h2>Seguimiento registrado</h2>
+  @if (p.Seguimiento.Count == 0)
+  {
+    <p class="tenue">Sin registros de avance, costos ni evidencias.</p>
+  }
+  else
+  {
+  <table class="tabla">
+    <thead><tr><th>Momento</th><th>Tipo</th><th>Valor</th><th>Descripción</th><th>Usuario</th></tr></thead>
+    <tbody>
+    @foreach (var x in p.Seguimiento)
+    {
+      <tr>
+        <td>@Formato.Corta(x.Momento)</td><td>@x.Tipo</td>
+        <td>@(x.Tipo == "COSTO" ? Formato.Dinero(x.Valor) : x.Tipo == "AVANCE" ? x.Valor + " %" : "")</td>
+        <td>@x.Descripcion</td><td>@x.Usuario</td>
+      </tr>
+    }
+    </tbody>
+  </table>
+  }
+
+  @if (Model.Auditoria is not null)
+  {
+    <h2>Auditoría</h2>
+    <p class="tenue">Cada cambio y cada intento rechazado, con quién, cuándo y por qué (RN-17).</p>
+    <table class="tabla compacta">
+      <thead><tr><th>Momento</th><th>Usuario</th><th>Operación</th><th>Antes → después</th><th>Resultado</th><th>Detalle</th></tr></thead>
+      <tbody>
+      @foreach (var a in Model.Auditoria)
+      {
+        <tr class="@(a.Resultado == "RECHAZADO" ? "alerta" : "")">
+          <td>@Formato.Corta(a.Momento)</td><td>@a.Usuario</td><td>@a.Operacion</td>
+          <td>@a.ValorAnterior → @a.ValorNuevo</td><td>@a.Resultado</td><td>@a.Detalle</td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  }
+</main>

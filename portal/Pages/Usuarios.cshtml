@@ -1,0 +1,27 @@
+@page "/usuarios"
+@model Portal.Pages.UsuariosModel
+@{
+    ViewData["Titulo"] = "Usuarios";
+}
+<main class="contenido estrecho">
+  <h1>Usuarios del organismo</h1>
+  <p>El usuario nuevo pertenece a tu organismo. Un segundo coordinador permite aprobar proyectos de
+    reconstrucción a dos manos: quien formula un proyecto no puede aprobarlo.</p>
+  <partial name="_Mensajes" />
+  @if (!ViewData.ModelState.IsValid)
+  {
+    <p class="aviso error" role="alert">@string.Join(" ", ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage))</p>
+  }
+  <form method="post" action="/usuarios" class="formulario tarjeta" asp-antiforgery="true">
+    <label>Usuario <input name="usuario" value="@Model.Usuario" required minlength="3" maxlength="80" pattern="[a-z0-9_.\-]{3,80}"></label>
+    <label>Contraseña inicial <input name="clave" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label>
+    <label>Rol
+      <select name="rol">
+        <option value="EVALUADOR">Evaluador · registra daños y opera los proyectos que tiene asignados</option>
+        <option value="CONSULTA">Consulta · solo lectura</option>
+        <option value="COORDINADOR">Coordinador · registra desastres y aprueba proyectos</option>
+      </select>
+    </label>
+    <button>Crear usuario</button>
+  </form>
+</main>

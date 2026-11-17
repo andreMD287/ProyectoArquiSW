@@ -1,0 +1,49 @@
+@page "/desastres"
+@model Portal.Pages.Desastres.IndexModel
+@{
+    ViewData["Titulo"] = "Desastres";
+}
+<main class="contenido">
+  <div class="titulo-con-accion">
+    <h1>Desastres del organismo</h1>
+    @if (Model.Sesion.EsCoordinador)
+    {
+      <a class="boton" href="/desastres/nuevo">Registrar desastre</a>
+    }
+  </div>
+  <partial name="_Mensajes" />
+
+  <nav class="filtros" aria-label="Filtrar por fase">
+    <a href="/desastres" class="@(string.IsNullOrEmpty(Model.Fase) ? "activo" : "")">Todos (@Model.Total)</a>
+    @foreach (var f in Model.PorFase)
+    {
+      <a href="/desastres?fase=@f.Key" class="@(Model.Fase == f.Key ? "activo" : "")">@Formato.Fase(f.Key) (@f.Value)</a>
+    }
+  </nav>
+
+  @if (Model.Desastres.Count == 0)
+  {
+    <p class="tenue">No hay desastres en esta fase.</p>
+  }
+  else
+  {
+  <table class="tabla">
+    <thead><tr><th>Referencia</th><th>Tipo</th><th>Ubicación</th><th>Nivel</th><th>Fase</th><th>Área afectada</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var d in Model.Desastres)
+    {
+      var id = d.Texto("id");
+      <tr>
+        <td><a href="/desastres/@id">@id</a></td>
+        <td>@d.Texto("tipo")</td>
+        <td>@d.Texto("ubicacion")</td>
+        <td><span class="nivel nivel-@d.Entero("nivel")">@d.Texto("severidad")</span></td>
+        <td><partial name="_Fase" model='d.Texto("fase", "REGISTRO")' /></td>
+        <td>@(d.Tiene("radioKm") ? "Radio " + Formato.Decimal(d.Texto("radioKm"), 1) + " km" : "Sin caracterizar")</td>
+        <td><a href="/desastres/@id">Tablero</a></td>
+      </tr>
+    }
+    </tbody>
+  </table>
+  }
+</main>

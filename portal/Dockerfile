@@ -1,13 +1,15 @@
-# Etapa 1: compila y corre las pruebas con Maven (imagen basada en Ubuntu, necesaria para protoc)
-FROM maven:3.9-eclipse-temurin-21 AS construccion
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn -B -q package
+# Etapa 1: restaura, genera el cliente gRPC y publica con el SDK de .NET 10
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS construccion
+WORKDIR /src
+COPY Portal.csproj .
+RUN dotnet restore Portal.csproj
+COPY . .
+RUN dotnet publish Portal.csproj -c Release -o /app --no-restore
 
-# Etapa 2: imagen de ejecución (Tomcat embebido)
-FROM eclipse-temurin:21-jre
+# Etapa 2: imagen de ejecución de ASP.NET Core (Kestrel en el puerto 8080)
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
-COPY --from=construccion /app/target/portal-1.0.0.jar app.jar
+COPY --from=construccion /app .
+USER $APP_UID
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["dotnet", "Portal.dll"]

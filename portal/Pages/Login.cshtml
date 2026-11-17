@@ -1,0 +1,30 @@
+@page "/login"
+@model Portal.Pages.LoginModel
+@{
+    ViewData["Titulo"] = "Iniciar sesión";
+    ViewData["SinBarra"] = true;
+    ViewData["ClaseCuerpo"] = "acceso";
+}
+<main class="tarjeta estrecha">
+  <p class="antetitulo">Plataforma para la Gestión de Desastres y Reconstrucción</p>
+  <h1>Iniciar sesión</h1>
+  <p>Entra con el usuario de tu organismo.</p>
+  @if (Request.Query.ContainsKey("salida"))
+  {
+    <p class="aviso ok">Sesión cerrada.</p>
+  }
+  @if (Request.Query.ContainsKey("vencida"))
+  {
+    <p class="aviso error">Tu sesión venció. Inicia sesión de nuevo.</p>
+  }
+  @if (Model.Error is not null)
+  {
+    <p class="aviso error" role="alert">@Model.Error</p>
+  }
+  <form method="post" action="/login" class="formulario" asp-antiforgery="true">
+    <input type="hidden" name="siguiente" value="@Model.Siguiente">
+    <label>Usuario <input name="usuario" value="@Model.Usuario" autocomplete="username" required maxlength="80" autofocus></label>
+    <label>Contraseña <input name="clave" type="password" autocomplete="current-password" required maxlength="256"></label>
+    <button>Entrar</button>
+  </form>
+</main>

@@ -1,0 +1,124 @@
+@page "/desastres/{referencia}/{handler?}"
+@model Portal.Pages.Desastres.TableroModel
+@{
+    ViewData["Titulo"] = "Tablero del desastre";
+    var d = Model.Desastre;
+    var r = Model.Referencia;
+}
+@section Cabeza {
+  <link rel="stylesheet" href="/lib/leaflet/leaflet.css">
+}
+<main class="contenido">
+  <p><a href="/desastres">← Desastres</a></p>
+  <div class="titulo-con-accion">
+    <h1>@d.Texto("tipo") · @d.Texto("ubicacion")</h1>
+    <partial name="_Fase" model="Model.Fase" />
+  </div>
+  <p class="tenue">@r · Nivel @d.Texto("severidad") · versión @d.Largo("version")</p>
+  <p>@d.Texto("descripcion")</p>
+  <partial name="_Mensajes" />
+
+  <!-- Tablero: lo arma el servicio de tablero (servlet asíncrono multihilo) con las tres fuentes en paralelo -->
+  <section class="tablero" id="tablero" data-ref="@r" data-lat="@d.NumeroCrudo("latitud")"
+           data-lon="@d.NumeroCrudo("longitud")" data-radio="@d.NumeroCrudo("radioKm")" data-fase="@Model.Fase">
+    <div id="mapa" class="mapa" aria-label="Mapa del desastre"></div>
+    <aside class="paneles">
+      <div class="panel">
+        <h2>Evaluaciones de daño</h2>
+        <p id="resumen-evaluaciones" class="tenue">Cargando…</p>
+        <a href="/evaluaciones?desastre=@r">Ver evaluaciones</a>
+      </div>
+      <div class="panel">
+        <h2>Reconstrucción física</h2>
+        <p id="resumen-reconstruccion" class="tenue">Cargando…</p>
+        <a href="/reconstruccion/@r">Ver proyectos</a>
+      </div>
+      <div class="panel fuentes">
+        <h2>Fuentes del tablero</h2>
+        <p class="tenue">Consultadas en paralelo por el servlet multihilo del servicio de tablero.</p>
+        <table class="tabla compacta" id="fuentes"><tbody></tbody></table>
+        <p id="total-tablero" class="tenue"></p>
+      </div>
+    </aside>
+  </section>
+
+  <div class="columnas">
+    @if (Model.Sesion.PuedeEvaluar && Model.Fase != "CIERRE")
+    {
+    <section class="tarjeta">
+      <h2>Caracterizar el desastre</h2>
+      <p class="tenue">Ubicación y radio del área afectada. La primera caracterización pasa el desastre a
+        <strong>Caracterización</strong>. La app de campo envía la misma información sin conexión.</p>
+      <form method="post" action="/desastres/@r/caracterizacion" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="versionBase" value="@d.Largo("version")">
+        <div class="fila">
+          <label>Latitud <input name="latitud" type="number" step="any" min="-90" max="90" required value="@d.NumeroCrudo("latitud")"></label>
+          <label>Longitud <input name="longitud" type="number" step="any" min="-180" max="180" required value="@d.NumeroCrudo("longitud")"></label>
+          <label>Radio (km) <input name="radioKm" type="number" step="0.1" min="0.1" max="500" required value="@d.NumeroCrudo("radioKm")"></label>
+        </div>
+        <label>Nivel (opcional)
+          <select name="nivel">
+            <option value="">Sin cambio</option>
+            <option value="1">Nivel 1 · Bajo</option><option value="2">Nivel 2 · Medio</option>
+            <option value="3">Nivel 3 · Alto</option><option value="4">Nivel 4 · Crítico</option>
+          </select>
+        </label>
+        <label>Observación <textarea name="descripcion" maxlength="2000" rows="2"></textarea></label>
+        <button>Guardar caracterización</button>
+      </form>
+    </section>
+    }
+
+    @if (Model.Sesion.EsCoordinador && Model.Siguientes.Count > 0)
+    {
+    <section class="tarjeta">
+      <h2>Cambiar de fase</h2>
+      <p class="tenue">Reconstrucción se inicia desde su módulo, cuando hay evaluaciones con daño.</p>
+      <form method="post" action="/desastres/@r/fase" class="formulario" asp-antiforgery="true">
+        <input type="hidden" name="versionBase" value="@d.Largo("version")">
+        <label>Nueva fase
+          <select name="fase">
+            @foreach (var f in Model.Siguientes)
+            {
+              <option value="@f">@Formato.Fase(f)</option>
+            }
+          </select>
+        </label>
+        <label>Motivo <input name="motivo" required maxlength="500"></label>
+        <button>Cambiar fase</button>
+      </form>
+    </section>
+    }
+  </div>
+
+  <section>
+    <h2>Historial del desastre</h2>
+    @if (!Model.Historial.Elementos().Any())
+    {
+      <p class="tenue">Sin cambios desde el registro.</p>
+    }
+    else
+    {
+    <table class="tabla">
+      <thead><tr><th>Versión</th><th>Fecha</th><th>Quién</th><th>Fase</th><th>Nivel</th><th>Motivo</th></tr></thead>
+      <tbody>
+      @foreach (var h in Model.Historial.Elementos())
+      {
+        <tr>
+          <td>@h.Largo("version")</td>
+          <td>@Formato.Corta(h.Texto("fecha"))</td>
+          <td>@h.Texto("actor")</td>
+          <td>@h.Obj("anterior").Texto("fase", "REGISTRO") → @h.Obj("nuevo").Texto("fase", "REGISTRO")</td>
+          <td>@h.Obj("anterior").Texto("severidad") → @h.Obj("nuevo").Texto("severidad")</td>
+          <td>@h.Texto("motivo")</td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </section>
+</main>
+@section Scripts {
+  <script src="/lib/leaflet/leaflet.js"></script>
+  <script src="/js/tablero.js"></script>
+}

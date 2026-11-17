@@ -1,0 +1,113 @@
+@page "/reconstruccion/{referencia}/{handler?}"
+@model Portal.Pages.Reconstruccion.SeguimientoModel
+@{
+    ViewData["Titulo"] = "Reconstrucción";
+    var r = Model.Referencia;
+    var s = Model.Seguimiento;
+}
+<main class="contenido">
+  <p><a href="/desastres/@r">← Tablero del desastre</a></p>
+  <div class="titulo-con-accion">
+    <h1>Reconstrucción física · @Model.Desastre.Texto("tipo") · @Model.Desastre.Texto("ubicacion")</h1>
+    <partial name="_Fase" model="Model.Fase" />
+  </div>
+  <p class="tenue">Solo activos físicos (viviendas, vías, puentes, escuelas…). Reconstrucción no registra datos de personas.
+    Tu rol aquí: <strong>@Model.Sesion.RolReconstruccion</strong>.</p>
+  <partial name="_Mensajes" />
+
+  @if (Model.Sesion.EsCoordinador)
+  {
+  <div class="acciones">
+    @if (Model.Fase == "CARACTERIZACION")
+    {
+      <form method="post" action="/reconstruccion/@r/iniciar" asp-antiforgery="true"><button>Iniciar reconstrucción</button></form>
+    }
+    @if (Model.Fase == "RECONSTRUCCION")
+    {
+      <form method="post" action="/reconstruccion/@r/cerrar" asp-antiforgery="true"><button class="secundario">Cerrar el desastre</button></form>
+    }
+  </div>
+  }
+
+  <section class="cifras">
+    <div><strong>@s.Proyectos.Count</strong><span>proyectos</span></div>
+    <div><strong>@s.AvancePonderado %</strong><span>avance ponderado por presupuesto</span></div>
+    <div><strong>@Formato.Dinero(s.PresupuestoTotal)</strong><span>presupuesto total</span></div>
+    <div><strong>@Formato.Dinero(s.CostoTotal)</strong><span>costo ejecutado</span></div>
+    <div><strong>@s.ConSobrecosto</strong><span>con sobrecosto</span></div>
+  </section>
+
+  <h2>Proyectos</h2>
+  @if (s.Proyectos.Count == 0)
+  {
+    <p class="tenue">Aún no hay proyectos de reconstrucción en este desastre.</p>
+  }
+  else
+  {
+  <table class="tabla">
+    <thead><tr><th>Proyecto</th><th>Activo</th><th>Tipo</th><th>Estado</th><th>Avance</th><th>Presupuesto</th><th>Costo</th><th>Responsable</th></tr></thead>
+    <tbody>
+    @foreach (var p in s.Proyectos)
+    {
+      <tr class="@(p.Sobrecosto ? "alerta" : "")">
+        <td><a href="/reconstruccion/@r/proyectos/@p.Id">@p.Nombre</a></td>
+        <td>@p.TipoActivo</td>
+        <td>@p.Tipo</td>
+        <td><span class="estado">@p.Estado</span></td>
+        <td><progress max="100" value="@p.Avance"></progress> <span>@p.Avance %</span></td>
+        <td>@Formato.Dinero(p.Presupuesto)</td>
+        <td>@Formato.Dinero(p.CostoAcumulado)</td>
+        <td>@Formato.OGuion(p.Responsable)</td>
+      </tr>
+    }
+    </tbody>
+  </table>
+  }
+
+  @if (Model.Sesion.EsCoordinador)
+  {
+  <section class="tarjeta">
+    <h2>Crear proyecto desde evaluaciones de daño</h2>
+    @if (Model.AvisoEvaluaciones is not null)
+    {
+      <p class="aviso error">@Model.AvisoEvaluaciones</p>
+    }
+    @if (Model.Evaluaciones is not null)
+    {
+    <form method="post" action="/reconstruccion/@r/proyectos" class="formulario" asp-antiforgery="true">
+      <label>Nombre del proyecto <input name="nombre" required maxlength="200"></label>
+      <label>Tipo
+        <select name="tipo">
+          <option value="">Deducir del daño (destrucción total = Reconstrucción)</option>
+          <option value="REPARACION">Reparación</option><option value="RECONSTRUCCION">Reconstrucción</option>
+        </select>
+      </label>
+      <fieldset>
+        <legend>Evaluaciones que lo originan</legend>
+        @if (Model.Evaluaciones.Count == 0)
+        {
+          <p class="tenue">Este desastre no tiene evaluaciones de tu organismo.</p>
+        }
+        @foreach (var e in Model.Evaluaciones)
+        {
+          var bloqueada = !e.Elegible || e.ConProyectoActivo;
+          <label class="opcion @(bloqueada ? "deshabilitada" : "")">
+            <input type="checkbox" name="evaluaciones" value="@e.Id" disabled="@bloqueada">
+            <span>@e.TipoActivo · @e.Nivel · @e.Descripcion</span>
+            @if (e.ConProyectoActivo)
+            {
+              <em>ya tiene un proyecto activo</em>
+            }
+            else if (!e.Elegible)
+            {
+              <em>daño leve o sin validar: no origina proyectos</em>
+            }
+          </label>
+        }
+      </fieldset>
+      <button>Crear proyecto</button>
+    </form>
+    }
+  </section>
+  }
+</main>

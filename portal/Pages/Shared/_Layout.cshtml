@@ -1,0 +1,40 @@
+@{
+    var sesion = SesionUsuario.De(User);
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>@ViewData["Titulo"] · Plataforma de desastres</title>
+  <link rel="stylesheet" href="/css/portal.css">
+  @await RenderSectionAsync("Cabeza", required: false)
+</head>
+<body class="@ViewData["ClaseCuerpo"]">
+@if (ViewData["SinBarra"] is not true)
+{
+<header class="barra">
+  <a class="marca" href="/desastres">Gestión de Desastres y Reconstrucción</a>
+  <nav>
+    <a href="/desastres">Desastres</a>
+    <a href="/mapa">Mapa</a>
+    <a href="/evaluaciones">Evaluaciones</a>
+    @if (sesion?.EsCoordinador == true)
+    {
+      <a href="/usuarios">Usuarios</a>
+    }
+  </nav>
+  @if (sesion is not null)
+  {
+  <div class="quien">
+    <span>@sesion.Usuario</span>
+    <span class="rol">@sesion.Rol</span>
+    <form method="post" action="/logout" asp-antiforgery="true"><button class="enlace">Salir</button></form>
+  </div>
+  }
+</header>
+}
+@RenderBody()
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

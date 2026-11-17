@@ -1,0 +1,38 @@
+@page "/desastres/nuevo"
+@model Portal.Pages.Desastres.NuevoModel
+@{
+    ViewData["Titulo"] = "Registrar desastre";
+    var errores = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+    if (Model.Error is not null) errores.Add(Model.Error);
+}
+<main class="contenido estrecho">
+  <p><a href="/desastres">← Desastres</a></p>
+  <h1>Registrar desastre</h1>
+  <p>El desastre nace en fase <strong>Registro</strong>. Su ubicación exacta y el área afectada se
+    agregan después, al caracterizarlo desde el portal o desde la app de campo.</p>
+  @if (errores.Count > 0)
+  {
+    <p class="aviso error" role="alert">@string.Join(" ", errores)</p>
+  }
+  <form method="post" action="/desastres/nuevo" class="formulario tarjeta" asp-antiforgery="true">
+    <label>Tipo
+      <select name="tipo" required>
+        @foreach (var t in NuevoModel.Tipos)
+        {
+          <option value="@t" selected="@(t == Model.Tipo)">@Formato.Nombre(t)</option>
+        }
+      </select>
+    </label>
+    <label>Ubicación (municipio, vereda o sector) <input name="ubicacion" value="@Model.Ubicacion" required maxlength="200"></label>
+    <label>Descripción inicial <textarea name="descripcion" required maxlength="2000" rows="4">@Model.Descripcion</textarea></label>
+    <label>Nivel inicial
+      <select name="severidad">
+        <option value="BAJA" selected="@(Model.Severidad == "BAJA")">Nivel 1 · Bajo: se atiende con recursos locales</option>
+        <option value="MEDIA" selected="@(Model.Severidad == "MEDIA")">Nivel 2 · Medio: coordinación entre varios organismos</option>
+        <option value="ALTA" selected="@(Model.Severidad == "ALTA")">Nivel 3 · Alto: recursos regionales o nacionales</option>
+        <option value="CRITICA" selected="@(Model.Severidad == "CRITICA")">Nivel 4 · Crítico: coordinación nacional</option>
+      </select>
+    </label>
+    <button>Registrar</button>
+  </form>
+</main>

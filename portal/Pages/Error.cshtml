@@ -1,0 +1,14 @@
+@page
+@model Portal.Pages.ErrorModel
+@{
+    ViewData["Titulo"] = "Error";
+}
+<main class="contenido">
+  <h1>No se pudo completar la operación</h1>
+  <p class="aviso error">@Model.Mensaje</p>
+  @if (Model.Estado > 0)
+  {
+    <p class="tenue">Código @Model.Estado</p>
+  }
+  <p><a href="javascript:history.back()">Volver</a> · <a href="/desastres">Ir a desastres</a></p>
+</main>

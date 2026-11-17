@@ -1,0 +1,12 @@
+@{
+    var ok = TempData["ok"] as string;
+    var error = TempData["error"] as string;
+}
+@if (!string.IsNullOrEmpty(ok))
+{
+  <p class="aviso ok" role="status">@ok</p>
+}
+@if (!string.IsNullOrEmpty(error))
+{
+  <p class="aviso error" role="alert">@error</p>
+}

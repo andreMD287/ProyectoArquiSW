@@ -7,14 +7,25 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on: [api, reconstruccion, portal]
-  # UD-09 Portal web: presentación MVC (Spring MVC + Thymeleaf) y servlet asíncrono multihilo del tablero.
+  # UD-09 Portal web: toda la presentación web, en ASP.NET Core Razor Pages (.NET 10).
+  # Consume los servicios desplegados: núcleo y servidor por REST, Reconstrucción por gRPC y el tablero por REST.
   portal:
     build: ../portal
     environment:
       PORTAL_NUCLEO_URL: http://nucleo:8080/plataforma-desastres/api
       PORTAL_SERVIDOR_URL: http://api:8080
-      PORTAL_RECONSTRUCCION_HOST: reconstruccion
-      PORTAL_RECONSTRUCCION_PUERTO: "9096"
+      PORTAL_RECONSTRUCCION_URL: http://reconstruccion:9096
+      PORTAL_TABLERO_URL: http://tablero:8080
+    depends_on: [nucleo, api, reconstruccion, tablero]
+  # UD-10 Servicio de tablero (Java, Spring Boot): servlet asíncrono multihilo que compone el tablero
+  # de un desastre con el núcleo, servidor y Reconstrucción en paralelo. Solo lo llama el portal.
+  tablero:
+    build: ../tablero
+    environment:
+      TABLERO_NUCLEO_URL: http://nucleo:8080/plataforma-desastres/api
+      TABLERO_SERVIDOR_URL: http://api:8080
+      TABLERO_RECONSTRUCCION_HOST: reconstruccion
+      TABLERO_RECONSTRUCCION_PUERTO: "9096"
     depends_on: [nucleo, api, reconstruccion]
   api:
     build: .

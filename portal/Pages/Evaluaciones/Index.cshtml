@@ -1,0 +1,45 @@
+@page "/evaluaciones"
+@model Portal.Pages.Evaluaciones.IndexModel
+@{
+    ViewData["Titulo"] = "Evaluaciones de daño";
+}
+<main class="contenido">
+  <h1>Evaluaciones de daño</h1>
+  <p class="tenue">Capturadas en campo con la app (también sin conexión) y sincronizadas al recuperar la red.</p>
+  <form method="get" action="/evaluaciones" class="filtros">
+    <label>Desastre
+      <select name="desastre" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        @foreach (var x in Model.Desastres.Elementos())
+        {
+          var id = x.Texto("id");
+          <option value="@id" selected="@(id == Model.Desastre)">@id · @x.Texto("tipo") · @x.Texto("ubicacion")</option>
+        }
+      </select>
+    </label>
+  </form>
+  @if (!Model.Evaluaciones.Elementos().Any())
+  {
+    <p class="tenue">No hay evaluaciones para este filtro.</p>
+  }
+  else
+  {
+  <table class="tabla">
+    <thead><tr><th>Capturada</th><th>Activo</th><th>Nivel de afectación</th><th>Desastre</th><th>Evaluador</th><th>Ubicación</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var e in Model.Evaluaciones.Elementos())
+    {
+      <tr>
+        <td>@Formato.Corta(e.Texto("registradaEn"))</td>
+        <td>@e.Texto("activo", "—")</td>
+        <td><span class="nivel afectacion-@e.Entero("nivelAfectacion")">@e.Entero("nivelAfectacion") de 5</span></td>
+        <td>@e.Texto("eventoId", "Sin vincular")</td>
+        <td>@e.Texto("evaluador", "—")</td>
+        <td>@e.Numero("latitud").ToString("0.0000"), @e.Numero("longitud").ToString("0.0000")</td>
+        <td><a href="/evaluaciones/@e.Texto("id")">Detalle</a></td>
+      </tr>
+    }
+    </tbody>
+  </table>
+  }
+</main>

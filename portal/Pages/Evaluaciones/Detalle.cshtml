@@ -1,0 +1,44 @@
+@page "/evaluaciones/{id:guid}/{handler?}"
+@model Portal.Pages.Evaluaciones.DetalleModel
+@{
+    ViewData["Titulo"] = "Evaluación de daño";
+    var e = Model.Evaluacion;
+}
+<main class="contenido estrecho">
+  <p><a href="javascript:history.back()">← Volver</a></p>
+  <h1>Evaluación de daño</h1>
+  <dl class="datos tarjeta">
+    <dt>Activo</dt><dd>@e.Texto("activo", "—")</dd>
+    <dt>Nivel de afectación</dt><dd>@e.Entero("nivelAfectacion") de 5</dd>
+    <dt>Desastre</dt><dd>@e.Texto("eventoId", "Sin vincular")</dd>
+    <dt>Descripción</dt><dd>@e.Texto("descripcion")</dd>
+    <dt>Ubicación</dt><dd>@e.NumeroCrudo("latitud"), @e.NumeroCrudo("longitud") (@e.Texto("fuenteUbicacion", "—"))</dd>
+    <dt>Capturada</dt><dd>@e.Texto("capturadaEnUtc")</dd>
+    <dt>Evaluador</dt><dd>@e.Texto("evaluador", "—")</dd>
+    <dt>Versión</dt><dd>@e.Texto("version")</dd>
+  </dl>
+  @if (e.Tiene("evidenciaId"))
+  {
+    <figure class="foto">
+      <img src="/evaluaciones/@e.Texto("evaluacionId")/foto" alt="Foto de la evaluación">
+      <figcaption>Evidencia fotográfica tomada en campo</figcaption>
+    </figure>
+  }
+  <h2>Historial de versiones</h2>
+  <p class="tenue">Cada corrección es una versión nueva; la captura original no se sobrescribe.</p>
+  <table class="tabla">
+    <thead><tr><th>Versión</th><th>Nivel</th><th>Descripción</th><th>Motivo</th><th>Quién</th></tr></thead>
+    <tbody>
+    @foreach (var h in Model.Historial.Elementos())
+    {
+      <tr>
+        <td>@h.Texto("version")</td>
+        <td>@h.Texto("nivelAfectacion", h.Obj("datos").Texto("nivelAfectacion", "—"))</td>
+        <td>@h.Texto("descripcion", h.Obj("datos").Texto("descripcion", "—"))</td>
+        <td>@h.Texto("motivo", "Captura original")</td>
+        <td>@h.Texto("autor", h.Texto("evaluador", "—"))</td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</main>

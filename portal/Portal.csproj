@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- UD-09 Portal web: presentación de la plataforma en ASP.NET Core Razor Pages (.NET 10). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Portal</RootNamespace>
+    <!-- Números y fechas con formato invariante; los formatos de Colombia los arma Formato.cs. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Cliente gRPC hacia Reconstrucción, generado del mismo contrato que usa el servicio Java. -->
+    <Protobuf Include="Protos\reconstruccion.proto" GrpcServices="Client" />
+    <PackageReference Include="Google.Protobuf" Version="3.28.3" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.67.0" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

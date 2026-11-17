@@ -25,12 +25,13 @@
   else
   {
   <table class="tabla">
-    <thead><tr><th>Capturada</th><th>Activo</th><th>Nivel de afectación</th><th>Desastre</th><th>Evaluador</th><th>Ubicación</th><th></th></tr></thead>
+    <thead><tr><th>Capturada</th><th>Tipo de activo</th><th>Activo</th><th>Nivel de afectación</th><th>Desastre</th><th>Evaluador</th><th>Ubicación</th><th></th></tr></thead>
     <tbody>
     @foreach (var e in Model.Evaluaciones.Elementos())
     {
       <tr>
         <td>@Formato.Corta(e.Texto("registradaEn"))</td>
+        <td>@e.Texto("tipoActivoNombre", "—")</td>
         <td>@e.Texto("activo", "—")</td>
         <td><span class="nivel afectacion-@e.Entero("nivelAfectacion")">@e.Entero("nivelAfectacion") de 5</span></td>
         <td>@e.Texto("eventoId", "Sin vincular")</td>

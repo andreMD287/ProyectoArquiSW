@@ -8,6 +8,7 @@
   <p><a href="javascript:history.back()">← Volver</a></p>
   <h1>Evaluación de daño</h1>
   <dl class="datos tarjeta">
+    <dt>Tipo de activo</dt><dd>@e.Texto("tipoActivoNombre", "—")@(e.Tiene("tipoActivoOriginal") ? " (recibido como " + e.Texto("tipoActivoOriginal") + ")" : "")</dd>
     <dt>Activo</dt><dd>@e.Texto("activo", "—")</dd>
     <dt>Nivel de afectación</dt><dd>@e.Entero("nivelAfectacion") de 5</dd>
     <dt>Desastre</dt><dd>@e.Texto("eventoId", "Sin vincular")</dd>

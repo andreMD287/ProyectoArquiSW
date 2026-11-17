@@ -41,11 +41,14 @@ public class FuentesTablero {
             e.put("longitud", p.path("longitud").asDouble());
             e.put("nivel", p.path("nivelAfectacion").isNumber() ? p.path("nivelAfectacion").asInt() : null);
             e.put("activo", p.path("activo").asText(""));
+            e.put("tipoActivo", p.path("tipoActivo").asText(""));
             e.put("descripcion", p.path("descripcion").asText(""));
             e.put("registradaEn", p.path("registradaEn").asText(""));
             lista.add(e);
             if (e.get("nivel") != null) porNivel.merge(String.valueOf(e.get("nivel")), 1, Integer::sum);
-            String activo = e.get("activo").toString().isBlank() ? "Sin tipo" : e.get("activo").toString();
+            // Contrato C1: se agrupa por tipo de activo (Puente, Escuela…); sin tipo, por el texto libre.
+            String tipo = p.path("tipoActivoNombre").asText("");
+            String activo = !tipo.isBlank() ? tipo : e.get("activo").toString().isBlank() ? "Sin tipo" : e.get("activo").toString();
             porActivo.merge(activo, 1, Integer::sum);
         }
         Map<String, Object> r = new LinkedHashMap<>();

@@ -2,7 +2,7 @@
 
 Código unificado de la plataforma: núcleo de identidad y desastres (Jakarta EE), evaluaciones de campo y mapas (.NET), captura sin conexión (.NET MAUI), notificaciones (Taller 3, RabbitMQ), Reconstrucción física (Spring Boot, REST y gRPC), el **portal web** (ASP.NET Core Razor Pages), que es la única interfaz web, y el **servicio de tablero** (Java), con el servlet asíncrono multihilo que arma el tablero de un desastre.
 
-Estado al 17 de noviembre de 2026: todo compila y `./verificar.sh` pasa completo con el portal en .NET (248 comprobaciones, registro en `evidencias/rol1-build/2026-11-17_verificar_portal_net.log`). La arquitectura está en `documentacion/SAD_arc42.md` (v2.1); el SRS y el ATAM se están pasando a sus plantillas.
+Estado al 17 de noviembre de 2026: todo compila y `./verificar.sh` pasa completo (271 comprobaciones, registro en `evidencias/rol1-build/2026-11-17_verificar_final.log`). Incluye el portal en .NET, C1 y C2 en `servidor` y el consumo de los avisos de Reconstrucción en notificaciones. La arquitectura está en `documentacion/SAD_arc42.md` (v2.2).
 
 ## Ejecutar
 

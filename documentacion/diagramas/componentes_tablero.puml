@@ -1,0 +1,28 @@
+@startuml componentes_tablero
+!include <C4/C4_Component>
+!include estilo.iuml
+LAYOUT_TOP_DOWN()
+title Componentes del servicio de tablero, UD-10 (C4 nivel 3): servlet asíncrono multihilo
+
+Container(portal, "UD-09 Portal web", "ASP.NET Core Razor Pages", "Reenvía el token del usuario", $tags="construido")
+Container_Boundary(tab, "UD-10 Servicio de tablero · Spring Boot 3.3 en Tomcat") {
+  Component(servlet, "TableroServlet", "@WebServlet(asyncSupported = true)", "GET /tablero: startAsync, junta tres fuentes, responde parcial si una falla, 401 si el token venció y 503 si el pool está lleno", $tags="construido")
+  Component(tablero, "Tablero y pool", "ThreadPoolExecutor (16 hilos, cola 64)", "Lanza las tres consultas en paralelo, cada una con límite de 1,5 s", $tags="construido")
+  Component(cn, "NucleoCliente", "RestClient", "El desastre (fase, nivel y área)", $tags="construido")
+  Component(cs, "ServidorCliente", "RestClient", "Evaluaciones del desastre", $tags="construido")
+  Component(cr, "ReconstruccionCliente", "Stub gRPC", "Seguimiento de proyectos", $tags="construido")
+}
+Container(nucleo, "UD-02 Núcleo", "Jakarta EE", $tags="construido")
+Container(servidor, "UD-03 Campo y mapas", "ASP.NET Core", $tags="construido")
+Container(rec, "UD-06 Reconstrucción", "Spring Boot, gRPC", $tags="construido")
+
+Rel(portal, servlet, "GET /tablero?desastre=REF", "HTTP/JSON, Authorization: Bearer")
+Rel(servlet, tablero, "Arma el tablero")
+Rel(tablero, cn, "Fuente 1")
+Rel(tablero, cs, "Fuente 2")
+Rel(tablero, cr, "Fuente 3")
+Rel(cn, nucleo, "REST/JSON")
+Rel(cs, servidor, "REST/JSON")
+Rel(cr, rec, "gRPC")
+SHOW_LEGEND()
+@enduml

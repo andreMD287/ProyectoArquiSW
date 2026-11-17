@@ -4,7 +4,7 @@
 LAYOUT_TOP_DOWN()
 title Componentes de Reconstrucción, UD-06 (C4 nivel 3): arquitectura hexagonal
 
-Container(portal, "UD-09 Portal web", "Spring MVC", $tags="construido")
+Container(portal, "UD-09 Portal web y UD-10 tablero", "Razor Pages (.NET) y servlet (Java)", $tags="construido")
 Container(clientes, "Clientes REST", "Scripts y otros módulos", $tags="construido")
 Container_Boundary(rec, "UD-06 Reconstrucción · Spring Boot 3.3") {
   Component(rest, "Adaptador REST", "ReconstruccionController, FiltroSesion", "Valida el token contra el núcleo; If-Match = versión esperada", $tags="construido")
@@ -21,7 +21,7 @@ Container(nucleo, "UD-02 Núcleo", "Jakarta EE", $tags="construido")
 Container(servidor, "UD-03 Campo y mapas", "ASP.NET Core", $tags="construido")
 ContainerQueue(mq, "RabbitMQ", "reconstruccion.eventos a integracion.reconstruccion", $tags="construido")
 
-Rel(portal, grpc, "Proyectos", "gRPC")
+Rel(portal, grpc, "Proyectos y seguimiento", "gRPC")
 Rel(clientes, rest, "API", "REST/JSON")
 Rel(rest, cu, "Llama")
 Rel(grpc, cu, "Llama")

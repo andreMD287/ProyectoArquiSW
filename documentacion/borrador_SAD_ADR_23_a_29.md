@@ -1,5 +1,7 @@
 # Borrador para el SAD (arc42 §9 y §7) · ADR-23 a ADR-29 y ambiente entregado
 
+> **Reemplazado por `SAD_arc42.md` (v2.1, 17-nov-2026).** Desde esa versión la presentación es .NET: ADR-23 pasó a ASP.NET Core Razor Pages y el servlet de ADR-24 vive en el servicio de tablero (UD-10). Este borrador se conserva solo como historia.
+>
 > Borrador interno de Rol 1 (15-nov-2026) para pasar al SAD en arc42. Mismo formato que ADR-01 a 22.
 > Las cifras son las de `evidencias/rol1-tablero/medicion_tablero_2026-11-15_1334.json` y `evidencias/rol1-build/`.
 > ADR-25 y ADR-27 los completa Rol 2 (mensaje M6).

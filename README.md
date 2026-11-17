@@ -1,8 +1,8 @@
 # Territorio · integración de los talleres
 
-Código unificado de la plataforma: núcleo de identidad y desastres (Jakarta EE), evaluaciones de campo y mapas (.NET), captura sin conexión (.NET MAUI), notificaciones (Taller 3, RabbitMQ), Reconstrucción física (Spring Boot, REST y gRPC) y el **portal web** (Spring MVC + Thymeleaf), que es la única interfaz web y tiene el servlet asíncrono multihilo del tablero.
+Código unificado de la plataforma: núcleo de identidad y desastres (Jakarta EE), evaluaciones de campo y mapas (.NET), captura sin conexión (.NET MAUI), notificaciones (Taller 3, RabbitMQ), Reconstrucción física (Spring Boot, REST y gRPC), el **portal web** (ASP.NET Core Razor Pages), que es la única interfaz web, y el **servicio de tablero** (Java), con el servlet asíncrono multihilo que arma el tablero de un desastre.
 
-Estado al 15 de noviembre de 2026: todo compila y `./verificar.sh` pasa completo (243 comprobaciones, registro en `evidencias/rol1-build/`). Los documentos SRS, SAD y ATAM todavía no reflejan estos cambios.
+Estado al 17 de noviembre de 2026: todo compila y `./verificar.sh` pasa completo con el portal en .NET (248 comprobaciones, registro en `evidencias/rol1-build/2026-11-17_verificar_portal_net.log`). La arquitectura está en `documentacion/SAD_arc42.md` (v2.1); el SRS y el ATAM se están pasando a sus plantillas.
 
 ## Ejecutar
 
@@ -20,12 +20,20 @@ Acceso de laboratorio inicial: **coordinador_demo** / **Arqui-Local-2026!**. Pue
 
 El inicio aplica V001–V009, incluso sobre un volumen existente. Para detener conservando datos: `docker compose -f servidor/compose.yaml stop`. No uses `down -v` para actualizar.
 
-## Portal web (UD-09)
+## Portal web (UD-09) y servicio de tablero (UD-10)
 
-- **MVC con Spring MVC + Thymeleaf:** controladores `@Controller` en `portal/src/main/java/com/pgdr/portal/web`, vistas en `portal/src/main/resources/templates`. El token del núcleo vive en la sesión del servidor; el navegador solo tiene la cookie de sesión.
-- **Pantallas:** desastres (registro, fase y caracterización), tablero de un desastre con mapa, evaluaciones con historial y foto, mapa general, Reconstrucción física completa y usuarios del organismo.
-- **Servlet multihilo:** `portal/.../tablero/TableroServlet.java` (`GET /tablero?desastre=REF`). Consulta en paralelo el núcleo, servidor y Reconstrucción (gRPC) con un pool acotado. Responde parcial si una fuente falla y 503 si el pool está lleno.
-- **Medición:** `python portal/scripts/medir_tablero.py` deja el informe en `evidencias/rol1-tablero/`.
+Toda la presentación es .NET: la app de campo (MAUI) y el portal web.
+
+- **Portal web en ASP.NET Core Razor Pages** (`portal/`, .NET 10):
+  - Cada pantalla es una página: la vista (`Pages/**/*.cshtml`) y su `PageModel` (`*.cshtml.cs`), que expone los datos que la vista enlaza y atiende los formularios (`OnGet`, `OnPost…`). Se documenta como MVVM del lado del servidor (ADR-23).
+  - No guarda datos propios: consume los servicios desplegados. Usa REST con el núcleo y con `servidor`, gRPC con Reconstrucción (cliente generado del mismo `reconstruccion.proto`) y REST con el servicio de tablero.
+  - El token del núcleo queda en la memoria del portal; el navegador solo tiene la cookie `pgdr.sesion` (HttpOnly). Cada formulario lleva un token antifalsificación (CSRF).
+  - Pantallas: desastres (registro, fase y caracterización), tablero de un desastre con mapa, evaluaciones con historial y foto, mapa general, Reconstrucción física completa y usuarios del organismo.
+- **Servicio de tablero** (`tablero/`, Java 21, Spring Boot):
+  - Su `TableroServlet` (`GET /tablero?desastre=REF` con `Authorization: Bearer`) es asíncrono y multihilo.
+  - Consulta en paralelo el núcleo, `servidor` y Reconstrucción (gRPC) con un pool acotado.
+  - Responde parcial si una fuente falla y 503 si el pool está lleno. No se publica: solo lo llama el portal, que reenvía el token del usuario.
+- **Medición:** `python tablero/scripts/medir_tablero.py` deja el informe en `evidencias/rol1-tablero/`.
 
 ## Qué se unió
 

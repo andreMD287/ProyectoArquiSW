@@ -2,7 +2,7 @@
 !include <C4/C4_Container>
 !include estilo.iuml
 LAYOUT_TOP_DOWN()
-title Contenedores de la plataforma (C4 nivel 2) · ambiente entregado, 15-nov-2026
+title Contenedores de la plataforma (C4 nivel 2) · ambiente entregado, 17-nov-2026
 
 Person(coord, "Coordinador", "Registra desastres, inicia la reconstrucción y aprueba proyectos")
 Person(eval, "Evaluador de campo", "Caracteriza y evalúa daños; opera los proyectos asignados")
@@ -10,7 +10,8 @@ Person(consulta, "Consulta", "Solo lectura")
 
 System_Boundary(plataforma, "Plataforma para la Gestión de Desastres y Reconstrucción") {
   Container(entrada, "UD-01 Entrada", "Nginx 1.28", "Entrada única; límite de intentos de inicio de sesión", $tags="construido")
-  Container(portal, "UD-09 Portal web", "Spring Boot 3.3, Spring MVC, Thymeleaf", "Presentación MVC y TableroServlet asíncrono multihilo", $tags="construido")
+  Container(portal, "UD-09 Portal web", "ASP.NET Core 10, Razor Pages", "Toda la presentación web; consume los servicios desplegados", $tags="construido")
+  Container(tablero, "UD-10 Servicio de tablero", "Spring Boot 3.3 (Tomcat)", "TableroServlet asíncrono multihilo: compone el tablero de un desastre", $tags="construido")
   Container(app, "App de campo", ".NET MAUI, SQLite (Android)", "Captura sin conexión y sincronización por lotes", $tags="construido")
   Container(nucleo, "UD-02 Núcleo", "Jakarta EE en WildFly 41 (EJB, JPA, JTA)", "Identidad y sesiones, desastres y fases, auditoría, bandeja de salida", $tags="construido")
   ContainerDb(bdnucleo, "Base del núcleo", "PostgreSQL 17", "", $tags="bd")
@@ -38,6 +39,10 @@ Rel(entrada, rec, "/api/reconstruccion/", "REST/JSON")
 Rel(portal, nucleo, "Sesión y desastres", "REST/JSON con token")
 Rel(portal, servidor, "Evaluaciones", "REST/JSON con token")
 Rel(portal, rec, "Proyectos", "gRPC con token")
+Rel(portal, tablero, "Tablero de un desastre", "REST/JSON con token")
+Rel(tablero, nucleo, "Desastre", "REST/JSON")
+Rel(tablero, servidor, "Evaluaciones", "REST/JSON")
+Rel(tablero, rec, "Seguimiento", "gRPC")
 Rel(servidor, nucleo, "Valida sesión, copia el catálogo", "REST/JSON")
 Rel(rec, nucleo, "Valida sesión, lee y cambia la fase", "REST/JSON")
 Rel(rec, servidor, "Lee evaluaciones", "REST/JSON")

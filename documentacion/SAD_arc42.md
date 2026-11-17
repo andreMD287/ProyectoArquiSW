@@ -1,8 +1,8 @@
-# SAD v2.0 · Plataforma para la Gestión de Desastres y Reconstrucción
+# SAD v2.1 · Plataforma para la Gestión de Desastres y Reconstrucción
 
 **Documento de arquitectura de software, organizado según arc42**
 
-**Versión:** 2.0 · **Fecha:** 15 de noviembre de 2026
+**Versión:** 2.1 · **Fecha:** 17 de noviembre de 2026
 
 **Equipo:** Andrés Barrios, Nicolás Parra, Thomás López, André Landinez
 
@@ -15,6 +15,7 @@
 | Primera entrega | 19-sep-2026 | Diseño inicial: un núcleo con tres satélites |
 | 1.0 | 10-nov-2026 | Ocho unidades de despliegue, vistas 4+1 y 22 decisiones. Responde al SRS v1.0 |
 | 2.0 | 15-nov-2026 | Reorganizado según arc42. Agrega el portal web MVC (UD-09) con su servlet multihilo y registra Reconstrucción (UD-06) como construida en Spring Boot con REST y gRPC. Retira UD-05. Adopta las cuatro fases del desastre. Agrega ADR-23 a ADR-29. Separa el ambiente entregado del despliegue objetivo |
+| 2.1 | 17-nov-2026 | Toda la presentación pasa a .NET, por aclaración del profesor: el portal se rehace en ASP.NET Core Razor Pages (ADR-23) y el servlet multihilo queda en un servicio de tablero en Java, UD-10, que el portal consume (ADR-24) |
 
 ## Cómo se cubren las vistas 4+1 y los entregables del enunciado
 
@@ -45,7 +46,7 @@ Este documento describe la arquitectura de la Plataforma para la Gestión de Des
 | --- | --- | --- |
 | a. App móvil que recolecta y caracteriza | App de campo .NET MAUI con SQLite: captura sin conexión y sincronización. Caracterizar desde la app está en curso | §6.4, §8.5 |
 | b. Reconstrucción física | UD-06 Reconstrucción, en Spring Boot con REST y gRPC | §5.3, §6.5 |
-| c. Mapa con desastres, evaluaciones y proyectos | Tablero del desastre en el portal (UD-09), armado por un servlet multihilo | §6.6 |
+| c. Mapa con desastres, evaluaciones y proyectos | Tablero del desastre en el portal (UD-09), armado por el servlet multihilo del servicio de tablero (UD-10) | §6.6 |
 | d. Evaluación de daños | Evaluaciones versionadas con fotografía en `servidor` (UD-03) | §5.3, §6.4 |
 | Autenticación y autorización | Sesión del núcleo validada en cada solicitud; permisos por rol y organismo | §8.1 |
 
@@ -97,8 +98,8 @@ El profesor y los evaluadores esperan decisiones justificadas y evidencia; los c
 
 | Restricción | Cómo se cumple |
 | --- | --- |
-| Presentación MVC con un framework | Portal en Spring MVC con Thymeleaf (ADR-23) |
-| Multihilo con servlets | `TableroServlet` asíncrono con pool acotado (ADR-24) |
+| Toda la presentación en .NET, con MVC, MVP o MVVM (aclaración del 17-nov-2026) | Portal en ASP.NET Core Razor Pages, MVVM del lado del servidor (ADR-23), y app de campo en .NET MAUI |
+| Multihilo con servlets | `TableroServlet` asíncrono con pool acotado, en el servicio de tablero que consume el portal (ADR-24) |
 | Componentes .NET para operar sin conexión | App de campo .NET MAUI con SQLite (ADR-25) |
 | Autenticación y autorización | Sesión del núcleo validada en cada unidad; permisos en el backend (§8.1) |
 | Alcance indicado en clase | Personas, recursos y donaciones como sistemas externos (ADR-28) |
@@ -108,7 +109,7 @@ El profesor y los evaluadores esperan decisiones justificadas y evidencia; los c
 - Se entrega un ambiente de una máquina con Docker Compose (§7.1). Los tres centros de datos quedan diseñados (§7.2).
 - Plantilla arc42 y diagramas C4: azul sólido es construido; gris con borde punteado, diseñado.
 - Se conservan los identificadores del SRS y de la versión 1.0 (RF, QA, CON, SE, UD, ADR). RN-01 a RN-21 son las reglas de negocio de Reconstrucción.
-- Los nombres en monoespaciado (`nucleo`, `servidor`, `desastres`, `campo`, `reconstruccion`, `portal`) son carpetas de código y contenedores.
+- Los nombres en monoespaciado (`nucleo`, `servidor`, `desastres`, `campo`, `reconstruccion`, `portal`, `tablero`) son carpetas de código y contenedores.
 
 ## 3. Contexto y alcance
 
@@ -211,8 +212,8 @@ Los puntajes son valoraciones del equipo, no mediciones. A y B pierden en escala
 | Bandeja de salida | Núcleo y Reconstrucción | Construido |
 | Publicar y suscribir con una cola por suscriptor | Notificaciones | Construido |
 | Entrada única | Nginx | Construido |
-| MVC con controlador frontal | Portal | Construido |
-| Consultas en paralelo con pool acotado y respuesta parcial | `TableroServlet` | Construido |
+| MVVM del lado del servidor (vista Razor y `PageModel`) | Portal | Construido |
+| Composición de API: consultas en paralelo con pool acotado y respuesta parcial | `TableroServlet` (servicio de tablero) | Construido |
 | Puertos y adaptadores (hexagonal) | Reconstrucción; capas en todas las unidades | Construido |
 | Fachada de API | `servidor` ofrece a la app una sola API y delega sesión y desastres en el núcleo | Construido |
 | Copia de lectura derivada | Catálogo de desastres en `servidor`; consulta pública | Construido; consulta pública diseñada |
@@ -220,7 +221,7 @@ Los puntajes son valoraciones del equipo, no mediciones. A y B pierden en escala
 
 ### 4.3 Tecnología y relación con Sahana Eden
 
-Java atiende el *back-office* en línea: el núcleo en Jakarta EE, por sus transacciones JTA, y Reconstrucción y el portal en Spring Boot 3.3. .NET atiende lo que trabaja sin conexión: la app MAUI y `servidor`, que comparten los contratos de sincronización (ADR-17).
+Java atiende el *back-office* en línea: el núcleo en Jakarta EE, por sus transacciones JTA, y Reconstrucción y el servicio de tablero en Spring Boot 3.3. .NET atiende toda la presentación (el portal en Razor Pages y la app MAUI) y `servidor`, que comparte con la app los contratos de sincronización (ADR-17, ADR-23).
 
 De Sahana Eden, analizada en el SRS, se toman la plataforma web como punto común, la configurabilidad por catálogos, la información geográfica transversal y el control de acceso por organización. No se toman su unidad única de despliegue ni su base compartida, porque impiden escalar y proteger lo crítico por separado.
 
@@ -242,7 +243,8 @@ De Sahana Eden, analizada en el SRS, se toman la plataforma web como punto comú
 | UD-06 | Reconstrucción (`reconstruccion`) | Java 17, Spring Boot 3.3, REST y gRPC | SRV-09: proyectos de reconstrucción física; RN-01 a RN-21 | Base `reconstruccion` | Degradable | Construida |
 | UD-07 | Consulta pública | ASP.NET Core | SRV-10: copia pública de solo lectura | Copia derivada | Degradable | Diseñada |
 | UD-08 | Integración | Jakarta EE, RabbitMQ | SRV-11: un adaptador por sistema externo | Pendientes | Según adaptador | Diseñada |
-| UD-09 | Portal web (`portal`) | Java 21, Spring Boot 3.3, Spring MVC, Thymeleaf | Única interfaz web; `TableroServlet` | Sesión HTTP en memoria | Crítica | Construida |
+| UD-09 | Portal web (`portal`) | ASP.NET Core 10, Razor Pages | Única interfaz web; consume los demás servicios | Tokens de sesión en memoria | Crítica | Construida |
+| UD-10 | Servicio de tablero (`tablero`) | Java 21, Spring Boot 3.3, Tomcat | Tablero de un desastre: `TableroServlet` multihilo | Ninguno | Degradable | Construida |
 | — | App de campo (`campo`) | .NET MAUI, SQLite | Captura sin conexión y sincronización | Capturas por organismo y usuario | Crítica | Construida; mejoras en curso |
 | INF-01 | Cola de mensajes | RabbitMQ 4.1 | — | Mensajes en tránsito | Crítica | Construida, un nodo |
 | INF-02 | Monitoreo | Sondas y métricas | — | Métricas | Crítica | Solo sondas de salud |
@@ -265,15 +267,23 @@ SRV-07 (personas) y SRV-08 (recursos) salen de alcance (ADR-28). El código de S
 
 ![Componentes del portal web](diagramas/componentes_portal.png)
 
-*Figura 4. Componentes del portal web (C4 nivel 3): MVC y servlet multihilo.*
+*Figura 4. Componentes del portal web (C4 nivel 3): ASP.NET Core Razor Pages.*
 
-| Parte del MVC | En el portal |
+| Parte del MVVM | En el portal |
 | --- | --- |
-| Controlador | `DispatcherServlet` de Spring como controlador frontal; clases `@Controller` de sesión, desastres, evaluaciones, mapa, Reconstrucción y usuarios |
-| Modelo | DTO y modelos de vista que arman `NucleoCliente` (REST), `ServidorCliente` (REST) y `ReconstruccionCliente` (gRPC) |
-| Vista | Plantillas Thymeleaf; el mapa usa Leaflet, servido por el portal |
+| Vista | Página Razor (`Pages/**/*.cshtml`): HTML generado en el servidor; el mapa usa Leaflet, servido por el portal |
+| Modelo de vista | `PageModel` de cada página (`*.cshtml.cs`): propiedades que la vista enlaza (`[BindProperty]`, validadas con anotaciones) y comandos `OnGet` y `OnPost…` |
+| Modelo | Datos de los servicios dueños, que traen `NucleoCliente` y `ServidorCliente` (REST), `ReconstruccionCliente` (gRPC, generado de `reconstruccion.proto`) y `TableroCliente` (REST) |
 
-Pantallas: inicio de sesión; desastres con filtro por fase, registro, caracterización, cambio de fase e historial; tablero con mapa; evaluaciones con historial y foto; Reconstrucción completa; usuarios del organismo. `InterceptorSesion` envía al inicio de sesión a quien no tiene sesión. Los botones dependen del rol, pero cada servicio valida los permisos.
+Pantallas: inicio de sesión; desastres con filtro por fase, registro, caracterización, cambio de fase e historial; tablero con mapa; evaluaciones con historial y foto; Reconstrucción completa; usuarios del organismo. La autenticación por cookie envía al inicio de sesión a quien no tiene sesión; la cookie solo lleva la identidad y un id, y el token del núcleo queda en la memoria del portal. Cada formulario lleva un token antifalsificación. Los botones dependen del rol, pero cada servicio valida los permisos.
+
+#### 5.2.2b Servicio de tablero (UD-10)
+
+![Componentes del servicio de tablero](diagramas/componentes_tablero.png)
+
+*Figura 4b. Componentes del servicio de tablero (C4 nivel 3): servlet asíncrono multihilo.*
+
+No tiene interfaz: solo lo llama el portal, con el token del usuario en `Authorization: Bearer`. `TableroServlet` reparte las tres consultas en un pool acotado (§6.6) y cada fuente valida el token contra el núcleo; si alguna responde 401, el servlet responde 401 y el portal cierra la sesión. No se publica en el equipo.
 
 #### 5.2.3 Reconstrucción (UD-06)
 
@@ -344,7 +354,7 @@ La coordinación de organismos (participación por desastre y tareas con estados
 | Adaptadores | Controladores REST y gRPC, mensajería, repositorios | Casos de uso |
 | Infraestructura | Base de datos, colas, red, configuración | Adaptadores |
 
-Hay una carpeta y un contenedor por unidad; `interop` guarda los clientes de prueba de SOAP y EJB remoto. Ninguna unidad importa código de otra: se comunican por contratos REST, gRPC (`reconstruccion.proto`, copiado en el portal) y de eventos (§8.4). Las pruebas de punta a punta están en `servidor/scripts` y `portal/scripts`, y `./verificar.sh` las corre todas.
+Hay una carpeta y un contenedor por unidad; `interop` guarda los clientes de prueba de SOAP y EJB remoto. Ninguna unidad importa código de otra: se comunican por contratos REST, gRPC (`reconstruccion.proto`, copiado en el portal y en el tablero) y de eventos (§8.4). Las pruebas de punta a punta están en `servidor/scripts` y `tablero/scripts`, y `./verificar.sh` las corre todas.
 
 ## 6. Vista de ejecución
 
@@ -408,7 +418,7 @@ Los ciudadanos usarían la consulta pública (diseñada), que lee su propia copi
 | La carga supera la capacidad | Se degrada en el orden de §8.2; lo crítico no |
 | El núcleo no responde | Las operaciones protegidas se rechazan; la consulta pública sigue |
 
-Evidencia: el tablero con 20 clientes responde con p95 de 241 ms en una máquina (§6.6). No hay prueba con 10.000 usuarios.
+Evidencia: el tablero con 20 clientes responde con p95 de 366 ms en una máquina (§6.6). No hay prueba con 10.000 usuarios.
 
 ### 6.3 Escenario C — Falla de un sistema externo
 
@@ -507,29 +517,32 @@ Cada proyecto guarda una copia de sus evaluaciones de origen y la conserva aunqu
 
 ![Secuencia del tablero](diagramas/secuencia_tablero.png)
 
-*Figura 10. Tablero de un desastre: servlet asíncrono con tres fuentes en paralelo.*
+*Figura 10. Tablero de un desastre: el portal .NET consume el servlet asíncrono, que consulta tres fuentes en paralelo.*
 
-1. `TableroServlet` atiende `GET /tablero`, valida la sesión y llama a `startAsync`, que libera el hilo de Tomcat.
-2. Un pool de 16 hilos con cola de 64 consulta en paralelo el desastre (núcleo), sus evaluaciones (`servidor`) y sus proyectos (Reconstrucción, por gRPC). Cada fuente tiene 1,5 s de límite, y la respuesta, 3 s.
-3. Si una fuente falla o vence, responde con las demás e indica `fuentesNoDisponibles`.
-4. Con el pool y la cola llenos responde 503 con `Retry-After`; nunca encola sin límite.
+1. El navegador pide `/tablero` al portal. El portal toma el token de la sesión y llama al servicio de tablero con `Authorization: Bearer`.
+2. `TableroServlet` llama a `startAsync`, que libera el hilo de Tomcat.
+3. Un pool de 16 hilos con cola de 64 consulta en paralelo el desastre (núcleo), sus evaluaciones (`servidor`) y sus proyectos (Reconstrucción, por gRPC). Cada fuente tiene 1,5 s de límite, y la respuesta, 3 s.
+4. Si una fuente falla o vence, responde con las demás e indica `fuentesNoDisponibles`; si una responde 401, el token venció y el portal cierra la sesión.
+5. Con el pool y la cola llenos responde 503 con `Retry-After`; nunca encola sin límite.
 
-Medición del 15-nov-2026 en el ambiente entregado (`evidencias/rol1-tablero/medicion_tablero_2026-11-15_2329.json`):
+Medición del 17-nov-2026 en el ambiente entregado, de punta a punta: navegador, Nginx, portal .NET, servicio de tablero y tres fuentes (`evidencias/rol1-tablero/medicion_tablero_2026-11-17_1527.json`):
 
 | Escenario | Solicitudes | Clientes | p50 | p95 | Lectura |
 | --- | --- | --- | --- | --- | --- |
-| Paralelo | 100 | 1 | 27 ms | 44 ms | Un 27 % más rápido en p95: tarda lo de la fuente más lenta |
-| Secuencial | 100 | 1 | 37 ms | 61 ms | |
-| Paralelo | 300 | 20 | 173 ms | 241 ms | Igual al secuencial (3 % más) en una máquina saturada |
-| Secuencial | 300 | 20 | 153 ms | 233 ms | |
-| Reconstrucción congelada | 60 | 20 | 1.510 ms | 1.523 ms | 60 de 60 respuestas parciales, sin errores |
+| Paralelo | 100 | 1 | 27 ms | 50 ms | Un 22 % más rápido en p95: tarda lo de la fuente más lenta |
+| Secuencial | 100 | 1 | 41 ms | 64 ms | |
+| Paralelo | 300 | 20 | 223 ms | 366 ms | Igual al secuencial (3 % más) en una máquina saturada |
+| Secuencial | 300 | 20 | 182 ms | 355 ms | |
+| Reconstrucción congelada | 60 | 20 | 1.515 ms | 1.528 ms | 60 de 60 respuestas parciales, sin errores |
+
+El salto del portal al servicio de tablero, que llegó con la presentación en .NET (ADR-23), cuesta unos 6 ms en p95 con un cliente (44 ms en la medición del 15-nov, sin ese salto). Con 20 clientes cuesta más (de 241 a 366 ms), porque en la misma máquina compiten dos contenedores más.
 
 Con 20 clientes, el paralelo triplica la carga simultánea sobre servicios ya saturados, que validan todos el token contra el núcleo: con una sola máquina no gana, y es un trade-off aceptado (ADR-24). Medir corrigió dos defectos:
 
 - Con el plazo de 5 s de las páginas, una fuente colgada retenía los hilos y 25 de 60 respuestas eran 503. Hoy el plazo de cada cliente del tablero es el límite de su fuente.
 - La fuente de Reconstrucción descargaba el catálogo completo del núcleo en cada consulta. Hoy las consultas de solo lectura usan una copia de hasta 3 s; las operaciones que deciden reglas leen siempre el dato fresco.
 
-La medición anterior a estos ajustes (`medicion_tablero_2026-11-15_1334.json`: p95 de 56 ms frente a 67 ms con 1 cliente y de 323 ms frente a 288 ms con 20) se conserva como evidencia del cambio.
+Las mediciones anteriores se conservan como evidencia de cada cambio: `medicion_tablero_2026-11-15_1334.json`, antes de esos ajustes (p95 de 56 ms frente a 67 ms con 1 cliente y de 323 ms frente a 288 ms con 20), y `medicion_tablero_2026-11-15_2329.json`, con el portal anterior en Spring (p95 de 44 ms frente a 61 ms con 1 cliente y de 241 ms frente a 233 ms con 20).
 
 ## 7. Vista de despliegue
 
@@ -542,7 +555,8 @@ La medición anterior a estos ajustes (`medicion_tablero_2026-11-15_1334.json`: 
 | Contenedor | Unidad | Tecnología | Puerto en el equipo | Habla con |
 | --- | --- | --- | --- | --- |
 | `web` | UD-01 Entrada | Nginx 1.28 | 127.0.0.1:18085 | `portal` (`/`), `api` (`/api/`), `reconstruccion` (`/api/reconstruccion/`) |
-| `portal` | UD-09 Portal web | Spring Boot 3.3, Spring MVC, Thymeleaf, Tomcat | — | `nucleo` (REST), `api` (REST), `reconstruccion` (gRPC 9096) |
+| `portal` | UD-09 Portal web | ASP.NET Core 10, Razor Pages, Kestrel | — | `nucleo` (REST), `api` (REST), `reconstruccion` (gRPC 9096), `tablero` (REST) |
+| `tablero` | UD-10 Servicio de tablero | Spring Boot 3.3, Tomcat | — | `nucleo` (REST), `api` (REST), `reconstruccion` (gRPC 9096) |
 | `nucleo` | UD-02 Núcleo | Jakarta EE en WildFly 41 (EJB, JPA, JTA, JAX-RS, SOAP, EJB remoto) | 127.0.0.1:18092 (pruebas) | `database`, `desastres` (HTTP, bandeja de salida) |
 | `database` | Base del núcleo | PostgreSQL 17 | — | — |
 | `api` | UD-03 Campo y mapas | ASP.NET Core 10 | — | `db`, `nucleo` (REST: sesión y catálogo), `desastres` |
@@ -554,8 +568,8 @@ La medición anterior a estos ajustes (`medicion_tablero_2026-11-15_1334.json`: 
 | `reconstruccion-db` | Base de Reconstrucción | PostgreSQL 17 | — | — |
 | Teléfono Android | App de campo | .NET MAUI + SQLite | — | `web` → `api` (`/api/campo/lotes`) |
 
-- **Inicio y secretos.** `./iniciar.sh` construye las imágenes, aplica las migraciones del núcleo y levanta los 11 contenedores. Los secretos viven en `servidor/.env`, que no se versiona y que `iniciar.sh` crea desde `.env.ejemplo`; Compose no tiene contraseñas escritas. Los puertos solo escuchan en 127.0.0.1.
-- **Verificación.** `./verificar.sh` corre 9 pruebas de punta a punta: API, integración, campo, Reconstrucción con gRPC, evolución, unificación, caracterización, portal y seguridad. El 15-nov-2026 pasaron con 247 comprobaciones; el número varía en dos o tres entre corridas porque algunas se repiten dentro de un ciclo de espera. La instalación en limpio, desde un clon nuevo, también pasa (`evidencias/rol1-build/`).
+- **Inicio y secretos.** `./iniciar.sh` construye las imágenes, aplica las migraciones del núcleo y levanta los 12 contenedores. Los secretos viven en `servidor/.env`, que no se versiona y que `iniciar.sh` crea desde `.env.ejemplo`; Compose no tiene contraseñas escritas. Los puertos solo escuchan en 127.0.0.1.
+- **Verificación.** `./verificar.sh` corre 9 pruebas de punta a punta: API, integración, campo, Reconstrucción con gRPC, evolución, unificación, caracterización, portal y seguridad. El 17-nov-2026, con el portal en .NET, pasaron con 248 comprobaciones (`evidencias/rol1-build/2026-11-17_verificar_portal_net.log`); el número varía en dos o tres entre corridas porque algunas se repiten dentro de un ciclo de espera. La instalación en limpio, desde un clon nuevo, también pasa (`evidencias/rol1-build/`).
 - **Alcance.** Este ambiente prueba el comportamiento funcional y sirve para medir (ADR-29). No prueba la disponibilidad ni la carga de 10.000 usuarios.
 
 ### 7.2 Despliegue objetivo: tres centros de datos (diseñado)
@@ -601,7 +615,7 @@ Tres reglas: se niega lo que no está permitido; cada permiso depende del rol y 
 
 | Mecanismo | Dónde y con qué valores | Estado |
 | --- | --- | --- |
-| Tiempos de espera | Entrada a las unidades: 5 s de conexión. Portal: 2 s de conexión y 5 s de lectura; 1,5 s por fuente en el tablero. `servidor` al núcleo: 5 s. Núcleo a notificaciones: 2 s y 3 s. Adaptadores: 2 a 10 s | Construido, salvo adaptadores |
+| Tiempos de espera | Entrada a las unidades: 5 s de conexión. Portal: 2 s de conexión y 5 s de lectura (4 s hacia el tablero). Servicio de tablero: 1,5 s por fuente y 3 s en total. `servidor` al núcleo: 5 s. Núcleo a notificaciones: 2 s y 3 s. Adaptadores: 2 a 10 s | Construido, salvo adaptadores |
 | Reintentos | Bandeja de salida en cada ciclo; cola de reintento a los 5 s; la app reenvía con los mismos identificadores | Construido |
 | Corte de circuito | Por adaptador: 3 fallas seguidas o 5 en 30 s; sonda cada 30 s | Diseñado |
 | Colas | Entrada de alertas, una por suscriptor, correo, eventos de Reconstrucción; durables | Construido en un nodo |
@@ -661,7 +675,7 @@ Con 80.000 ciudadanos solo crecería la consulta pública, de 4 a 9 instancias. 
 | Respuesta | 0,4 s | 0,4 s |
 | Margen | 0,3 s | 0,9 s |
 
-**Medido en el ambiente entregado.** El tablero, la consulta más compuesta, tuvo p95 de 44 ms con un cliente y de 241 ms con 20 (§6.6); en la versión 1.0, el registro de un desastre respondió en 22 ms con poca carga. Ninguna cifra incluye red real, réplica ni 10.000 usuarios. Confirmar en otro centro consumiría cerca de 0,8 s de los 3 s del registro, y con fotos de 5 MB el volumen de campo se multiplica por cinco. Las listas aún no se paginan (diseñado: de 20 en 20 con cursor).
+**Medido en el ambiente entregado.** El tablero, la consulta más compuesta, tuvo p95 de 50 ms con un cliente y de 366 ms con 20 (§6.6); en la versión 1.0, el registro de un desastre respondió en 22 ms con poca carga. Ninguna cifra incluye red real, réplica ni 10.000 usuarios. Confirmar en otro centro consumiría cerca de 0,8 s de los 3 s del registro, y con fotos de 5 MB el volumen de campo se multiplica por cinco. Las listas aún no se paginan (diseñado: de 20 en 20 con cursor).
 
 ### 8.4 APIs y eventos
 
@@ -681,7 +695,8 @@ Códigos HTTP: 200 o 201 aplicada; 202 recibida para proceso diferido; 401 sin c
 | `servidor` | `GET /api/desastres`, `/api/catalogos`; `POST /api/campo/lotes`; `GET` y `PUT /api/campo/evaluaciones/{id}`, con `/historial`, `/foto` y `/desastre`; `GET /api/panorama`; `/api/salud` | RF-ED-01 a 03, 07, 08, 11 a 14 |
 | Reconstrucción REST | Bajo `/api/reconstruccion`: desastres (iniciar reconstrucción, cerrar, evaluaciones, seguimiento, auditoría) y proyectos (crear, aprobar, iniciar, presupuesto, avance, costo, evidencia, estado, auditoría) | RF-RE-01 a 06 |
 | Reconstrucción gRPC | `ReconstruccionService`, 14 RPC: `IniciarReconstruccion`, `CrearProyecto`, `CrearProyectosEnLote`, `AprobarProyecto`, `IniciarEjecucion`, `RegistrarAvance`, `RegistrarCosto`, `AdjuntarEvidencia`, `ModificarPresupuesto`, `CambiarEstado`, `ConsultarSeguimiento`, `ConsultarAuditoria`, `CerrarDesastre`, `ConsultarEvaluaciones` | RF-RE-01 a 06 |
-| Portal | Páginas MVC y `GET /tablero?desastre=` (JSON del mapa) | Mínimo c |
+| Portal | Páginas Razor y `GET /tablero?desastre=` (JSON del mapa, que reenvía al servicio de tablero) | Mínimos a, b, c y d |
+| Servicio de tablero | `GET /tablero?desastre=` con `Authorization: Bearer`; solo lo llama el portal | Mínimo c |
 | Notificaciones | `POST /desastres` (aviso desde la bandeja de salida); `POST` y `GET /sistemas` (suscripción) | RF-GD-13, RF-CO-06 |
 
 Diseñadas, sin código: validación y duplicados de evaluaciones, documentos PDF, delimitación y consulta histórica, consolidación, participación y tareas, tipos de desastre, auditoría consolidada, consulta pública y alertas por fuente.
@@ -876,9 +891,9 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Requisitos.** CON-07, CON-02; restricciones del curso (§2.2).
 - **Contexto.** Los talleres usaron Jakarta EE, Spring Boot, .NET, mensajería, REST, SOAP, gRPC y llamadas remotas; el curso pide MVC, servlets multihilo y .NET sin conexión.
 - **Alternativas.** Una plataforma para todo; la que mejor se ajusta a cada unidad.
-- **Decisión.** Núcleo: Java 21 y Jakarta EE en WildFly 41 (EJB, JPA, JTA, JAX-RS, SOAP, EJB remoto). Portal: Java 21, Spring Boot 3.3, Spring MVC, Thymeleaf y servlets en Tomcat, con cliente gRPC. Reconstrucción: Java 17, Spring Boot 3.3, REST y gRPC. `servidor`: ASP.NET Core 10. App: .NET MAUI y SQLite. Notificaciones: Java 17 y Jakarta EE en Payara 6. Además, PostgreSQL 17, RabbitMQ 4.1, Nginx 1.28 y Docker Compose.
-- **Justificación.** JTA da la transacción local de ADR-01; Java para el *back-office* en línea y .NET para lo desconectado. CON-02 se ejercita con REST, gRPC, SOAP y EJB remoto.
-- **Consecuencias.** Dos plataformas y tres servidores de aplicaciones; la copia del `.proto` en el portal debe igualar la de Reconstrucción.
+- **Decisión.** Núcleo: Java 21 y Jakarta EE en WildFly 41 (EJB, JPA, JTA, JAX-RS, SOAP, EJB remoto). Portal: ASP.NET Core 10 con Razor Pages y cliente gRPC. Servicio de tablero: Java 21, Spring Boot 3.3 y servlets en Tomcat, con cliente gRPC. Reconstrucción: Java 17, Spring Boot 3.3, REST y gRPC. `servidor`: ASP.NET Core 10. App: .NET MAUI y SQLite. Notificaciones: Java 17 y Jakarta EE en Payara 6. Además, PostgreSQL 17, RabbitMQ 4.1, Nginx 1.28 y Docker Compose.
+- **Justificación.** JTA da la transacción local de ADR-01; Java para el *back-office* en línea y .NET para toda la presentación y lo desconectado. CON-02 se ejercita con REST, gRPC, SOAP y EJB remoto.
+- **Consecuencias.** Dos plataformas y tres servidores de aplicaciones; las copias del `.proto` en el portal y en el tablero deben igualar la de Reconstrucción (lo comprueba `verificar_portal.py`).
 
 #### ADR-18 — Incorporación inmediata o diferida de los lotes · Construido
 
@@ -925,23 +940,35 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Justificación.** Varias instancias y un registro que sobrevive a un centro.
 - **Consecuencias.** Una base más; mientras tanto, una sola instancia activa. Se decide con ADR-27.
 
-#### ADR-23 — Una sola presentación web MVC con Spring MVC y Thymeleaf · Construido
+#### ADR-23 — Presentación web en ASP.NET Core Razor Pages · Construido
 
-- **Requisitos.** Restricción del curso (MVC con framework); QA-SEG-01, QA-ESC-01; mínimos a, b, c y d.
-- **Contexto.** Había HTML estático en `servidor`, React en Reconstrucción y la app MAUI. Ninguna web usaba un framework MVC, y cada una manejaba la sesión en el navegador.
-- **Alternativas.** JSF del Taller 4 (estado de vista por sesión); ASP.NET Core MVC (sin servlets); Spring MVC con Thymeleaf; dejar HTML estático y React.
-- **Decisión.** UD-09 Portal web, en Spring Boot 3.3 con Spring MVC y Thymeleaf, como única interfaz web (§5.2.2). Habla por REST con el núcleo y `servidor`, y por gRPC con Reconstrucción.
-- **Justificación.** Un solo inicio de sesión, con el token guardado en el servidor. Sin estado de vista, a diferencia de JSF, lo que favorece el Escenario B. Corre en un contenedor de servlets, lo que permite ADR-24. No agrega tecnología.
-- **Consecuencias.** A favor: se verifica de punta a punta (`verificar_portal.py`, 44 comprobaciones con tres roles) y gRPC tiene un cliente real. En contra: depende de tres servicios, repite algunas validaciones y su sesión en memoria pide afinidad con varias instancias.
+- **Requisitos.** Restricción del curso: toda la presentación en .NET, con MVC, MVP o MVVM (aclaración del profesor del 17-nov-2026, que precisa la de "MVC con un framework"); QA-SEG-01, QA-ESC-01; mínimos a, b, c y d.
+- **Contexto.** La versión 2.0 tenía el portal en Spring MVC con Thymeleaf. El profesor aclaró que la presentación debe ser .NET y planteó escoger entre las opciones de ASP.NET: Web Forms, Web Pages, SPA y MVC. ASP.NET Core agrega Razor Pages y Blazor.
+- **Alternativas.**
+  - Web Forms (su patrón natural es MVP): solo existe en .NET Framework, sobre Windows e IIS. Microsoft no la llevó al .NET actual, así que no corre en los contenedores Linux del ambiente.
+  - Web Pages: tampoco existe en ASP.NET Core; su sucesor es Razor Pages.
+  - SPA con React, Angular o Vue, o Blazor. Microsoft recomienda Blazor para proyectos nuevos, pero en modo interactivo de servidor mantiene una conexión y un estado por usuario, y en el navegador (WebAssembly o JavaScript) el token del núcleo quedaría del lado del cliente.
+  - ASP.NET Core MVC: válido; es la traducción directa del portal anterior.
+  - Razor Pages.
+- **Decisión.** UD-09 Portal web en ASP.NET Core 10 con Razor Pages, como única interfaz web (§5.2.2). Cada pantalla es una página: la vista `.cshtml` y su `PageModel`. Consume los servicios ya desplegados sin reescribir su lógica: REST con el núcleo, con `servidor` y con el servicio de tablero, y gRPC con Reconstrucción, con el cliente generado del mismo `reconstruccion.proto`.
+- **Justificación.**
+  - Las pantallas son formularios y listas. Razor Pages las organiza por página sobre la misma base de MVC (enlace de modelo, validación y resultados), con menos piezas que controladores y vistas por separado.
+  - Patrón: el `PageModel` expone las propiedades que la vista enlaza (`[BindProperty]`, validadas con anotaciones) y atiende los comandos (`OnGet`, `OnPost…`). Hace de modelo de vista, por eso se documenta como MVVM del lado del servidor. Microsoft no le pone nombre de patrón: la clasificación es del equipo. La app MAUI usa el mismo patrón.
+  - Misma plataforma que `servidor` (ASP.NET Core 10): no agrega tecnología.
+  - Sin estado de vista por usuario, lo que favorece el escenario B. El token queda en el servidor y los formularios traen protección antifalsificación (CSRF) por defecto.
+  - Sigue el consejo del profesor de desplegar y consumir: solo cambió la capa de presentación; los servicios de negocio siguen igual.
+- **Consecuencias.**
+  - A favor: `verificar_portal.py` pasa con 47 comprobaciones y tres roles. Un cliente .NET usa el contrato gRPC de un servicio Java, lo que prueba la interoperabilidad (QA-INT-01).
+  - En contra: el servlet multihilo ya no puede vivir en la presentación y se suma un contenedor (ADR-24). Los tokens de sesión viven en la memoria del portal: con varias instancias hace falta afinidad o un almacén compartido. El `.proto` se copia en el portal y en el tablero; una prueba verifica que las copias son idénticas.
 
 #### ADR-24 — Servlet asíncrono y multihilo para el tablero · Construido y medido
 
 - **Requisitos.** Restricción del curso (multihilo con servlets); QA-REN-01, QA-RES-02, QA-ESC-01; mínimo c.
-- **Contexto.** El tablero junta tres dueños. En secuencia, sus latencias se suman y una falla tumba la página.
-- **Alternativas.** Consultas secuenciales en el controlador; paralelas desde el navegador; servlet asíncrono con pool acotado.
-- **Decisión.** `TableroServlet` con `@WebServlet(asyncSupported = true)`, `startAsync` y un `ThreadPoolExecutor` de 16 hilos con cola de 64; 1,5 s por fuente, respuesta parcial y 503 con el pool lleno (§6.6).
+- **Contexto.** El tablero junta tres dueños. En secuencia, sus latencias se suman y una falla tumba la página. Desde la versión 2.1 la presentación es .NET (ADR-23), así que el servlet no puede vivir en el portal.
+- **Alternativas.** Consultas secuenciales en la página; paralelas desde el navegador; tareas en paralelo en el portal .NET (no es un servlet); el servlet dentro del núcleo, que tendría que llamar a `servidor` y crearía un ciclo, porque `servidor` ya llama al núcleo; un servicio de tablero propio con un servlet asíncrono y pool acotado.
+- **Decisión.** UD-10 Servicio de tablero (`tablero`, Spring Boot 3.3 en Tomcat), que solo consume el portal. Su `TableroServlet` usa `@WebServlet(asyncSupported = true)`, `startAsync` y un `ThreadPoolExecutor` de 16 hilos con cola de 64; 1,5 s por fuente, respuesta parcial y 503 con el pool lleno (§6.6). El portal le reenvía el token del usuario y, si una fuente responde 401, el servlet responde 401.
 - **Justificación.** Sin carga tarda lo de la fuente más lenta; una fuente caída no tumba el tablero; el pool limita la presión sobre los servicios. Las tres cosas están medidas (§6.6).
-- **Consecuencias.** Trade-off medido: con 20 clientes en una sola máquina el paralelo no gana (p95 de 241 frente a 233 ms), porque los servicios de atrás ya están saturados. Puntos de sensibilidad: el tamaño del pool, la cola, el límite por fuente y la vigencia de la copia del catálogo en Reconstrucción.
+- **Consecuencias.** Trade-off medido: con 20 clientes en una sola máquina el paralelo no gana (p95 de 366 frente a 355 ms), porque los servicios de atrás ya están saturados. El salto del portal al servicio de tablero cuesta unos 6 ms en p95 con un cliente. Puntos de sensibilidad: el tamaño del pool, la cola, el límite por fuente y la vigencia de la copia del catálogo en Reconstrucción.
 
 #### ADR-25 — Operación sin conexión con .NET MAUI y SQLite · Construido; mejoras en curso
 
@@ -954,8 +981,8 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Requisitos.** Mínimo b; QA-INT-01, QA-TRZ-01; CON-02.
 - **Contexto.** El diseño del taller era .NET, pero el curso deja .NET para lo desconectado. Reconstrucción es un *back-office* en línea que comparte con el núcleo la identidad y la fase del desastre.
 - **Alternativas.** .NET con gRPC y SignalR, como en el taller; Jakarta EE dentro del núcleo; Spring Boot aparte.
-- **Decisión.** Unidad propia en Spring Boot 3.3 con su base. REST para clientes heterogéneos y scripts; gRPC (14 RPC) como canal interno del portal. Valida el token contra el núcleo y publica desde una bandeja de salida con el formato C5.
-- **Justificación.** Mismo lenguaje que el núcleo y el portal; reglas RN-01 a RN-21 en un dominio sin framework, probado en memoria; contrato gRPC tipado entre servicios Java.
+- **Decisión.** Unidad propia en Spring Boot 3.3 con su base. REST para clientes heterogéneos y scripts; gRPC (14 RPC) como canal interno hacia el portal .NET y el servicio de tablero. Valida el token contra el núcleo y publica desde una bandeja de salida con el formato C5.
+- **Justificación.** Mismo lenguaje que el núcleo y el servicio de tablero; reglas RN-01 a RN-21 en un dominio sin framework, probado en memoria; contrato gRPC tipado entre servicios Java.
 - **Consecuencias.** Una tercera base y un tercer servidor de aplicación. El refresco del tablero reemplaza el tiempo real (SignalR) del taller. No guarda datos de personas.
 
 #### ADR-27 — Consumo continuo de RabbitMQ en notificaciones · En curso
@@ -980,7 +1007,7 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Alternativas.** Promedio; máximo; percentiles.
 - **Decisión.** p50 y p95, medidos en el ambiente entregado con el número de solicitudes y la concurrencia. Las metas de los tres centros son metas de diseño.
 - **Justificación.** Bass, Clements y Kazman miden latencia y tasa de incumplimiento: «p95 menor que 2 s» es una latencia máxima con hasta 5 % de incumplimiento. El libro de SRE de Google (Beyer et al., 2016, cap. 4) trata las latencias como distribuciones.
-- **Consecuencias.** No se extrapola al despliegue objetivo. Evidencia: `portal/scripts/medir_tablero.py` y su informe JSON.
+- **Consecuencias.** No se extrapola al despliegue objetivo. Evidencia: `tablero/scripts/medir_tablero.py` y su informe JSON.
 
 ## 10. Requisitos de calidad
 
@@ -1011,13 +1038,13 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | QA-DIS-03, QA-CNF-01 | Operaciones sobre versión base; almacén local | 04, 13, 25 | `verificar_android_instrumentado.py`, `verificar_evolucion.py` |
 | QA-ESC-01 | Unidades que crecen por separado; entrada única; portal sin estado de vista | 01, 03, 14, 23 | Modelo de capacidad (estimación) |
 | QA-ESC-02 | Unidad propia para campo; fotos después; incorporación diferida | 13, 18 | `verificar_campo.py`; sin prueba con 500 equipos |
-| QA-REN-01 | Copias de lectura; consultas en paralelo | 03, 24, 29 | Tablero: p95 de 44 ms con 1 cliente y de 241 ms con 20 |
+| QA-REN-01 | Copias de lectura; consultas en paralelo | 03, 24, 29 | Tablero: p95 de 50 ms con 1 cliente y de 366 ms con 20 |
 | QA-REN-02 | Presupuesto por tramo; resultado en la misma llamada | 02, 29 | 22 ms con poca carga (versión 1.0) |
 | QA-REN-03 | Bandeja de salida; cola por suscriptor; consumo continuo | 02, 15, 27 | 2,7 s y 3,2 s con avisos aislados (versión 1.0); 10 simultáneas pendiente |
 | QA-RES-01 | Adaptador con corte de circuito y cola | 07, 21 | Cola por suscriptor y bandeja de salida verificadas |
 | QA-RES-02 | Procesos separados; respuesta parcial | 11, 16, 24 | 60 de 60 respuestas parciales con Reconstrucción caída |
 | QA-INT-01, QA-INT-02, QA-EXT-01 | Adaptadores; REST, gRPC, SOAP y EJB remoto | 07, 17, 26 | Prueba gRPC con `grpcurl`; prueba de EJB remoto; suscripción de sistemas |
-| QA-SEG-01, QA-SEG-02 | Sesión validada en el núcleo; permisos en el backend | 10, 19, 23 | `verificar_seguridad.py` (10), `verificar_portal.py` (43), `verificar_unificacion.py` |
+| QA-SEG-01, QA-SEG-02 | Sesión validada en el núcleo; permisos en el backend | 10, 19, 23 | `verificar_seguridad.py` (10), `verificar_portal.py` (47), `verificar_unificacion.py` |
 | QA-TRZ-01 | Auditoría en la transacción del cambio | 20 | `verificar_reconstruccion.py`, `verificar_caracterizacion.py` |
 | QA-TRZ-02, QA-MOD-01, QA-MOD-02, QA-CNF-02 | Dos fechas; configuración; alias | 05, 06, 08 | Sin código |
 
@@ -1036,7 +1063,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Código de Solicitudes de recursos en el núcleo y en `servidor` | Mantener y exponer algo fuera de alcance | Abierto | Retirarlo de ambos lados, con sus pruebas, cuando el equipo lo acuerde |
 | Catálogo de `servidor` con consistencia eventual de unos segundos | Una evaluación de un desastre recién creado queda preliminar unos segundos | Aceptado | Documentado; las pruebas esperan |
 | Trade-off del tablero en una máquina saturada | Más carga simultánea sobre los servicios de atrás | Aceptado | Ajustar pool y límite; medir con servicios escalados |
-| Sesión HTTP del portal en memoria | Varias instancias exigen afinidad o almacén compartido | Abierto | Afinidad en la entrada o sesión compartida |
+| Tokens de sesión del portal en memoria | Varias instancias exigen afinidad; un reinicio del portal pide entrar de nuevo | Abierto | Afinidad en la entrada o almacén compartido (por ejemplo, Redis) |
 | Sin pruebas de carga de 10.000 usuarios ni de 500 equipos con fotos | Metas de escala sin evidencia | Abierto | Prueba con red real |
 | Validación de evaluaciones sin código | Reconstrucción toma como validada una evaluación vinculada a un desastre | Abierto | Validación por un coordinador distinto |
 | C1 (tipo de activo) y C2 desde la app, en curso | Proyectos clasificados con texto libre; la app aún no caracteriza | En curso | Ajustar el adaptador de Reconstrucción al publicarse C1 |
@@ -1056,6 +1083,8 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Unidad de despliegue (UD) | Proceso que se despliega, crece y falla por separado, dueño de su base |
 | Componente (SRV) | Responsabilidad lógica; varios pueden vivir en una unidad |
 | Respuesta parcial | Respuesta del tablero que trae las fuentes disponibles y nombra la que faltó |
+| Razor Pages | Modelo de ASP.NET Core en el que cada pantalla es una página: vista `.cshtml` más su `PageModel` |
+| MVVM | Modelo, vista y modelo de vista: la vista enlaza propiedades del modelo de vista, que atiende sus comandos |
 | Aviso | Mensaje que anuncia un cambio ya guardado y viaja por una cola |
 | Bandeja de salida | Tabla donde el cambio y su aviso se guardan en la misma transacción |
 | Versión base | Versión que el cliente tenía cuando hizo el cambio |

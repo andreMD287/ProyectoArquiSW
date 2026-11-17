@@ -8,11 +8,12 @@ Deployment_Node(movil, "Teléfono Android", "Android 10 o superior") {
 }
 Deployment_Node(equipo, "Equipo del laboratorio", "Windows o macOS con Docker Desktop") {
   Deployment_Node(nav, "Navegador", "Chrome, Edge o Firefox") {
-    Container(pagina, "Páginas del portal", "HTML de Thymeleaf, Leaflet", "", $tags="construido")
+    Container(pagina, "Páginas del portal", "HTML de Razor Pages, Leaflet", "", $tags="construido")
   }
   Deployment_Node(red, "Red de Docker arqui-integracion_default", "Docker Compose; secretos en servidor/.env") {
     Container(web, "web", "Nginx 1.28 · 127.0.0.1:18085", "", $tags="construido")
-    Container(portal, "portal", "Spring Boot 3.3 (Tomcat) · 8080", "", $tags="construido")
+    Container(portal, "portal", "ASP.NET Core 10 (Kestrel) · 8080", "", $tags="construido")
+    Container(tablero, "tablero", "Spring Boot 3.3 (Tomcat) · 8080", "Sin puerto publicado", $tags="construido")
     Container(nucleo, "nucleo", "WildFly 41 · 8080 (127.0.0.1:18092 para pruebas)", "", $tags="construido")
     ContainerDb(database, "database", "PostgreSQL 17", "Base pgdrdb", $tags="bd")
     Container(api, "api", "ASP.NET Core 10 · 8080", "", $tags="construido")
@@ -33,6 +34,10 @@ Rel(web, rec, "/api/reconstruccion/", "HTTP")
 Rel(portal, nucleo, "REST")
 Rel(portal, api, "REST")
 Rel(portal, rec, "gRPC 9096")
+Rel(portal, tablero, "REST")
+Rel(tablero, nucleo, "REST")
+Rel(tablero, api, "REST")
+Rel(tablero, rec, "gRPC 9096")
 Rel(api, nucleo, "REST")
 Rel(rec, nucleo, "REST")
 Rel(rec, api, "REST")

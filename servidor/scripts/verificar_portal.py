@@ -1,6 +1,8 @@
-"""Prueba de punta a punta del portal MVC (UD-09) y su servlet multihilo, navegando como un
-usuario: inicio de sesión, desastres, caracterización, tablero, evaluaciones, Reconstrucción
-física con aprobación a dos manos, mapa y cierre de sesión. Crea datos sintéticos."""
+"""Prueba de punta a punta del portal web (UD-09, ASP.NET Core Razor Pages) y del servicio de
+tablero (UD-10, servlet multihilo), navegando como un usuario: inicio de sesión, desastres,
+caracterización, tablero, evaluaciones, Reconstrucción física con aprobación a dos manos, mapa y
+cierre de sesión. Cada formulario lleva su token antifalsificación, como en un navegador. Crea
+datos sintéticos."""
 import html
 import http.cookiejar
 import json
@@ -10,8 +12,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
 
 BASE = os.environ.get('MAPAS_URL', 'http://127.0.0.1:18085')
+RAIZ = Path(__file__).resolve().parents[2]
+ANTIFALSIFICACION = re.compile(r'name="__RequestVerificationToken"[^>]*value="([^"]+)"')
 total = 0
 
 
@@ -29,20 +34,35 @@ class SinRedireccion(urllib.request.HTTPRedirectHandler):
 
 
 class Navegador:
-    """Un navegador con su propia cookie de sesión. No sigue redirecciones solo: las sigue seguir()."""
+    """Un navegador con sus propias cookies. No sigue redirecciones solo: las sigue seguir().
+    Como un navegador real, envía en cada formulario el token antifalsificación de la última página."""
 
     def __init__(self):
         self.cookies = http.cookiejar.CookieJar()
         self.abrir = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.cookies), SinRedireccion()).open
+        self.antifalsificacion = None
 
-    def pedir(self, metodo, ruta, datos=None):
+    def pedir(self, metodo, ruta, datos=None, con_token=True):
+        if metodo == 'POST' and con_token:
+            datos = dict(datos or {})
+            datos.setdefault('__RequestVerificationToken', self.token())
         cuerpo = None if datos is None else urllib.parse.urlencode(datos, doseq=True).encode()
         q = urllib.request.Request(BASE + ruta, cuerpo, {'Content-Type': 'application/x-www-form-urlencoded'}, method=metodo)
         try:
             with self.abrir(q, timeout=30) as r:
-                return r.status, r.headers, r.read().decode('utf-8', 'replace')
+                s, h, b = r.status, r.headers, r.read().decode('utf-8', 'replace')
         except urllib.error.HTTPError as r:
-            return r.code, r.headers, r.read().decode('utf-8', 'replace')
+            s, h, b = r.code, r.headers, r.read().decode('utf-8', 'replace')
+        m = ANTIFALSIFICACION.search(b)
+        if m:
+            self.antifalsificacion = html.unescape(m.group(1))
+        return s, h, b
+
+    def token(self):
+        """El token sale de cualquier página con formulario; /login siempre tiene uno."""
+        if not self.antifalsificacion:
+            self.pedir('GET', '/login')
+        return self.antifalsificacion
 
     def seguir(self, metodo, ruta, datos=None):
         s, h, b = self.pedir(metodo, ruta, datos)
@@ -56,6 +76,7 @@ class Navegador:
     def entrar(self, usuario, clave):
         s, h, _ = self.pedir('POST', '/login', {'usuario': usuario, 'clave': clave})
         check(s == 302 and h['Location'].endswith('/desastres'), 'inicia sesión en el portal: ' + usuario, (s, dict(h)))
+        self.antifalsificacion = None   # el token antifalsificación va ligado al usuario: se pide otro
 
 
 def avisos(pagina):
@@ -79,6 +100,12 @@ clave = os.environ.get('PGDR_BOOTSTRAP_PASSWORD', 'Arqui-Local-2026!')
 tag = uuid.uuid4().hex[:8]
 CLAVE = 'Portal-Prueba-2026!'
 
+# --- El contrato gRPC es uno solo: las copias del portal .NET y del tablero son iguales al de Reconstrucción ---
+fuente = (RAIZ / 'reconstruccion/backend/src/main/proto/reconstruccion.proto').read_text(encoding='utf-8')
+for copia in ['portal/Protos/reconstruccion.proto', 'tablero/src/main/proto/reconstruccion.proto']:
+    texto = (RAIZ / copia).read_text(encoding='utf-8').split('\n', 1)[1]
+    check(texto == fuente, 'la copia del contrato gRPC es idéntica: ' + copia)
+
 # --- Sesión ---
 coord = Navegador()
 s, h, b = coord.pedir('GET', '/desastres')
@@ -86,7 +113,10 @@ check(s == 302 and '/login' in h['Location'], 'sin sesión el portal lleva al in
 s, _, b = coord.pedir('POST', '/login', {'usuario': usuario, 'clave': 'clave-equivocada'})
 check(s == 200 and 'incorrectos' in b, 'una contraseña equivocada no entra', s)
 coord.entrar(usuario, clave)
-check(any(c.name == 'JSESSIONID' for c in coord.cookies), 'la sesión vive en una cookie del portal (el token no va al navegador)')
+sesion = [c for c in coord.cookies if c.name == 'pgdr.sesion']
+check(sesion and any(k.lower() == 'httponly' for k in sesion[0]._rest), 'la sesión vive en una cookie HttpOnly del portal (el token no va al navegador)')
+s, _, b = coord.pedir('POST', '/usuarios', {'usuario': 'sin_token_' + tag, 'clave': CLAVE, 'rol': 'CONSULTA'}, con_token=False)
+check(s == 400, 'un formulario sin token antifalsificación se rechaza (CSRF)', s)
 s, _, b = coord.seguir('GET', '/desastres')
 check(s == 200 and 'Desastres del organismo' in b and 'Registrar desastre' in b, 'el coordinador ve la lista y puede registrar', s)
 
@@ -105,7 +135,7 @@ s, _, b = consulta.seguir('GET', '/usuarios')
 check(s == 403, 'CONSULTA no administra usuarios', s)
 
 # --- Registro y caracterización del desastre ---
-s, h, _ = coord.pedir('POST', '/desastres', {'tipo': 'DESLIZAMIENTO', 'ubicacion': 'Vereda portal ' + tag,
+s, h, _ = coord.pedir('POST', '/desastres/nuevo', {'tipo': 'DESLIZAMIENTO', 'ubicacion': 'Vereda portal ' + tag,
                                               'descripcion': 'Prueba del portal', 'severidad': 'MEDIA'})
 check(s == 302 and '/desastres/DES-' in h['Location'], 'el coordinador registra un desastre', (s, dict(h)))
 ref = h['Location'].rsplit('/', 1)[1]
@@ -143,8 +173,14 @@ s, _, b = coord.seguir('GET', '/evaluaciones/' + evaluaciones['Puente'])
 check(s == 200 and 'Historial de versiones' in b and 'Puente' in b, 'el detalle de la evaluación muestra su historial', s)
 
 # --- Tablero multihilo ---
-s, _, b = coord.seguir('GET', '/tablero?desastre=' + ref)
-t = json.loads(b)
+# Recién levantada la plataforma, la primera consulta puede llegar parcial (Reconstrucción en frío
+# tarda más que el límite de su fuente): eso es la degradación prevista. Se reintenta hasta 3 veces.
+for intento in range(3):
+    s, _, b = coord.seguir('GET', '/tablero?desastre=' + ref)
+    t = json.loads(b)
+    if s == 200 and t['fuentesNoDisponibles'] == []:
+        break
+    time.sleep(1)
 check(s == 200 and t['modo'] == 'paralelo' and t['fuentesNoDisponibles'] == [], 'el tablero responde con las tres fuentes', t.get('fuentes'))
 hilos = {f['hilo'] for f in t['fuentes'].values()}
 check(all(x.startswith('tablero-') for x in hilos), 'las fuentes corren en hilos del pool del tablero', hilos)
@@ -195,4 +231,4 @@ s, h, _ = coord.pedir('POST', '/logout')
 check(s == 302 and 'salida' in h['Location'], 'cerrar sesión', (s, dict(h)))
 s, h, _ = coord.pedir('GET', '/desastres')
 check(s == 302 and '/login' in h['Location'], 'después de salir el portal pide sesión otra vez', s)
-print(f'\nPortal MVC: {total} comprobaciones correctas.')
+print(f'\nPortal web .NET y tablero: {total} comprobaciones correctas.')

@@ -512,7 +512,7 @@ sequenceDiagram
 
 *Figura 9. Escenario E: reconstrucción física.*
 
-Cada proyecto guarda una copia de sus evaluaciones de origen y la conserva aunque la evaluación se corrija. Las reglas están en §5.3. Lo prueban `verificar_reconstruccion.py` (76 a 78 comprobaciones, incluidas aprobación por la misma persona, sobrecosto, cancelación sin permiso y gRPC) y 31 pruebas del dominio. Si `servidor` no responde, no se crea el proyecto y se reintenta con el mismo identificador; si dos personas cambian el proyecto a la vez, la segunda recibe 409; si RabbitMQ no responde, el aviso espera en la bandeja de salida; un compromiso sin respuesta del sistema financiero quedaría En conciliación (ADR-21, diseñado).
+Cada proyecto guarda una copia de sus evaluaciones de origen y la conserva aunque la evaluación se corrija. Las reglas están en §5.3. Lo prueban `verificar_reconstruccion.py` (87 comprobaciones el 17-nov, incluidas aprobación por la misma persona, sobrecosto, cancelación sin permiso y gRPC) y 31 pruebas del dominio. Si `servidor` no responde, no se crea el proyecto y se reintenta con el mismo identificador; si dos personas cambian el proyecto a la vez, la segunda recibe 409; si RabbitMQ no responde, el aviso espera en la bandeja de salida; un compromiso sin respuesta del sistema financiero quedaría En conciliación (ADR-21, diseñado).
 
 ### 6.6 Tablero de un desastre (servlet multihilo)
 
@@ -540,10 +540,10 @@ El salto del portal al servicio de tablero, que llegó con la presentación en .
 
 Con 20 clientes, el paralelo triplica la carga simultánea sobre servicios ya saturados, que validan todos el token contra el núcleo: con una sola máquina no gana, y es un trade-off aceptado (ADR-24). Medir corrigió dos defectos:
 
-- Con el plazo de 5 s de las páginas, una fuente colgada retenía los hilos y 25 de 60 respuestas eran 503. Hoy el plazo de cada cliente del tablero es el límite de su fuente.
+- Con el plazo de 5 s de las páginas, una fuente colgada retenía los hilos y 25 de 60 respuestas eran 503 (corrida de prueba que no se guardó; el ajuste está explicado en `ConfiguracionTablero.java`). Hoy el plazo de cada cliente del tablero es el límite de su fuente.
 - La fuente de Reconstrucción descargaba el catálogo completo del núcleo en cada consulta. Hoy las consultas de solo lectura usan una copia de hasta 3 s; las operaciones que deciden reglas leen siempre el dato fresco.
 
-Las mediciones anteriores se conservan como evidencia de cada cambio: `medicion_tablero_2026-11-15_1334.json`, antes de esos ajustes (p95 de 56 ms frente a 67 ms con 1 cliente y de 323 ms frente a 288 ms con 20), y `medicion_tablero_2026-11-15_2329.json`, con el portal anterior en Spring (p95 de 44 ms frente a 61 ms con 1 cliente y de 241 ms frente a 233 ms con 20).
+Las mediciones anteriores se conservan como evidencia de cada cambio: `medicion_tablero_2026-11-15_1334.json`, ya con el plazo corregido pero antes de la copia del catálogo en Reconstrucción (p95 de 56 ms frente a 67 ms con 1 cliente y de 323 ms frente a 288 ms con 20), y `medicion_tablero_2026-11-15_2329.json`, con el portal anterior en Spring (p95 de 44 ms frente a 61 ms con 1 cliente y de 241 ms frente a 233 ms con 20).
 
 ## 7. Vista de despliegue
 
@@ -1055,7 +1055,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 
 ### 10.2 Meta, enfoque, decisión y evidencia
 
-| Meta | Enfoque | ADR | Evidencia al 15-nov-2026 |
+| Meta | Enfoque | ADR | Evidencia al 17-nov-2026 |
 | --- | --- | --- | --- |
 | QA-DIS-01 | Redundancia de lo crítico; lo degradable aparte | 01, 11, 12 | Diseño; el tablero sigue sin Reconstrucción (medido) |
 | QA-DIS-02 | Réplica síncrona y conmutación | 09, 12 | Ninguna: sin código |
@@ -1070,7 +1070,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | QA-INT-01, QA-INT-02, QA-EXT-01 | Adaptadores; REST, gRPC, SOAP y EJB remoto | 07, 17, 26 | Prueba gRPC con `grpcurl`; prueba de EJB remoto; suscripción de sistemas |
 | QA-SEG-01, QA-SEG-02 | Sesión validada en el núcleo; permisos en el backend | 10, 19, 23 | `verificar_seguridad.py` (10), `verificar_portal.py` (47), `verificar_unificacion.py` |
 | QA-TRZ-01 | Auditoría en la transacción del cambio | 20 | `verificar_reconstruccion.py`, `verificar_caracterizacion.py` |
-| QA-TRZ-02, QA-MOD-01, QA-MOD-02, QA-CNF-02 | Dos fechas; configuración; alias | 05, 06, 08 | Sin código |
+| QA-TRZ-02, QA-MOD-01, QA-MOD-02, QA-CNF-02 | Dos fechas; configuración; alias | 05, 06, 08 | Sin código, salvo el catálogo configurable de tipos de activo (C1); los tipos de desastre siguen fijos |
 
 ## 11. Riesgos y deuda técnica
 

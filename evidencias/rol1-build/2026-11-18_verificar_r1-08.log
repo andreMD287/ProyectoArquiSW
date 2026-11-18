@@ -1,0 +1,316 @@
+Fecha: 2026-11-18 09:12:11 -0500
+Rama r1-08-secretos: clave EJB en tiempo de ejecución y RabbitMQ sin puertos publicados
+
+test_01_salud_catalogos (__main__.ApiTests.test_01_salud_catalogos) ... ok
+test_02_crud_filtros_version (__main__.ApiTests.test_02_crud_filtros_version) ... ok
+test_03_validacion_limites_y_ausencias (__main__.ApiTests.test_03_validacion_limites_y_ausencias) ... ok
+test_04_geojson_orden_y_atomicidad (__main__.ApiTests.test_04_geojson_orden_y_atomicidad) ... ok
+test_05_geojson_malformado (__main__.ApiTests.test_05_geojson_malformado) ... ok
+test_06_actualizacion_concurrente (__main__.ApiTests.test_06_actualizacion_concurrente) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.050s
+
+OK
+test_01_campo_en_panorama_calor_geojson_y_detalle (__main__.IntegracionTests.test_01_campo_en_panorama_calor_geojson_y_detalle) ... ok
+test_02_afectacion_original_y_filtros (__main__.IntegracionTests.test_02_afectacion_original_y_filtros) ... ok
+test_03_preliminar_y_foto (__main__.IntegracionTests.test_03_preliminar_y_foto) ... ok
+test_04_importacion_no_pierde_evaluaciones (__main__.IntegracionTests.test_04_importacion_no_pierde_evaluaciones) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.746s
+
+OK
+OK modo inmediato: lote mixto, foto, conflictos, reintento y consulta.
+Observación local: acuse 31 ms, consulta completa 79 ms.
+OK: login coordinador_demo
+OK: sin sesión responde 401
+OK: las cabeceras de identidad sin token no sirven
+OK: un token inventado responde 401
+OK: crear usuario EVALUADOR
+OK: login rec_evaluador_b743df2d6a
+OK: crear usuario CONSULTA
+OK: login rec_consulta_b743df2d6a
+OK: crear usuario COORDINADOR
+OK: login rec_coordinador_b743df2d6a
+OK: crear usuario EVALUADOR
+OK: login rec_evaluador2_b743df2d6a
+OK: desastre registrado en el núcleo
+OK: evaluación puente capturada en servidor
+OK: evaluación escuela capturada en servidor
+OK: evaluación leve capturada en servidor
+OK: el módulo lista los desastres del núcleo
+OK: el desastre aparece una vez en el módulo
+OK: el desastre nace en fase Registro
+OK: no se inicia reconstrucción desde Registro (RN-01)
+OK: catálogo de la plataforma
+OK: el núcleo rechaza saltar de Registro a Reconstrucción
+OK: solo un coordinador cambia la fase
+OK: el núcleo pasa el desastre a Caracterización
+OK: repetir el mismo cambio no lo aplica dos veces
+OK: una versión base vieja responde 409
+OK: el módulo lista los desastres del núcleo
+OK: el desastre aparece una vez en el módulo
+OK: el módulo ve la fase nueva del núcleo
+OK: el coordinador no puede pasar a Reconstrucción llamando directo al núcleo
+OK: consulta no inicia la reconstrucción
+OK: falsificar el rol en una cabecera no da permisos
+OK: la autoridad inicia la reconstrucción (CU-01)
+OK: catálogo de la plataforma
+OK: la fase quedó guardada en el núcleo
+OK: el historial del núcleo conserva los cambios de fase
+OK: tampoco puede cerrar un desastre en Reconstrucción llamando directo al núcleo
+OK: el módulo lee las evaluaciones de servidor
+OK: el nivel de afectación se traduce a categoría de daño
+OK: el responsable no crea proyectos
+OK: el lote crea los válidos y reporta los demás (CU-02, RN-18)
+OK: daño leve se rechaza con RN-02 y evaluación inexistente con RN-07
+OK: una evaluación no origina dos proyectos activos (RN-09)
+OK: quien formuló el proyecto no lo aprueba (RN-20)
+OK: otra autoridad aprueba el proyecto (CU-03)
+OK: el proyecto guarda al formulador y el tipo de activo físico (código C1)
+OK: consulta no inicia la ejecución
+OK: el responsable inicia la ejecución (CU-04)
+OK: un responsable no asignado no registra avance (RN-21)
+OK: el responsable registra avance con la versión que vio (CU-05)
+OK: con una versión vieja (If-Match) el cambio se rechaza con 409
+OK: un costo mayor que el presupuesto se registra y marca sobrecosto (RN-14)
+OK: el presupuesto no cambia sin motivo (RN-12)
+OK: la autoridad modifica el presupuesto con motivo (CU-06)
+OK: no se finaliza con avance menor que 100 (RN-15)
+OK: avance al 100 %
+OK: no se finaliza sin evidencia (RN-15)
+OK: el responsable adjunta la evidencia (CU-05)
+OK: un costo final deja el proyecto con sobrecosto
+OK: no se finaliza con sobrecosto (RN-15)
+OK: la autoridad ajusta el presupuesto con motivo
+OK: el responsable finaliza el proyecto (CU-07)
+OK: consulta ve el proyecto de su organismo (CU-08)
+OK: la auditoría guarda los cambios y los intentos rechazados (RN-17)
+OK: consulta no modifica
+OK: no se cierra con proyectos sin terminar (RN-04)
+OK: un responsable no cancela proyectos
+OK: la autoridad cancela un proyecto propuesto
+OK: la autoridad cierra el desastre (CU-09)
+OK: catálogo de la plataforma
+OK: el cierre quedó guardado en el núcleo
+OK: la bandeja de salida quedó despachada
+OK: el aviso sigue el contrato C5 (idEvento, tipo, desastre, proyecto, organismo, datos)
+OK: notificaciones consume el aviso y envía el correo de proyecto aprobado a los sistemas del organismo (Mailpit)
+OK: también avisa por correo el sobrecosto
+OK: y el cierre del desastre
+OK: se reenvía a la cola el mismo aviso de aprobación (repetido)
+OK: se publica un aviso mal formado
+OK: el aviso repetido no genera más correos (deduplicación por idEvento)
+OK: el aviso mal formado queda en la cola de errores sin bloquear la cola
+OK: la cola de integración queda vacía: todo se consumió
+OK: gRPC ConsultarSeguimiento responde con el token del núcleo
+OK: gRPC sin token responde Unauthenticated
+OK: gRPC con un token inventado responde Unauthenticated
+OK: gRPC respeta los roles (consulta no aprueba)
+
+Reconstrucción integrada: 85 comprobaciones correctas.
+OK: login único
+OK: registrar desastre
+OK: destinatario de avisos
+OK: reintentos de cambio de gravedad idempotentes
+OK: versión de desastre obsoleta rechazada
+OK: historial del cambio conserva antes/después
+OK: aviso de nueva gravedad confirmado por Taller 3/SMTP
+OK: un solo evento de gravedad para cinco reintentos
+OK: captura original aceptada
+OK: corrección crea versión 1
+OK: reintento de corrección no duplica
+OK: propuesta offline obsoleta queda en conflicto
+OK: conflicto no sobrescribe servidor
+OK: resolución explícita permite reenviar sobre versión revisada
+OK: historial de evaluaciones conserva original y correcciones
+OK: operación original permanece inmutable
+OK: reenvío original no revierte correcciones
+OK: versión actual no vuelve a cero
+OK: foto original permanece disponible tras correcciones
+OK: calor lee versión actual
+OK: solicitud nace de evaluación existente
+OK: origen y versión provienen del servidor, no del cliente
+OK: reintento de solicitud derivada no duplica
+OK: no deriva solicitud de una versión obsoleta sin revisar
+OK: cliente externo no puede falsificar atestación de evaluación
+OK: atención conserva origen de daños
+OK: nueva corrección posterior a la solicitud
+OK: solicitud conserva instantánea de origen aunque cambie la evaluación
+OK: reintento posterior a otra corrección recupera solicitud original sin duplicar
+OK: consulta no corrige evaluaciones
+OK: consulta no cambia gravedad
+OK: aislamiento nuevo flujo GET /campo/evaluaciones/c4f57e4f-6ab0-440e-939b-a170912ce14f/historial
+OK: aislamiento nuevo flujo PUT /campo/evaluaciones/c4f57e4f-6ab0-440e-939b-a170912ce14f
+OK: aislamiento nuevo flujo POST /campo/evaluaciones/c4f57e4f-6ab0-440e-939b-a170912ce14f/solicitudes
+OK: aislamiento nuevo flujo GET /desastres/EVOLUCION-6c3d6806/historial
+OK: SOAP rechaza credenciales inválidas
+OK: token SOAP funciona en mapas REST
+OK: logout SOAP revoca sesión REST
+{"resultado": "APROBADO", "desastre": "EVOLUCION-6c3d6806", "evaluacion": "c4f57e4f-6ab0-440e-939b-a170912ce14f", "solicitud": 13}
+OK: mapas requieren sesión
+OK: catálogo requiere sesión
+OK: clave incorrecta rechazada
+OK: login coordinador_demo
+OK: crear rol EVALUADOR
+OK: login evaluador_0b28ea1a80
+OK: crear rol CONSULTA
+OK: login consulta_0b28ea1a80
+OK: suscripción del organismo
+OK: evaluador no crea desastre
+OK: consulta no crea desastre
+OK: desastre persistido en núcleo
+OK: diez reintentos conservan el registro
+OK: cambio de contenido devuelve conflicto
+OK: núcleo → outbox → Taller3 → RabbitMQ → correo confirmado
+OK: catálogo conserva organismo
+OK: consulta no sincroniza
+OK: evaluador sincroniza foto y captura
+OK: evaluación asociada al desastre del núcleo
+OK: identidad procede del token, no del JSON
+OK: foto conservada y autorizada
+OK: foto no es pública
+OK: reintento móvil idéntico no duplica
+OK: mapa/calor/GeoJSON /api/panorama?eventoId=UNIFICADO-0b28ea1a80
+OK: mapa/calor/GeoJSON /api/campo/sitios?eventoId=UNIFICADO-0b28ea1a80
+OK: mapa/calor/GeoJSON /api/panorama/geojson?eventoId=UNIFICADO-0b28ea1a80
+OK: DAL original conserva creación
+OK: evaluador no modifica puntos de coordinación
+OK: login otro_0b28ea1a80
+OK: aislamiento de detalle /api/campo/evaluaciones/fa073699-ae30-4f07-8ea7-7705b1ad6b02
+OK: aislamiento de detalle /api/campo/evaluaciones/fa073699-ae30-4f07-8ea7-7705b1ad6b02/foto
+OK: aislamiento de detalle /api/afectaciones/8f78d18d-2699-4d26-8ca0-28058c89d3f4
+OK: aislamiento de consulta /api/desastres
+OK: aislamiento de consulta /api/panorama
+OK: aislamiento de consulta /api/campo/sitios
+OK: aislamiento de consulta /api/panorama/geojson
+OK: aislamiento de consulta /api/sistemas
+OK: organismo ajeno no reasocia captura
+OK: referencia existente no cambia de propietario
+OK: conflicto de propietario revierte inserción
+ Container arqui-integracion-rabbitmq-1 Stopping 
+ Container arqui-integracion-rabbitmq-1 Stopped 
+OK: desastre durable aunque broker esté detenido
+OK: notificación queda pendiente en outbox
+OK: mapas siguen disponibles sin broker
+ Container arqui-integracion-rabbitmq-1 Starting 
+ Container arqui-integracion-rabbitmq-1 Started 
+OK: notificación pendiente recuperada al volver broker
+ Container arqui-integracion-nucleo-1 Restarting 
+ Container arqui-integracion-api-1 Restarting 
+ Container arqui-integracion-api-1 Started 
+ Container arqui-integracion-nucleo-1 Started 
+OK: sesión y desastre sobreviven reinicio
+OK: captura sobrevive reinicio
+OK: logout integrado
+OK: token revocado no accede a mapas
+OK: logout integrado
+OK: token revocado no accede a mapas
+OK: logout integrado
+OK: token revocado no accede a mapas
+OK: logout integrado
+OK: token revocado no accede a mapas
+{"resultado": "APROBADO", "desastre": "UNIFICADO-0b28ea1a80", "evaluacion": "fa073699-ae30-4f07-8ea7-7705b1ad6b02", "organizacion": "ffe316ed-532b-426e-8005-7c5bfe54bb9e"}
+OK: login del coordinador
+OK: crear usuario EVALUADOR
+OK: crear usuario CONSULTA
+OK: desastre registrado
+OK: CONSULTA no caracteriza
+OK: una latitud fuera de rango se rechaza
+OK: el nivel del desastre va de 1 a 4
+OK: un desastre inexistente responde 404
+OK: el evaluador caracteriza y el desastre pasa a CARACTERIZACION
+OK: quedan la ubicación y el radio
+OK: el nivel 3 queda como ALTA y la versión sube a 1
+OK: repetir la misma clave devuelve el mismo resultado (idempotencia)
+OK: la misma clave con otro contenido responde 409
+OK: una versión base vieja responde 409 con la versión actual
+OK: una segunda caracterización actualiza el radio sin cambiar la fase
+OK: el historial guarda las dos caracterizaciones
+OK: la copia de servidor recibe la fase y la versión nuevas
+OK: la copia de servidor conserva la ubicación, el radio y el nivel (C2)
+OK: segundo desastre registrado
+OK: servidor exige sesión para caracterizar
+OK: servidor: CONSULTA no caracteriza
+OK: servidor reenvía la caracterización del evaluador al núcleo (C2)
+OK: servidor: repetir la misma clave devuelve el mismo resultado
+OK: servidor no convierte el conflicto en éxito: 409 con la versión actual
+OK: servidor: un desastre inexistente responde 404
+OK: el catálogo trae los tipos de activo (C1)
+OK: un lote con un código válido, uno desconocido y uno sin código se recibe completo
+OK: reenviar el mismo lote no crea conflicto (idempotencia intacta)
+OK: un código válido se conserva
+OK: un código desconocido queda como OTRO y se conserva el original
+OK: una evaluación sin código (app anterior) queda como OTRO
+OK: el detalle de la evaluación trae el tipo normalizado, el original y el texto libre
+
+Caracterización y tipos de activo (C2 y C1): 32 comprobaciones correctas.
+OK: la copia del contrato gRPC es idéntica: portal/Protos/reconstruccion.proto
+OK: la copia del contrato gRPC es idéntica: tablero/src/main/proto/reconstruccion.proto
+OK: sin sesión el portal lleva al inicio de sesión
+OK: una contraseña equivocada no entra
+OK: inicia sesión en el portal: coordinador_demo
+OK: la sesión vive en una cookie HttpOnly del portal (el token no va al navegador)
+OK: un formulario sin token antifalsificación se rechaza (CSRF)
+OK: el coordinador ve la lista y puede registrar
+OK: el coordinador crea un usuario EVALUADOR
+OK: el coordinador crea un usuario CONSULTA
+OK: el coordinador crea un usuario COORDINADOR
+OK: inicia sesión en el portal: portal_evaluador_412f9f4e
+OK: inicia sesión en el portal: portal_consulta_412f9f4e
+OK: inicia sesión en el portal: portal_coordinador_412f9f4e
+OK: CONSULTA no ve la acción de registrar
+OK: CONSULTA no administra usuarios
+OK: el coordinador registra un desastre
+OK: el tablero del desastre abre en fase Registro
+OK: el evaluador caracteriza y el desastre pasa a Caracterización
+OK: una versión vieja se rechaza sin sobrescribir
+OK: el desastre llega a la copia de servidor que descarga la app
+OK: evaluación de Puente capturada
+OK: evaluación de Escuela capturada
+OK: la lista de evaluaciones del desastre las muestra
+OK: el detalle de la evaluación muestra su historial
+OK: el tablero responde con las tres fuentes
+OK: las fuentes corren en hilos del pool del tablero
+OK: el tablero trae fase y área del desastre
+OK: el tablero resume las evaluaciones por nivel
+OK: el tablero también corre en modo secuencial (para medir)
+OK: el tablero exige sesión
+OK: el tablero valida la referencia
+OK: el coordinador inicia la reconstrucción
+OK: el portal lista las evaluaciones disponibles para crear proyectos
+OK: el coordinador crea un proyecto desde la evaluación
+OK: quien formuló el proyecto no lo aprueba (RN-20)
+OK: un segundo coordinador aprueba el proyecto
+OK: el responsable asignado: iniciar
+OK: el responsable asignado: avance
+OK: el responsable asignado: evidencia
+OK: el responsable asignado: estado
+OK: un formulario abierto con una versión vieja no pisa el cambio de otro
+OK: la auditoría muestra el intento rechazado y los cambios
+OK: el tablero refleja el proyecto finalizado
+OK: el mapa general incluye el desastre caracterizado
+OK: cerrar sesión
+OK: después de salir el portal pide sesión otra vez
+
+Portal web .NET y tablero: 47 comprobaciones correctas.
+OK: el catálogo interno exige la clave de integración
+OK: una clave de integración equivocada se rechaza
+OK: una clave casi igual también se rechaza
+OK: con la clave correcta el servicio interno lee el catálogo
+OK: la ruta de migración que actúa como el coordinador está apagada
+OK: sin token no hay acceso: /api/desastres
+OK: sin token no hay acceso: /api/panorama
+OK: sin token no hay acceso: /api/reconstruccion/desastres
+OK: el tablero del portal exige sesión
+OK: después de muchos intentos fallidos el login responde 429
+
+Seguridad: 10 comprobaciones correctas.
+código de salida: 0
+
+== Prueba de EJB remoto (perfil pruebas, prueba-rpc) con el usuario técnico creado al arrancar
+OK: EJB remoto real reutiliza identidad y token de la plataforma REST.
+OK: cierre RPC revoca la misma sesión.
+== Imagen del núcleo: add-user en el historial: 0; EJB_CLAVE en su configuración: 0
+== RabbitMQ: puertos publicados en el equipo: ninguno

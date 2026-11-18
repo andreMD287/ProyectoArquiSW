@@ -554,7 +554,7 @@ Las mediciones anteriores se conservan como evidencia de cada cambio (E2): la de
 | api | UD-03 Campo y mapas | ASP.NET Core 10 | — | db, nucleo (REST: sesión y catálogo), desastres |
 | db | Base de servidor | PostgreSQL 17 | — | — |
 | desastres | UD-04 Notificaciones | Jakarta EE en Payara 6 | — | rabbitmq (AMQP), mailpit (SMTP) |
-| rabbitmq | Mensajería | RabbitMQ 4.1 | 127.0.0.1:15683–15684 | — |
+| rabbitmq | Mensajería | RabbitMQ 4.1 | Ninguno: solo la red interna; las pruebas lo consultan desde dentro del contenedor | — |
 | mailpit | Buzón de pruebas | Mailpit | 127.0.0.1:18026 | — |
 | reconstruccion | UD-06 Reconstrucción | Spring Boot 3.3 (REST 8086, gRPC 9096) | 127.0.0.1:19096 (gRPC) | reconstruccion-db, nucleo (sesión y fase), api (evaluaciones), rabbitmq |
 | reconstruccion-db | Base de Reconstrucción | PostgreSQL 17 | — | — |
@@ -597,7 +597,7 @@ Tres reglas: se niega lo que no está permitido; cada permiso depende del rol y 
 | Cifrado | Token de la app en el almacenamiento seguro del dispositivo | TLS; cifrado en reposo; llaves fuera de las unidades. El SQLite del móvil aún no se cifra |
 | Auditoría | Núcleo: creación del desastre e historial de nivel, fase y caracterización, en la transacción del cambio. Reconstrucción: cambios e intentos rechazados (RN-17) | Registro de solo adición; consulta consolidada (ADR-20); accesos denegados e inicios de sesión |
 | Datos personales | No se guardan datos de personas afectadas (ADR-28) | Con SE-03 y SE-05 solo cruzarían identificadores |
-| Secretos | En un archivo de entorno sin versionar. Clave de integración comparada en tiempo constante. La importación por integración, apagada por defecto | Autenticación en el servicio de notificaciones; clave EJB fuera de la construcción del núcleo |
+| Secretos | En un archivo de entorno sin versionar. Clave de integración comparada en tiempo constante. La importación por integración, apagada por defecto. La clave EJB no va en la imagen del núcleo: el usuario técnico se crea al arrancar, con las variables de entorno | Autenticación en el servicio de notificaciones |
 
 **Dos personas.** Un coordinador puede crear otro coordinador de su organismo; así existe la segunda persona que RN-20 exige para aprobar. Con la misma regla quedan diseñadas las operaciones de alto impacto: cambiar políticas de acceso o de sesión, certificar una regla de consolidación, declarar una falla grave y restaurar la copia aislada.
 
@@ -1075,7 +1075,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Entrega de avisos al menos una vez | Si notificaciones cae entre enviar y marcar, un correo puede repetirse una vez | Aceptado | Documentado (ADR-27) |
 | El servicio de notificaciones no autentica a quien lo llama | Dentro de la red de Docker, cualquiera podría publicar o suscribirse | Abierto, en curso | Clave de servicio en sus rutas |
 | SQLite del móvil sin cifrar | Un dispositivo perdido expone las capturas de su usuario | Aceptado como limitación | SQLCipher |
-| Clave EJB como argumento de construcción del núcleo | Queda en el historial de la imagen | Aceptado para el laboratorio | Pasarla en tiempo de ejecución |
+| Clave EJB como argumento de construcción del núcleo | Quedaba en el historial de la imagen | Cerrado: el núcleo crea el usuario técnico al arrancar, con las variables de entorno | — |
 | Código de Solicitudes de recursos en el núcleo y en servidor | Mantener y exponer algo fuera de alcance | Abierto | Retirarlo de ambos lados, con sus pruebas, cuando el equipo lo acuerde |
 | Catálogo de servidor con consistencia eventual de unos segundos | Una evaluación de un desastre recién creado queda preliminar unos segundos | Aceptado | Documentado; las pruebas esperan |
 | Trade-off del tablero en una máquina saturada | Más carga simultánea sobre los servicios de atrás | Aceptado | Ajustar pool y límite; medir con servicios escalados |

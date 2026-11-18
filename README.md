@@ -85,7 +85,7 @@ Prueba EJB remoto desde un proceso independiente:
 docker compose -f servidor/compose.yaml --profile pruebas run --rm --build prueba-rpc
 ```
 
-Las variables EJB_USUARIO/EJB_CLAVE configuran el usuario técnico de la conexión y se aplican también como argumentos de compilación del núcleo. No sustituyen el usuario/clave de la plataforma. La prueba verifica login RPC, uso del token en mapas REST y revocación.
+Las variables EJB_USUARIO/EJB_CLAVE configuran el usuario técnico de la conexión. El núcleo lo crea al arrancar con esas variables de entorno, así que la clave no queda dentro de la imagen. No sustituyen el usuario/clave de la plataforma. La prueba verifica login RPC, uso del token en mapas REST y revocación.
 
 ## Android
 

@@ -17,11 +17,6 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B org.apache.maven.plugins:maven-de
 # Etapa 2: servidor de aplicaciones
 FROM quay.io/wildfly/wildfly:41.0.1.Final-jdk21
 
-# Same application-realm mechanism used by the original login workshop for remote EJB.
-ARG EJB_USUARIO=ejbcliente
-ARG EJB_CLAVE=Arqui-Rpc-Local-2026!
-RUN /opt/jboss/wildfly/bin/add-user.sh -a -u "${EJB_USUARIO}" -p "${EJB_CLAVE}" --silent
-
 # Instalar módulo JDBC
 COPY --chown=jboss:0 --from=build \
     /tmp/driver/postgresql.jar \
@@ -43,5 +38,11 @@ RUN /opt/jboss/wildfly/bin/jboss-cli.sh \
 COPY --chown=jboss:0 --from=build \
     /app/target/plataforma-desastres.war \
     /opt/jboss/wildfly/standalone/deployments/plataforma-desastres.war
+
+# Usuario técnico de EJB remoto (application realm, como en el taller de login): se crea al
+# arrancar con EJB_USUARIO y EJB_CLAVE del entorno, así la clave no queda dentro de la imagen.
+COPY --chown=jboss:0 docker/wildfly/iniciar.sh /opt/jboss/wildfly/bin/pgdr-iniciar.sh
+RUN sed -i 's/\r$//' /opt/jboss/wildfly/bin/pgdr-iniciar.sh && chmod 0755 /opt/jboss/wildfly/bin/pgdr-iniciar.sh
+CMD ["/opt/jboss/wildfly/bin/pgdr-iniciar.sh"]
 
 EXPOSE 8080

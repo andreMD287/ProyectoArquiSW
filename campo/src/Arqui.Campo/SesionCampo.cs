@@ -34,10 +34,14 @@ internal static class SesionCampo {
   req.Headers.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",Token);
  }
  public static async Task Salir(Uri destino){
+  if(SesionVencida){LimpiarSesionLocal();return;}
   using var http=new HttpClient{Timeout=TimeSpan.FromSeconds(15)};
   using var req=new HttpRequestMessage(HttpMethod.Post,new Uri(destino,"/api/auth/logout"));Autorizar(req);req.Content=new StringContent("{}",System.Text.Encoding.UTF8,"application/json");
   using var res=await http.SendAsync(req);
   if(!res.IsSuccessStatusCode && res.StatusCode!=System.Net.HttpStatusCode.Unauthorized)throw new InvalidOperationException("No se pudo cerrar sesión. Reintenta con conexión.");
+  LimpiarSesionLocal();
+ }
+ private static void LimpiarSesionLocal(){
   SecureStorage.Default.Remove("arqui-sesion");Token=null;Organizacion=Usuario=Rol=Servidor="";SesionVencida=false;
  }
 }

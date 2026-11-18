@@ -95,7 +95,7 @@ public sealed class CapturaPage : ContentPage
             if (cargandoCatalogo || elegirDesastre.SelectedIndex < 0) return;
             evento.Text = elegirDesastre.SelectedIndex == 0 ? "" : catalogo[elegirDesastre.SelectedIndex - 1].Id;
         };
-        servidor.Text = Preferences.Default.Get("ServidorCampo", "http://127.0.0.1:18085");
+        servidor.Text = Preferences.Default.Get("ServidorCampo", "http://127.0.0.1:8084");
         sincronizar.Clicked += async (_, _) => await SincronizarAsync(manual: true);
         timer = Dispatcher.CreateTimer();
         timer.Interval = TimeSpan.FromSeconds(8);

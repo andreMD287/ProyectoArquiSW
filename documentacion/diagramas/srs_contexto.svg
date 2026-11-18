@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1335" viewBox="0 0 1000 1335">
+<defs><marker id="abierta" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto"><path d="M1,1 L11,6 L1,11" fill="none" stroke="#374151" stroke-width="1.5"/></marker><marker id="llena" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M1,1 L11,6 L1,11 Z" fill="#374151"/></marker><marker id="triangulo" viewBox="0 0 16 16" refX="15" refY="8" markerWidth="15" markerHeight="15" orient="auto"><path d="M1,1 L15,8 L1,15 Z" fill="#FFFFFF" stroke="#374151" stroke-width="1.5"/></marker></defs>
+<rect width="1000" height="1335" fill="#FFFFFF"/>
+<text x="500" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">Diagrama de contexto</text>
+<text x="500" y="60" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#6B7280" text-anchor="middle">La plataforma como caja negra: quién la usa y con qué sistemas se integra</text>
+<rect x="20" y="78" width="592" height="184" rx="6" fill="none" stroke="#6B7280" stroke-width="1.3" stroke-dasharray="7 5"/>
+<text x="32" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#374151" text-anchor="start">Usuarios de los organismos</text>
+<rect x="32" y="104" width="180" height="146" rx="6" fill="#08427B" stroke="#08427B" stroke-width="1.5"/>
+<circle cx="122.0" cy="130" r="11" fill="#FFFFFF"/>
+<path d="M104.0,164 q0,-20 18,-20 q18,0 18,20 Z" fill="#FFFFFF"/>
+<text x="122.0" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#FFFFFF" text-anchor="middle">Coordinador</text>
+<text x="122.0" y="216" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#DBEAFE" text-anchor="middle">Rol COORDINADOR</text>
+<text x="122.0" y="237" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#DBEAFE" text-anchor="middle">portal web</text>
+<rect x="222" y="104" width="180" height="146" rx="6" fill="#08427B" stroke="#08427B" stroke-width="1.5"/>
+<circle cx="312.0" cy="130" r="11" fill="#FFFFFF"/>
+<path d="M294.0,164 q0,-20 18,-20 q18,0 18,20 Z" fill="#FFFFFF"/>
+<text x="312.0" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#FFFFFF" text-anchor="middle">Evaluador de campo</text>
+<text x="312.0" y="216" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#DBEAFE" text-anchor="middle">Rol EVALUADOR</text>
+<text x="312.0" y="237" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#DBEAFE" text-anchor="middle">app de campo y portal</text>
+<rect x="412" y="104" width="180" height="146" rx="6" fill="#08427B" stroke="#08427B" stroke-width="1.5"/>
+<circle cx="502.0" cy="130" r="11" fill="#FFFFFF"/>
+<path d="M484.0,164 q0,-20 18,-20 q18,0 18,20 Z" fill="#FFFFFF"/>
+<text x="502.0" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#FFFFFF" text-anchor="middle">Consulta</text>
+<text x="502.0" y="216" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#DBEAFE" text-anchor="middle">Rol CONSULTA</text>
+<text x="502.0" y="237" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#DBEAFE" text-anchor="middle">portal web</text>
+<rect x="626" y="104" width="172" height="146" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<circle cx="712.0" cy="130" r="11" fill="#374151"/>
+<path d="M694.0,164 q0,-20 18,-20 q18,0 18,20 Z" fill="#374151"/>
+<text x="712.0" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">Ciudadano</text>
+<text x="712.0" y="216" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#374151" text-anchor="middle">sin sesión</text>
+<text x="712.0" y="237" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">consulta pública</text>
+<rect x="810" y="104" width="170" height="146" rx="6" fill="#D1D5DB" stroke="#374151" stroke-width="1.5"/>
+<text x="895" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">Sistemas que</text>
+<text x="895" y="172" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">no usan REST</text>
+<text x="895" y="200" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">inician sesión por</text>
+<text x="895" y="220" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">SOAP o EJB remoto</text>
+<rect x="330" y="440" width="340" height="200" rx="8" fill="#1D4ED8" stroke="#1E3A8A" stroke-width="1.5"/>
+<text x="500" y="496" font-family="Segoe UI, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#FFFFFF" text-anchor="middle">Plataforma para la Gestión</text>
+<text x="500" y="521" font-family="Segoe UI, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#FFFFFF" text-anchor="middle">de Desastres y Reconstrucción</text>
+<text x="500" y="566" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#DBEAFE" text-anchor="middle">registra y caracteriza desastres,</text>
+<text x="500" y="586" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#DBEAFE" text-anchor="middle">evalúa daños, gestiona la</text>
+<text x="500" y="606" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#DBEAFE" text-anchor="middle">reconstrucción y avisa</text>
+<polyline points="122,250 400,440" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#llena)"/>
+<polyline points="312,250 455,440" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#llena)"/>
+<polyline points="502,250 510,440" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#llena)"/>
+<polyline points="712,250 570,440" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<polyline points="895,250 640,440" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#llena)"/>
+<rect x="20" y="340" width="206" height="450" rx="6" fill="none" stroke="#6B7280" stroke-width="1.3" stroke-dasharray="7 5"/>
+<text x="32" y="362" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#374151" text-anchor="start">SE-01 Alerta temprana</text>
+<text x="32" y="384" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="start">envían eventos por</text>
+<text x="32" y="403" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="start">cola o webhook</text>
+<rect x="30" y="425" width="186" height="100" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="123.0" y="471.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-01a Sistemas de</text>
+<text x="123.0" y="491.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">alerta temprana</text>
+<rect x="30" y="545" width="186" height="100" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="123.0" y="591.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-01b Estaciones</text>
+<text x="123.0" y="611.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">meteorológicas</text>
+<rect x="30" y="665" width="186" height="100" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="123.0" y="711.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-01c Sensores</text>
+<text x="123.0" y="731.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">sísmicos</text>
+<polyline points="216,475 330,490" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<polyline points="216,595 330,545" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<polyline points="216,715 330,600" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<rect x="750" y="400" width="230" height="270" rx="6" fill="none" stroke="#6B7280" stroke-width="1.3" stroke-dasharray="7 5"/>
+<text x="762" y="422" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#374151" text-anchor="start">Información y</text>
+<text x="762" y="441" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#374151" text-anchor="start">comunicación</text>
+<rect x="762" y="450" width="206" height="105" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="865.0" y="488.5" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-02 Sistemas de</text>
+<text x="865.0" y="508.5" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">información geográfica</text>
+<text x="865.0" y="528.5" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">geometrías · REST</text>
+<rect x="762" y="565" width="206" height="95" rx="6" fill="#D1D5DB" stroke="#374151" stroke-width="1.5"/>
+<text x="865.0" y="588.5" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-08 Comunicación</text>
+<text x="865.0" y="608.5" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">y notificación</text>
+<text x="865.0" y="628.5" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">avisos y correo</text>
+<text x="865.0" y="648.5" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">cola y SMTP</text>
+<rect x="750" y="688" width="230" height="252" rx="6" fill="none" stroke="#6B7280" stroke-width="1.3" stroke-dasharray="7 5"/>
+<text x="762" y="710" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#374151" text-anchor="start">Gestión administrativa</text>
+<text x="762" y="729" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#374151" text-anchor="start">y obras</text>
+<rect x="762" y="734" width="206" height="96" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="865.0" y="758.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-06 Administrativos</text>
+<text x="865.0" y="778.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">y financieros</text>
+<text x="865.0" y="798.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">compromiso presupuestal</text>
+<text x="865.0" y="818.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">cola diferida</text>
+<rect x="762" y="840" width="206" height="92" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="865.0" y="862.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-07 Proyectos de</text>
+<text x="865.0" y="882.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">infraestructura</text>
+<text x="865.0" y="902.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">proyectos y avances</text>
+<text x="865.0" y="922.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">cola diferida</text>
+<polyline points="670,480 762,502" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<polyline points="670,540 762,612" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#llena)"/>
+<polyline points="670,598 762,782" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<polyline points="670,630 762,886" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<rect x="20" y="970" width="960" height="208" rx="6" fill="none" stroke="#6B7280" stroke-width="1.3" stroke-dasharray="7 5"/>
+<text x="32" y="1166" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#374151" text-anchor="start">Atención, recursos y personas</text>
+<rect x="34" y="990" width="296" height="146" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="182.0" y="1039.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-03 Hospitalarios</text>
+<text x="182.0" y="1059.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">avisa el desastre y recibe</text>
+<text x="182.0" y="1079.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">la capacidad disponible</text>
+<text x="182.0" y="1099.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">cola diferida; consulta cada 60 s</text>
+<rect x="352" y="990" width="296" height="146" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="500.0" y="1039.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-04 Gestión de recursos</text>
+<text x="500.0" y="1059.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">dueño de recursos y donaciones</text>
+<text x="500.0" y="1079.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">disponibilidad</text>
+<text x="500.0" y="1099.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">consulta cada 5 min</text>
+<rect x="670" y="990" width="296" height="146" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="818.0" y="1039.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">SE-05 Identificación y</text>
+<text x="818.0" y="1059.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">atención de personas</text>
+<text x="818.0" y="1079.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">dueño de los datos de personas</text>
+<text x="818.0" y="1099.0" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="italic" fill="#374151" text-anchor="middle">solo identificadores · REST y cola</text>
+<polyline points="420,640 182,990" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<polyline points="500,640 500,990" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<polyline points="600,640 760,990" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<text x="20" y="1208" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="start">Leyenda</text>
+<rect x="20" y="1224" width="34" height="20" rx="3" fill="#08427B" stroke="#08427B" stroke-width="1.5"/>
+<text x="64" y="1240" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">Persona con un rol</text>
+<rect x="500" y="1224" width="34" height="20" rx="3" fill="#1D4ED8" stroke="#1E3A8A" stroke-width="1.5"/>
+<text x="544" y="1240" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">Plataforma (construida)</text>
+<rect x="20" y="1254" width="34" height="20" rx="3" fill="#D1D5DB" stroke="#374151" stroke-width="1.5"/>
+<text x="64" y="1270" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">Externo con integración construida</text>
+<rect x="500" y="1254" width="34" height="20" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="544" y="1270" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">Externo o actor diseñado</text>
+<polyline points="20,1300 74,1300" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#llena)"/>
+<text x="84" y="1305" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">integración construida</text>
+<polyline points="500,1300 554,1300" fill="none" stroke="#374151" stroke-width="1.6" stroke-dasharray="8 6" marker-end="url(#llena)"/>
+<text x="564" y="1305" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">integración diseñada, sin adaptador</text>
+<text x="20" y="1326" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#374151" text-anchor="start">La flecha va en el sentido de la solicitud o del mensaje. El recuadro punteado agrupa sistemas afines.</text>
+</svg>

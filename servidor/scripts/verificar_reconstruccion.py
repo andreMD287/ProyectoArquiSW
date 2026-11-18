@@ -135,12 +135,22 @@ for _ in range(20):
  if pendientes()==0:break
  time.sleep(1)
 check(pendientes()==0,'la bandeja de salida quedó despachada')
-RABBIT={'Authorization':'Basic '+base64.b64encode((os.environ.get('RABBIT_USUARIO','taller')+':'+os.environ.get('RABBIT_CLAVE','taller-local')).encode()).decode(),'Content-Type':'application/json'}
+RABBIT_USUARIO=os.environ.get('RABBIT_USUARIO','taller')
+RABBIT_CLAVE=os.environ.get('RABBIT_CLAVE','taller-local')
+# RabbitMQ no publica puertos al host (R1-08): las colas se consultan y se publica dentro del contenedor.
 def cola(nombre):
- with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:15684/api/queues/%2F/'+nombre,headers=RABBIT),timeout=10) as r:return json.loads(r.read())
+ salida=subprocess.check_output(C+['exec','-T','rabbitmq','rabbitmqctl','list_queues','-q','--no-table-headers','name','messages'],text=True)
+ for linea in salida.splitlines():
+  partes=linea.split()
+  if len(partes)==2 and partes[0]==nombre:return {'messages':int(partes[1])}
+ return {}
 def publicar(texto):
- cuerpo=json.dumps({'properties':{'message_id':uid(),'content_type':'application/json'},'routing_key':'integracion.reconstruccion','payload':texto,'payload_encoding':'string'}).encode()
- with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:15684/api/exchanges/%2F/amq.default/publish',cuerpo,RABBIT,method='POST'),timeout=10) as r:return json.loads(r.read()).get('routed')
+ propiedades=json.dumps({'message_id':uid(),'content_type':'application/json'})
+ r=subprocess.run(C+['exec','-T','rabbitmq','rabbitmqadmin','--non-interactive','--username',RABBIT_USUARIO,'--password',RABBIT_CLAVE,
+   'publish','message','--routing-key','integracion.reconstruccion','--payload-file','-','--properties',propiedades],
+   input=texto,capture_output=True,text=True,encoding='utf-8')
+ if r.returncode!=0:return None
+ return 'routed' in r.stdout.lower() and 'not routed' not in r.stdout.lower() and 'false' not in r.stdout.lower()
 def correos(asunto):
  # Mailpit busca por palabras: se busca por la última palabra del asunto (única por prueba) y se cuenta el asunto exacto.
  clave=asunto.replace('(',' ').replace(')',' ').split()[-1]

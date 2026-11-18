@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1790" height="1460" viewBox="0 0 1790 1460">
+<defs><marker id="abierta" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M1,1 L11,6 L1,11" fill="none" stroke="#374151" stroke-width="1.5"/></marker><marker id="triangulo" viewBox="0 0 16 16" refX="15" refY="8" markerWidth="16" markerHeight="16" orient="auto"><path d="M1,1 L15,8 L1,15 Z" fill="#FFFFFF" stroke="#374151" stroke-width="1.5"/></marker></defs>
+<rect width="1790" height="1460" fill="#FFFFFF"/>
+<text x="895.0" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">Casos de uso de los mínimos del proyecto (a–d)</text>
+<rect x="250" y="62" width="1320" height="1240" fill="none" stroke="#1E3A8A" stroke-width="2.2"/>
+<text x="910" y="88" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">Plataforma para la Gestión de Desastres y Reconstrucción</text>
+<rect x="280" y="104" width="1260" height="218" rx="6" fill="none" stroke="#374151" stroke-width="1.6"/>
+<text x="294" y="128" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="start">a. App móvil que recolecta y caracteriza</text>
+<rect x="280" y="392" width="600" height="586" rx="6" fill="none" stroke="#374151" stroke-width="1.6"/>
+<text x="294" y="416" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="start">b. Reconstrucción física</text>
+<rect x="930" y="392" width="610" height="400" rx="6" fill="none" stroke="#374151" stroke-width="1.6"/>
+<text x="944" y="416" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="start">d. Evaluación de daños</text>
+<rect x="280" y="1084" width="1260" height="202" rx="6" fill="none" stroke="#374151" stroke-width="1.6"/>
+<text x="294" y="1108" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#111827" text-anchor="start">c. Mapa con desastres, evaluaciones y proyectos</text>
+<ellipse cx="560" cy="214" rx="155" ry="34" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="560" y="210.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Caracterizar el desastre</text>
+<text x="560" y="228.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">(también sin conexión)</text>
+<ellipse cx="1300" cy="172" rx="120" ry="24" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="1300" y="177.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Sincronizar capturas</text>
+<ellipse cx="1300" cy="272" rx="118" ry="30" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="1300" y="268.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Resolver conflicto</text>
+<text x="1300" y="286.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">de versión</text>
+<ellipse cx="420" cy="354" rx="112" ry="22" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="420" y="359.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Registrar desastre</text>
+<ellipse cx="580" cy="482" rx="195" ry="44" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="580" y="469.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Registrar avance, costo</text>
+<text x="580" y="487.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">y evidencia</text>
+<text x="580" y="505.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">[RN-21: solo el responsable asignado]</text>
+<ellipse cx="580" cy="580" rx="150" ry="32" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="580" y="576.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Iniciar reconstrucción</text>
+<text x="580" y="594.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">[RN-01, RN-02]</text>
+<ellipse cx="580" cy="664" rx="150" ry="32" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="580" y="660.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Formular proyectos</text>
+<text x="580" y="678.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">desde evaluaciones</text>
+<ellipse cx="580" cy="748" rx="180" ry="32" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="580" y="744.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Aprobar proyecto</text>
+<text x="580" y="762.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">[RN-20: no quien lo formuló]</text>
+<ellipse cx="580" cy="832" rx="150" ry="32" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="580" y="828.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Cerrar el desastre</text>
+<text x="580" y="846.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">[RN-04]</text>
+<ellipse cx="580" cy="920" rx="150" ry="32" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="580" y="916.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Consultar seguimiento</text>
+<text x="580" y="934.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">y auditoría</text>
+<ellipse cx="1235" cy="472" rx="175" ry="34" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="1235" y="468.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Registrar evaluación de daños</text>
+<text x="1235" y="486.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">(también sin conexión)</text>
+<ellipse cx="1060" cy="604" rx="100" ry="24" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="1060" y="609.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Adjuntar fotografía</text>
+<ellipse cx="1405" cy="604" rx="115" ry="24" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="1405" y="609.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Elegir tipo de activo</text>
+<ellipse cx="1100" cy="736" rx="125" ry="24" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="1100" y="741.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Consultar evaluaciones</text>
+<ellipse cx="432" cy="1242" rx="132" ry="24" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="432" y="1247.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Consultar mapa general</text>
+<ellipse cx="724" cy="1242" rx="140" ry="30" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="724" y="1238.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Consultar tablero</text>
+<text x="724" y="1256.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">del desastre</text>
+<ellipse cx="578" cy="1150" rx="112" ry="24" fill="#EFF6FF" stroke="#1E3A8A" stroke-width="1.4"/>
+<text x="578" y="1155.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="middle">Visualizar panorama</text>
+<circle cx="110" cy="413" r="13" fill="#DBEAFE" stroke="#1E3A8A" stroke-width="2"/>
+<line x1="110" y1="426" x2="110" y2="462" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="88" y1="440" x2="132" y2="440" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="110" y1="462" x2="93" y2="490" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="110" y1="462" x2="127" y2="490" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<text x="110" y="512" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">COORDINADOR</text>
+<circle cx="1700" cy="331" r="13" fill="#DBEAFE" stroke="#1E3A8A" stroke-width="2"/>
+<line x1="1700" y1="344" x2="1700" y2="380" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="1678" y1="358" x2="1722" y2="358" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="1700" y1="380" x2="1683" y2="408" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="1700" y1="380" x2="1717" y2="408" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<text x="1700" y="430" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">EVALUADOR</text>
+<circle cx="110" cy="893" r="13" fill="#DBEAFE" stroke="#1E3A8A" stroke-width="2"/>
+<line x1="110" y1="906" x2="110" y2="942" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="88" y1="920" x2="132" y2="920" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="110" y1="942" x2="93" y2="970" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="110" y1="942" x2="127" y2="970" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<text x="110" y="992" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="normal" fill="#111827" text-anchor="middle">CONSULTA</text>
+<circle cx="910" cy="1335" r="13" fill="#DBEAFE" stroke="#1E3A8A" stroke-width="2"/>
+<line x1="910" y1="1348" x2="910" y2="1384" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="888" y1="1362" x2="932" y2="1362" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="910" y1="1384" x2="893" y2="1412" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<line x1="910" y1="1384" x2="927" y2="1412" stroke="#1E3A8A" stroke-width="2" fill="none"/>
+<text x="910" y="1434" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="bold" font-style="italic" fill="#111827" text-anchor="middle">Usuario del organismo</text>
+<polyline points="136,444 308,354" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="136,444 405,214" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="136,444 430,580" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="136,444 430,664" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="136,444 400,748" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="136,444 430,832" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="136,444 430,920" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="136,924 430,920" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="1688,326 1420,172" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="1690,398 1410,472" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="1678,356 652,356 595.4,247.1" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="1678,372 742,372 618.4,438.9" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="890,1342 520,1300 467.1,1265.1" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="892,1330 864,1242" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="910,1320 910,736 975.0,736.0" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="1300.0,242.0 1300.0,196.0" fill="none" stroke="#374151" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#abierta)"/>
+<text x="1288" y="214" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" font-style="normal" fill="#111827" text-anchor="end">«extend»</text>
+<text x="1288" y="230" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" font-style="normal" fill="#111827" text-anchor="end">[respuesta 409]</text>
+<polyline points="1277.5,505.0 1375.2,580.8" fill="none" stroke="#374151" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#abierta)"/>
+<text x="1356" y="548" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">«include»</text>
+<polyline points="1090.3,581.1 1191.3,504.9" fill="none" stroke="#374151" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#abierta)"/>
+<text x="1124" y="548" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" font-style="normal" fill="#111827" text-anchor="end">«extend»</text>
+<polyline points="468.6,1218.9 541.9,1172.7" fill="none" stroke="#374151" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#abierta)"/>
+<text x="470" y="1196" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" font-style="normal" fill="#111827" text-anchor="end">«include»</text>
+<polyline points="678.9,1213.6 614.1,1172.7" fill="none" stroke="#374151" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#abierta)"/>
+<text x="688" y="1196" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">«include»</text>
+<polyline points="86,444 52,444 52,1368 110,1368" fill="none" stroke="#374151" stroke-width="1.5"/>
+<polyline points="110,1000 110,1368 884,1368" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#triangulo)"/>
+<polyline points="1700,442 1700,1368 936,1368" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#triangulo)"/>
+<path d="M990,1112 h500 v152 h-500 Z" fill="#FFFBEB" stroke="#6B7280" stroke-width="1.2"/>
+<text x="1006" y="1140" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">Entre corchetes: reglas de negocio del SAD (RN-01 a RN-21).</text>
+<text x="1006" y="1165" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">Solo funciones construidas. La validación de evaluaciones</text>
+<text x="1006" y="1190" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">está diseñada y por eso no aparece.</text>
+<text x="1006" y="1215" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">Usuario del organismo es abstracto: el coordinador, el</text>
+<text x="1006" y="1240" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#111827" text-anchor="start">evaluador y la consulta heredan sus casos de uso.</text>
+</svg>

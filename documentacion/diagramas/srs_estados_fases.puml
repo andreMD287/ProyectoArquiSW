@@ -1,0 +1,40 @@
+@startuml srs_estados_fases
+' Máquina de estados de las fases del desastre. Transiciones tomadas del SAD §5 (tabla de fases)
+' y del núcleo (RegistroIntegrado.FASES y exigeReconstruccion). Notación: evento [condición] / quién.
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam ArrowColor #374151
+skinparam ArrowFontSize 12
+skinparam state {
+  BackgroundColor #EFF6FF
+  BorderColor #1E3A8A
+  FontStyle bold
+  AttributeFontSize 12
+  AttributeFontStyle normal
+}
+skinparam noteBackgroundColor #FFFBEB
+skinparam noteBorderColor #6B7280
+hide empty description
+title Fases del desastre (máquina de estados)
+
+state "REGISTRO" as REG
+state "CARACTERIZACIÓN" as CAR
+state "RECONSTRUCCIÓN" as REC
+state "CIERRE" as CIE
+
+CAR : caracterizar [versión vigente] /\n  actualiza ubicación, radio y nivel
+REC : caracterizar [versión vigente] /\n  actualiza ubicación, radio y nivel
+CIE : sin transiciones de salida (RN-05)
+
+[*] --> REG : registrar desastre\n(COORDINADOR)
+REG --> CAR : caracterizar [primera caracterización\nválida y versión vigente]\n(COORDINADOR o EVALUADOR)\n o cambiar fase [motivo] (COORDINADOR)
+CAR --> REC : iniciar reconstrucción\n[RN-01, RN-02: al menos una evaluación\nvalidada con daño moderado o superior]\n(solo el módulo de Reconstrucción)
+REC --> CIE : cerrar desastre\n[RN-04: ningún proyecto sin\nfinalizar ni cancelar]\n(solo el módulo de Reconstrucción)
+REG -right-> CIE : cerrar con motivo [RN-03]\n(COORDINADOR; p. ej. falsa alarma)
+CAR -right-> CIE : cerrar con motivo [RN-03]\n(COORDINADOR)
+CIE --> [*]
+
+note "Todo cambio de fase exige motivo y la versión vigente;\nqueda en el historial con autor, valor anterior y nuevo.\nSi un coordinador pide por la API una transición que\ndepende de RN-01, RN-02 o RN-04, el núcleo la rechaza." as N1
+@enduml

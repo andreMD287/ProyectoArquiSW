@@ -8,16 +8,6 @@
 
 **Pontificia Universidad Javeriana** · Arquitectura de Software
 
-## Control de versiones
-
-| Versión | Fecha | Cambios |
-| --- | --- | --- |
-| Primera entrega | 19-sep-2026 | Primera evaluación. Observación del profesor: «Mejorar todo el documento» |
-| 1.0 | Nov-2026 | Nueve pasos, árbol de utilidad, diez análisis y riesgos sobre el SAD v1.0. Su evidencia es anterior al código actual |
-| 2.0 | 18-nov-2026 | Estructura del informe del SEI. Evalúa el SAD v2.2. Cada resultado dice si está medido, con su evidencia, o solo diseñado. Agrega Reconstrucción, el tablero multihilo y la presentación en .NET |
-
-**Convención de estado.** *Medido*: hay un registro de una prueba o medición (ver «Anexo. Registro de evidencias»). *Diseñado, sin evidencia*: decidido y razonado, sin código o sin prueba. *Parcial*: una parte medida y otra diseñada.
-
 ## Resumen ejecutivo
 
 **Qué y cómo.** Se evaluó la arquitectura del SAD v2.2 (17-nov-2026), construida y diseñada, con los nueve pasos del ATAM (Kazman, Klein y Clements, 2000), en una evaluación interna del equipo, sobre once grupos de escenarios.
@@ -408,7 +398,7 @@ Antes y después, p95 paralelo / secuencial (E2):
 | ADR-27: hasta 20 mensajes por cola y ciclo; deduplicación | PS-05 | TO-19 | R-16 | — |
 | ADR-22: entregas en base (diseñado; hoy archivos) | — | — | R-15 | — |
 
-**Razonamiento.** El presupuesto del SAD (escenario A, inicio de una emergencia) suma 3,7 s (guardar con réplica, bandeja, entrega, consumo y correo) y deja 1,3 s de margen. Con un mensaje por segundo por cola, la décima alerta simultánea esperaba unos 10 s; ahora el procesador toma hasta 20 por ciclo, así que 10 caben en uno. Está en el código, sin medir. Diagrama: Figura 6 del SAD.
+**Razonamiento.** El presupuesto del SAD («Escenario A: inicio de una emergencia») suma 3,7 s (guardar con réplica, bandeja, entrega, consumo y correo) y deja 1,3 s de margen. Con un mensaje por segundo por cola, la décima alerta simultánea esperaba unos 10 s; ahora el procesador toma hasta 20 por ciclo, así que 10 caben en uno. Está en el código, sin medir. Diagrama: Figura 6 del SAD.
 
 **Evidencia.** *Medido con el código del 11-nov* (ciclo de 5 s): 2,7 s al registrar y 3,2 s al cambiar el nivel, con avisos aislados (E5). *Medido el 17-nov, sin tiempos:* la cadena hasta el correo y la entrega tras detener RabbitMQ. *Diseñado, sin evidencia:* 10 simultáneas.
 
@@ -449,7 +439,7 @@ Antes y después, p95 paralelo / secuencial (E2):
 | ADR-09 y ADR-16: conmutación en 5 min; monitoreo | PS-03 | — | R-18 | — |
 | ADR-11: lo crítico separado de lo degradable | — | TO-02 | R-10, R-15, R-23 | NR-11 |
 
-**Razonamiento.** Con centros al 99,5 % e independientes, al menos dos de tres están arriba el 99,9925 % del tiempo: unos 3 min de caída al mes. Es ilustrativo (SAD, «Despliegue objetivo»): software, red, operación y conmutación (5 min presupuestados) deben caber en los 18 min restantes. Además, notificaciones y el portal aún no corren con varias instancias, y la promoción del primario no existe.
+**Razonamiento.** Con centros al 99,5 % e independientes, al menos dos de tres están arriba el 99,9925 % del tiempo: unos 3 min de caída al mes. Es ilustrativo (SAD, «Despliegue objetivo: tres centros de datos (diseñado)»): software, red, operación y conmutación (5 min presupuestados) deben caber en los 18 min restantes. Además, notificaciones y el portal aún no corren con varias instancias, y la promoción del primario no existe.
 
 **Evidencia.** *Medido, indirecto:* separación de lo degradable (AN-02) y durabilidad tras reiniciar (registro del 17-nov). *Diseñado, sin evidencia:* tres centros, réplica, conmutación y 99,95 %.
 

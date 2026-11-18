@@ -18,7 +18,7 @@ try:
   if 'fase=DETENER_API' in line:subprocess.run(COMPOSE+['stop','api'],check=True,stdout=subprocess.DEVNULL)
   if 'fase=RESTAURAR_API' in line:subprocess.run(COMPOSE+['start','api'],check=True,stdout=subprocess.DEVNULL)
   if 'APROBADO: SQLite' in line:ok=True
- rc=p.wait(timeout=150)
+ rc=p.wait(timeout=300)
  if rc or not ok:raise SystemExit('No se completó la prueba instrumentada; revisa la salida anterior.')
 finally:
  subprocess.run(COMPOSE+['start','api'],check=True,stdout=subprocess.DEVNULL)

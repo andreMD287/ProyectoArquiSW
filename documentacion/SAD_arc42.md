@@ -728,7 +728,7 @@ Cada cola tiene su `<cola>.reintento`, que devuelve el mensaje a los 5 s, y su `
 - Sin conexión se captura y se corrige. Cada operación lleva un identificador del dispositivo y la versión base (ADR-04). Ante un conflicto, el evaluador elige y su decisión es una operación nueva.
 - El dispositivo no borra una captura hasta la confirmación. Revocar la sesión de un dispositivo perdido impide sincronizar, pero no borra lo guardado; por eso solo guarda catálogos y capturas del propio usuario. **Limitación:** el SQLite no va cifrado.
 - La app trata el 401 aparte de la falta de red, porque un evaluador puede pasar más de 8 horas sin señal: avisa que la sesión venció, conserva lo pendiente y no reintenta hasta un nuevo inicio de sesión. También elige el tipo de activo del catálogo descargado (C1) sin perder el texto libre, y caracteriza el desastre sin conexión (C2). Ante un 409, la caracterización queda en conflicto hasta que el evaluador decide.
-- **Evidencia:** `verificar_android_instrumentado.py` ejecuta los métodos reales del APK con desconexión real, persistencia, conflicto y resolución, C1, C2, el 409 y el 401. El 17-nov pasó con 30 comprobaciones en un celular real (Samsung SM-A155M, Android 16). El registro y 18 capturas de la interfaz están en `evidencias/rol2-campo/`.
+- **Evidencia:** `verificar_android_instrumentado.py` ejecuta los métodos reales del APK con desconexión real, persistencia, conflicto y resolución, C1, C2, el 409 y el 401. El 17-nov pasó con 33 comprobaciones en un celular real (Samsung SM-A155M, Android 16), incluido cerrar sesión con la sesión vencida. El registro y 18 capturas de la interfaz están en `evidencias/rol2-campo/`.
 
 ### 8.6 Concurrencia y consistencia
 
@@ -1091,7 +1091,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Tokens de sesión del portal en memoria | Varias instancias exigen afinidad; un reinicio del portal pide entrar de nuevo | Abierto | Afinidad en la entrada o almacén compartido (por ejemplo, Redis) |
 | Sin pruebas de carga de 10.000 usuarios ni de 500 equipos con fotos | Metas de escala sin evidencia | Abierto | Prueba con red real |
 | Validación de evaluaciones sin código | Reconstrucción toma como validada una evaluación vinculada a un desastre | Abierto | Validación por un coordinador distinto |
-| Con la sesión vencida, «Cerrar sesión» en la app falla con un mensaje de falta de conexión | El evaluador no puede cerrar sesión hasta entrar de nuevo; no se pierde nada | Abierto (hallazgo de la prueba en un celular real) | Borrar la sesión local sin llamar al servidor cuando ya venció |
+| Con la sesión vencida, «Cerrar sesión» en la app falla con un mensaje de falta de conexión | El evaluador no puede cerrar sesión hasta entrar de nuevo; no se pierde nada | Cerrado: corregido en `1a26bd3` y verificado en un celular real | Con la sesión vencida, se borra la sesión local sin llamar al servidor |
 | Un cambio de fase del coordinador no emite aviso | Los organismos no se enteran de un cierre directo | Abierto | Emitirlo desde la bandeja de salida |
 | Sin TLS ni cifrado en reposo; puertos de prueba en 127.0.0.1 | Datos en claro dentro de la máquina | Aceptado para el laboratorio | Despliegue objetivo; cerrar el puerto del núcleo tras C2 |
 | Catálogos fijos; consolidación, dos fechas, coordinación y auditoría consolidada sin código | QA-MOD-01, QA-CNF-02 y QA-TRZ-02 solo en diseño | Abierto | ADR-05, 06, 08, 19 y 20 |

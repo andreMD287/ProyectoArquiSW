@@ -32,7 +32,7 @@ Resultaron 17 puntos de sensibilidad, 19 trade-offs, 31 riesgos y 16 no-riesgos 
 
 **Hallazgos principales.**
 
-1. `./verificar.sh` pasó con 271 comprobaciones el 17-nov (`evidencias/rol1-build/2026-11-17_verificar_final.log`): 87 de Reconstrucción, 47 del portal, 32 de caracterización y tipos de activo, 10 de seguridad, entre otras. En un celular real (Samsung SM-A155M, Android 16), la prueba instrumentada de la app pasó 30 comprobaciones de C1, C2, 409 y 401 (`evidencias/rol2-campo/`).
+1. `./verificar.sh` pasó con 271 comprobaciones el 17-nov (`evidencias/rol1-build/2026-11-17_verificar_final.log`): 87 de Reconstrucción, 47 del portal, 32 de caracterización y tipos de activo, 10 de seguridad, entre otras. En un celular real (Samsung SM-A155M, Android 16), la prueba instrumentada de la app pasó 33 comprobaciones de C1, C2, 409 y 401, incluido cerrar sesión con la sesión vencida (`evidencias/rol2-campo/`).
 2. El tablero cumple la meta de consulta en una máquina: p95 de 50 ms con 1 cliente y de 366 ms con 20. Con Reconstrucción congelada, 60 de 60 respuestas fueron parciales (p95 de 1.528 ms).
 3. Trade-off medido: el paralelo gana con 1 cliente (p95 de 50 frente a 64 ms), pero no con 20 en una máquina (366 frente a 355 ms). El salto del portal al servicio de tablero cuesta unos 6 ms de p95 con 1 cliente.
 4. La disponibilidad del 99,95 % y la escala (10.000 usuarios, 500 equipos con fotos) solo tienen sustento de diseño.
@@ -285,7 +285,7 @@ Antes y después, p95 paralelo / secuencial (archivos en `evidencias/rol1-tabler
 
 - *Medido en el servidor* (registro del 17-nov). `verificar_evolucion.py`: una propuesta sobre una versión vieja queda en conflicto, no sobrescribe y se reenvía tras resolver. `verificar_unificacion.py`: un reintento idéntico no duplica, la foto llega con su captura y la identidad sale del token. `verificar_caracterizacion.py` (32): `servidor` reenvía la caracterización (C2) sin convertir un 409 en éxito y acepta tipos de activo válidos, desconocidos o ausentes (C1) sin romper la idempotencia del lote.
 - *Medido en la app, integración anterior.* `evidencias/evolucion-android-instrumentacion.log`: prueba en el emulador con SQLite, desconexión real, conflicto y resolución; APROBADO. Capturas: `evidencias/android-guardado-offline.png` y `android-sincronizado.png`. Es anterior a los cambios de esta semana.
-- *Medido en un celular real* (17-nov; Samsung SM-A155M con Android 16; la app de la rama `rol2/campo-caracterizacion`). `evidencias/rol2-campo/2026-11-17_android_instrumentado_SM-A155M.log` registra 30 comprobaciones aprobadas con los métodos reales del APK:
+- *Medido en un celular real* (17-nov; Samsung SM-A155M con Android 16; la app de la rama `rol2/campo-caracterizacion`). `evidencias/rol2-campo/2026-11-17_android_instrumentado_SM-A155M_1a26bd3.log` registra 33 comprobaciones aprobadas con los métodos reales del APK (commit `1a26bd3`):
   - **C2 sin conexión:** la caracterización persiste al reabrir SQLite y sigue pendiente mientras el servidor está caído. Al volver la red, el desastre queda en fase Caracterización con su ubicación, su radio y su nivel.
   - **C1:** el catálogo de tipos de activo baja a SQLite, y la evaluación llega con su código y con el texto libre.
   - **409:** una caracterización sobre una versión vieja queda en conflicto VERSION_DESACTUALIZADA y el servidor no cambia. Se resuelve solo por decisión explícita, como una operación nueva.
@@ -294,7 +294,7 @@ Antes y después, p95 paralelo / secuencial (archivos en `evidencias/rol1-tabler
 - *Diseñado, sin evidencia.*
   - La prueba con 100 capturas seguidas y en modo avión. En el celular se cortó el enlace con el servidor, no la radio.
   - El cifrado del SQLite: no está hecho (R-07).
-- *Hallazgo de la prueba.* Con la sesión vencida, «Cerrar sesión» falla con un mensaje de falta de conexión (captura 17). Iniciar sesión otra vez sí funciona, así que no se pierde nada. La corrección quedó pedida en la rama de la app.
+- *Hallazgo de la prueba, corregido.* En la primera prueba (`cae6039`), con la sesión vencida, «Cerrar sesión» fallaba con un mensaje de falta de conexión (captura 17), y la app traía por defecto un puerto distinto al del túnel. El commit `1a26bd3` corrige ambas cosas. Se volvió a probar en el celular: cerrar sesión con la sesión vencida limpia la sesión local sin error, lo pendiente sigue en SQLite y se sincroniza al entrar de nuevo, y una instalación limpia trae `http://127.0.0.1:8084` (capturas 19 a 23).
 
 **Resultado.** Parcial: la reconciliación está medida en el servidor y en la app sobre un celular real, incluidos C1, C2, el 409 y el 401. Faltan la prueba de 100 capturas y el cifrado del SQLite.
 

@@ -242,7 +242,7 @@ De Sahana Eden, analizada en el SRS, se toman la plataforma web como punto comú
 | UD-03 | Campo y mapas (servidor) | ASP.NET Core 10 | SRV-05 evaluaciones; SRV-06 fotos; mapa; copia del catálogo de desastres; API de la app | Base propia | Crítica | Construida; validación y duplicados diseñados |
 | UD-04 | Notificaciones (desastres) | Java 17, Jakarta EE, Payara 6 | SRV-04: cola por suscriptor, correo, registro de entregas; entrada de alertas | Registro de entregas y bandeja de entrada (archivos) | Crítica | Construida, con consumo de los avisos de Reconstrucción (ADR-27) |
 | UD-05 | Personas afectadas | — | SRV-07 | — | — | Retirada (ADR-28) |
-| UD-06 | Reconstrucción (reconstruccion) | Java 17, Spring Boot 3.3, REST y gRPC | SRV-09: proyectos de reconstrucción física; RN-01 a RN-21 | Base propia | Degradable | Construida |
+| UD-06 | Reconstrucción | Java 17, Spring Boot 3.3, REST y gRPC | SRV-09: proyectos de reconstrucción física; RN-01 a RN-21 | Base propia | Degradable | Construida |
 | UD-07 | Consulta pública | ASP.NET Core | SRV-10: copia pública de solo lectura | Copia derivada | Degradable | Diseñada |
 | UD-08 | Integración | Jakarta EE, RabbitMQ | SRV-11: un adaptador por sistema externo | Pendientes | Según adaptador | Diseñada |
 | UD-09 | Portal web (portal) | ASP.NET Core 10, Razor Pages | Única interfaz web; consume los demás servicios | Tokens de sesión en memoria | Crítica | Construida |

@@ -1,0 +1,81 @@
+Fecha: 2026-11-17 19:59:26 -0500
+Dispositivo: SM-A155M · Android 16 · serie R58X…
+App: rama rol2/campo-caracterizacion (cae6039) + casos C1, C2, 409 y 401 (rama pruebas-android), variante -p:PruebasCampo=true
+
+INSTRUMENTATION_STATUS: fase=OK: migración conserva capturas de una copia de la base anterior
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: login real del APK
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: C1: los tipos de activo del servidor quedan en SQLite (9)
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: captura Android sincronizada
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: C1: el servidor guarda el tipo PUENTE y conserva el texto libre «Puente La Esperanza»
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: C1: una captura sin tipo elegido queda como OTRO
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=DETENER_API
+ Container arqui-integracion-api-1 Stopping 
+ Container arqui-integracion-api-1 Stopped 
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: servidor desconectado de verdad
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: corrección persiste al reabrir SQLite sin conexión
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: C2: la caracterización sin conexión persiste al reabrir SQLite (base v0)
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: fallo de red conserva propuesta pendiente
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: C2: el fallo de red conserva la caracterización pendiente
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: la falta de red no se confunde con sesión vencida
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=RESTAURAR_API
+ Container arqui-integracion-db-1 Waiting 
+ Container arqui-integracion-db-1 Healthy 
+ Container arqui-integracion-api-1 Starting 
+ Container arqui-integracion-api-1 Started 
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: conexión restaurada
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: conflicto conserva servidor y propuesta local
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: C2: al volver la red la caracterización se sincroniza
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: C2: el servidor muestra fase CARACTERIZACION, v1, ubicación, radio 3,5 km y nivel 2
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: versión remota identificada
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: resolución sincronizada como nueva versión
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: captura original local inmutable
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 409: la caracterización sobre v0 queda en conflicto VERSION_DESACTUALIZADA (servidor en v1)
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 409: el servidor no se sobrescribe (sigue en radio 3,5 km)
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 409: la propuesta local se conserva intacta
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 409: la decisión explícita crea una operación nueva y archiva la anterior
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 409: la versión resuelta llega al servidor (v2, radio 7 km)
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 401: la app marca la sesión vencida, distinta de la falta de red
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 401: la evaluación y la caracterización pendientes siguen en SQLite
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 401: no se reintenta con el token vencido hasta iniciar sesión otra vez
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 401: nuevo inicio de sesión
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: 401: tras iniciar sesión otra vez se sincroniza lo pendiente, sin pérdida
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: fase=OK: logout del APK
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=APROBADO: SQLite, login, desconexión real, resolución de conflictos, tipo de activo (C1), caracterización (C2), 409 y 401 en Android
+
+INSTRUMENTATION_CODE: -1
+ Container arqui-integracion-db-1 Waiting 
+ Container arqui-integracion-db-1 Healthy 
+RESULTADO ANDROID: APROBADO
+código de salida: 0

@@ -111,7 +111,7 @@ El profesor y los evaluadores esperan decisiones justificadas y evidencia; los c
 - Se entrega un ambiente de una máquina con Docker Compose («Ambiente entregado: Docker Compose en una máquina»). Los tres centros de datos quedan diseñados («Despliegue objetivo: tres centros de datos (diseñado)»).
 - Plantilla arc42 y diagramas C4: azul sólido es construido; gris con borde punteado, diseñado.
 - Se conservan los identificadores del SRS y de la versión 1.0 (RF, QA, CON, SE, UD, ADR). RN-01 a RN-21 son las reglas de negocio de Reconstrucción.
-- Los nombres en monoespaciado (nucleo, servidor, desastres, campo, reconstruccion, portal, tablero) son carpetas de código y contenedores.
+- Cada unidad de despliegue lleva el nombre de su contenedor: núcleo (UD-02), servidor (UD-03), Reconstrucción (UD-06), portal (UD-09) y servicio de tablero (UD-10).
 
 ## Contexto y alcance
 

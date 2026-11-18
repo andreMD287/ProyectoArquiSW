@@ -8,16 +8,6 @@
 
 **Pontificia Universidad Javeriana** · Arquitectura de Software
 
-## Control de versiones
-
-| Versión | Fecha | Cambios |
-| --- | --- | --- |
-| Primera entrega | 19-sep-2026 | Diseño inicial: un núcleo con tres satélites |
-| 1.0 | 10-nov-2026 | Ocho unidades de despliegue, vistas 4+1 y 22 decisiones. Responde al SRS v1.0 |
-| 2.0 | 15-nov-2026 | Reorganizado según arc42. Agrega el portal web MVC (UD-09) con su servlet multihilo y registra Reconstrucción (UD-06) como construida en Spring Boot con REST y gRPC. Retira UD-05. Adopta las cuatro fases del desastre. Agrega ADR-23 a ADR-29. Separa el ambiente entregado del despliegue objetivo |
-| 2.1 | 17-nov-2026 | Toda la presentación pasa a .NET, por aclaración del profesor: el portal se rehace en ASP.NET Core Razor Pages (ADR-23) y el servlet multihilo queda en un servicio de tablero en Java, UD-10, que el portal consume (ADR-24) |
-| 2.2 | 17-nov-2026 | C1 y C2 construidos en servidor y en la app, que también trata aparte la sesión vencida; la app se probó en un celular real; consumo de los avisos de Reconstrucción en notificaciones (ADR-27); textos de ADR-25 y ADR-27 |
-
 ## Cómo se cubren las vistas 4+1 y los entregables del enunciado
 
 | Vista o entregable | Sección |

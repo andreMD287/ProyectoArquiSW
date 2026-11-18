@@ -2,7 +2,7 @@
 
 Código unificado de la plataforma: núcleo de identidad y desastres (Jakarta EE), evaluaciones de campo y mapas (.NET), captura sin conexión (.NET MAUI), notificaciones (Taller 3, RabbitMQ), Reconstrucción física (Spring Boot, REST y gRPC), el **portal web** (ASP.NET Core Razor Pages), que es la única interfaz web, y el **servicio de tablero** (Java), con el servlet asíncrono multihilo que arma el tablero de un desastre.
 
-Estado al 17 de noviembre de 2026: todo compila y `./verificar.sh` pasa completo (271 comprobaciones, registro en `evidencias/rol1-build/2026-11-17_verificar_final.log`). Incluye el portal en .NET, C1 y C2 en `servidor` y el consumo de los avisos de Reconstrucción en notificaciones. La arquitectura está en `documentacion/SAD_arc42.md` (v2.2).
+Estado al 17 de noviembre de 2026: todo compila y `./verificar.sh` pasa completo (271 comprobaciones, registro en `evidencias/rol1-build/2026-11-17_verificar_final.log`). Incluye el portal en .NET, C1 y C2 en `servidor` y en la app, el consumo de los avisos de Reconstrucción en notificaciones y la app probada en un celular real (`evidencias/rol2-campo/`). La arquitectura está en `documentacion/SAD_arc42.md` (v2.2).
 
 ## Ejecutar
 
@@ -127,6 +127,6 @@ La API Java original de afectaciones sigue disponible como parte del trabajo del
 
 ## Prueba Android instrumentada
 
-Se ejecutaron los métodos reales del APK en el emulador de Android Studio, sin automatizar clics. La variante de prueba se compila con `-p:PruebasCampo=true`; tras instalarla, ejecutar `python3 servidor/scripts/verificar_android_instrumentado.py`. El script usa ADB del PATH o la variable ADB, y ANDROID_SERIAL (emulator-5554 por defecto). Detiene brevemente solo la API y la restablece al terminar: no ejecutarlo durante una demostración concurrente.
+Se ejecutaron los métodos reales del APK, sin automatizar clics, primero en el emulador de Android Studio. El 17-nov se ejecutaron también en un celular real (Samsung SM-A155M, Android 16) con los casos de C1, C2, 409 y 401, y pasaron 30 comprobaciones. Además se tomaron 18 capturas de la interfaz; todo está en `evidencias/rol2-campo/`. La variante de prueba se compila con `-p:PruebasCampo=true`; tras instalarla, ejecutar `python3 servidor/scripts/verificar_android_instrumentado.py`. El script usa ADB del PATH o la variable ADB, y ANDROID_SERIAL (emulator-5554 por defecto). Detiene brevemente solo la API y la restablece al terminar: no ejecutarlo durante una demostración concurrente.
 
 Usa una base SQLite aislada, prueba la migración sobre una copia de la base anterior y restaura la sesión previamente guardada. Crea datos sintéticos en el servidor. Verifica desconexión real, persistencia, conflicto y resolución. Después se reinstala **Arqui-Campo-integrada.apk**, que es la versión 0.4.0 normal y no contiene el ejecutor de pruebas. La prueba instrumentada no se presenta como una prueba manual completa de cada pantalla ni de cámara/GPS físicos.

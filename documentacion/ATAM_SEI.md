@@ -32,11 +32,11 @@ Resultaron 17 puntos de sensibilidad, 19 trade-offs, 31 riesgos y 16 no-riesgos 
 
 **Hallazgos principales.**
 
-1. `./verificar.sh` pasó con 271 comprobaciones el 17-nov (`evidencias/rol1-build/2026-11-17_verificar_final.log`): 87 de Reconstrucción, 47 del portal, 32 de caracterización y tipos de activo, 10 de seguridad, entre otras.
+1. `./verificar.sh` pasó con 271 comprobaciones el 17-nov (`evidencias/rol1-build/2026-11-17_verificar_final.log`): 87 de Reconstrucción, 47 del portal, 32 de caracterización y tipos de activo, 10 de seguridad, entre otras. En un celular real (Samsung SM-A155M, Android 16), la prueba instrumentada de la app pasó 30 comprobaciones de C1, C2, 409 y 401 (`evidencias/rol2-campo/`).
 2. El tablero cumple la meta de consulta en una máquina: p95 de 50 ms con 1 cliente y de 366 ms con 20. Con Reconstrucción congelada, 60 de 60 respuestas fueron parciales (p95 de 1.528 ms).
 3. Trade-off medido: el paralelo gana con 1 cliente (p95 de 50 frente a 64 ms), pero no con 20 en una máquina (366 frente a 355 ms). El salto del portal al servicio de tablero cuesta unos 6 ms de p95 con 1 cliente.
 4. La disponibilidad del 99,95 % y la escala (10.000 usuarios, 500 equipos con fotos) solo tienen sustento de diseño.
-5. Riesgos de más peso: el núcleo valida cada sesión (R-13); notificaciones no admite varias instancias (R-15); el SQLite del teléfono no está cifrado (R-07); la app aún no separa la sesión vencida de la falta de red (R-24). Riesgos nuevos de esta evaluación: el límite de inicios de sesión por IP (R-30) y la fuente colgada en el tablero (R-31).
+5. Riesgos de más peso: el núcleo valida cada sesión (R-13); notificaciones no admite varias instancias (R-15); el SQLite del teléfono no está cifrado (R-07). La app ya separa la sesión vencida de la falta de red, probado en un celular real (R-24, mitigado). Riesgos nuevos de esta evaluación: el límite de inicios de sesión por IP (R-30) y la fuente colgada en el tablero (R-31).
 
 ## 2. El método ATAM
 
@@ -279,16 +279,24 @@ Antes y después, p95 paralelo / secuencial (archivos en `evidencias/rol1-tabler
 | ADR-13: la foto viaja con su evaluación | PS-12 | TO-09 | R-19 | NR-04 |
 | ADR-18: incorporación inmediata o diferida | — | TO-11 | — | — |
 
-**Razonamiento.** La sobrescritura silenciosa es imposible por construcción: el servidor solo aplica sobre la versión vigente y, si no, responde conflicto sin cambiar nada. Un reintento no duplica y el dispositivo conserva la captura hasta la confirmación. El punto débil es la sesión: dura 8 horas y un evaluador puede pasar más de un turno sin señal; si la app trata el 401 como falta de red, los pendientes se retrasan sin aviso (R-24). Además, el SQLite no va cifrado (R-07). Diagrama: Figura 8 del SAD.
+**Razonamiento.** La sobrescritura silenciosa es imposible por construcción: el servidor solo aplica sobre la versión vigente y, si no, responde conflicto sin cambiar nada. Un reintento no duplica y el dispositivo conserva la captura hasta la confirmación. El punto débil es la sesión: dura 8 horas y un evaluador puede pasar más de un turno sin señal. Si la app tratara el 401 como falta de red, los pendientes se retrasarían sin aviso (R-24). La app lo trata aparte: avisa que la sesión venció, conserva lo pendiente y no reintenta hasta un nuevo inicio de sesión. Además, el SQLite no va cifrado (R-07). Diagrama: Figura 8 del SAD.
 
 **Evidencia.**
 
 - *Medido en el servidor* (registro del 17-nov). `verificar_evolucion.py`: una propuesta sobre una versión vieja queda en conflicto, no sobrescribe y se reenvía tras resolver. `verificar_unificacion.py`: un reintento idéntico no duplica, la foto llega con su captura y la identidad sale del token. `verificar_caracterizacion.py` (32): `servidor` reenvía la caracterización (C2) sin convertir un 409 en éxito y acepta tipos de activo válidos, desconocidos o ausentes (C1) sin romper la idempotencia del lote.
 - *Medido en la app, integración anterior.* `evidencias/evolucion-android-instrumentacion.log`: prueba en el emulador con SQLite, desconexión real, conflicto y resolución; APROBADO. Capturas: `evidencias/android-guardado-offline.png` y `android-sincronizado.png`. Es anterior a los cambios de esta semana.
-- *Diseñado, sin evidencia.* Prueba en teléfono real con 100 capturas. Cifrado del SQLite: no está hecho (R-07).
-- **Evidencia de la app: pendiente de Rol 2 (Andrés).** Falta en `evidencias/`: caracterizar desde el teléfono (C2), elegir el tipo de activo (C1) y la sesión vencida sin perder pendientes.
+- *Medido en un celular real* (17-nov; Samsung SM-A155M con Android 16; la app de la rama `rol2/campo-caracterizacion`). `evidencias/rol2-campo/2026-11-17_android_instrumentado_SM-A155M.log` registra 30 comprobaciones aprobadas con los métodos reales del APK:
+  - **C2 sin conexión:** la caracterización persiste al reabrir SQLite y sigue pendiente mientras el servidor está caído. Al volver la red, el desastre queda en fase Caracterización con su ubicación, su radio y su nivel.
+  - **C1:** el catálogo de tipos de activo baja a SQLite, y la evaluación llega con su código y con el texto libre.
+  - **409:** una caracterización sobre una versión vieja queda en conflicto VERSION_DESACTUALIZADA y el servidor no cambia. Se resuelve solo por decisión explícita, como una operación nueva.
+  - **401:** la app marca la sesión vencida, distinta de la falta de red. No borra lo pendiente ni reintenta con el token vencido, y después de iniciar sesión otra vez sincroniza todo.
+  - `evidencias/rol2-campo/capturas/` tiene 18 capturas de la interfaz con el mismo recorrido, incluidos el cierre forzado de la app sin red y una sesión vencida en el núcleo.
+- *Diseñado, sin evidencia.*
+  - La prueba con 100 capturas seguidas y en modo avión. En el celular se cortó el enlace con el servidor, no la radio.
+  - El cifrado del SQLite: no está hecho (R-07).
+- *Hallazgo de la prueba.* Con la sesión vencida, «Cerrar sesión» falla con un mensaje de falta de conexión (captura 17). Iniciar sesión otra vez sí funciona, así que no se pierde nada. La corrección quedó pedida en la rama de la app.
 
-**Resultado.** Parcial: reconciliación medida en el servidor y, antes, en la app; la app final está pendiente.
+**Resultado.** Parcial: la reconciliación está medida en el servidor y en la app sobre un celular real, incluidos C1, C2, el 409 y el 401. Faltan la prueba de 100 capturas y el cifrado del SQLite.
 
 ### 7.5 AN-05 · Acceso no autorizado y separación entre organismos · Parcial
 
@@ -531,7 +539,7 @@ Se conservan los identificadores de la v1.0; los nuevos empiezan en PS-13, TO-14
 | R-21 | Un organismo asociado por error a un evento ve información ajena | Auditar asociaciones | Abierto; diseño |
 | R-22 | El tablero en paralelo triplica la carga simultánea y no gana con carga | Medir con servicios escalados | Nuevo; aceptado |
 | R-23 | Tokens del portal en memoria: dos instancias pierden sesiones | Afinidad o almacén compartido | Nuevo; abierto |
-| R-24 | La app confunde sesión vencida con falta de red | Tratar el 401 aparte | Nuevo; en curso (Rol 2) |
+| R-24 | La app confunde sesión vencida con falta de red | Tratar el 401 aparte | Nuevo; mitigado, medido en un celular real (AN-04) |
 | R-25 | Notificaciones no autentica a quien la llama | Clave de servicio | Nuevo; abierto |
 | R-26 | Sin validación de evaluaciones, RN-02 descansa en un supuesto | Validación por otro coordinador | Nuevo; abierto |
 | R-27 | Sin TLS ni cifrado en reposo | Despliegue objetivo | Nuevo; aceptado en laboratorio |
@@ -594,7 +602,7 @@ T1 y T2 pesan más: tocan los escenarios (A, A) y no se reducen sin el despliegu
 | --- | --- | --- | --- |
 | QA-REN-01 | `medir_tablero.py`: 1 y 20 clientes; fuente congelada | p95 menor que 2 s; ninguna sobre 4 s; menos de 0,1 % de errores | Hecho el 17-nov en una máquina |
 | QA-RES-02 | Fuente congelada 5 min; detener una instancia | Parcial en menos de 2 s; detección en 10 s | Falta |
-| QA-DIS-03, QA-CNF-01 | App en teléfono: 100 capturas, modo avión, cierre forzado, sesión vencida, C1 y C2 | Llegan las 100 sin duplicar; el 401 no borra pendientes | Pendiente de Rol 2 (Andrés) |
+| QA-DIS-03, QA-CNF-01 | App en teléfono: 100 capturas, modo avión, cierre forzado, sesión vencida, C1 y C2 | Llegan las 100 sin duplicar; el 401 no borra pendientes | Parcial el 17-nov en un celular real: cierre forzado, corte del servidor, sesión vencida, C1, C2 y 409. Faltan las 100 capturas y el modo avión |
 | QA-SEG-01, 02 | Scripts de seguridad, portal y unificación; 50 inicios válidos desde una IP | Ningún acceso indebido; ningún legítimo con 429 | Hecho, salvo la IP compartida |
 | Escenario E; C1 y C2 | `verificar_reconstruccion.py` y `verificar_caracterizacion.py` | Todas correctas | Hecho el 17-nov |
 | QA-REN-03 | 1 y 10 alertas simultáneas, con y sin RabbitMQ | p95 menor que 5 s con 10 | Pendiente |
@@ -607,7 +615,7 @@ T1 y T2 pesan más: tocan los escenarios (A, A) y no se reducen sin el despliegu
 - La arquitectura responde con razonamiento a todos los escenarios del árbol. Con evidencia sostiene el tablero, la reconstrucción con sus reglas y su auditoría, la reconciliación sin sobrescribir, la separación por organismo y la entrega de avisos sin pérdida.
 - La medición del tablero corrigió dos defectos y mostró que el paralelo no siempre gana: la evidencia sirvió para corregir decisiones, no para adornarlas.
 - Los escenarios (A, A) de disponibilidad y escala siguen sin evidencia. Son el mayor riesgo y exigen el despliegue objetivo y pruebas de carga.
-- Para cerrar la entrega faltan la evidencia de la app en el teléfono (Rol 2) y la medición de 10 alertas simultáneas.
+- La app de campo se probó en un celular real con C1, C2, el 409 y el 401 (AN-04). Quedan pendientes la prueba de 100 capturas en el teléfono y la medición de 10 alertas simultáneas.
 
 ## Referencias
 

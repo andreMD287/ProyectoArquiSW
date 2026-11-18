@@ -16,7 +16,7 @@
 | 1.0 | 10-nov-2026 | Ocho unidades de despliegue, vistas 4+1 y 22 decisiones. Responde al SRS v1.0 |
 | 2.0 | 15-nov-2026 | Reorganizado según arc42. Agrega el portal web MVC (UD-09) con su servlet multihilo y registra Reconstrucción (UD-06) como construida en Spring Boot con REST y gRPC. Retira UD-05. Adopta las cuatro fases del desastre. Agrega ADR-23 a ADR-29. Separa el ambiente entregado del despliegue objetivo |
 | 2.1 | 17-nov-2026 | Toda la presentación pasa a .NET, por aclaración del profesor: el portal se rehace en ASP.NET Core Razor Pages (ADR-23) y el servlet multihilo queda en un servicio de tablero en Java, UD-10, que el portal consume (ADR-24) |
-| 2.2 | 17-nov-2026 | C1 y C2 construidos en `servidor`; consumo de los avisos de Reconstrucción en notificaciones (ADR-27); textos de ADR-25 y ADR-27 |
+| 2.2 | 17-nov-2026 | C1 y C2 construidos en `servidor` y en la app, que también trata aparte la sesión vencida; la app se probó en un celular real; consumo de los avisos de Reconstrucción en notificaciones (ADR-27); textos de ADR-25 y ADR-27 |
 
 ## Cómo se cubren las vistas 4+1 y los entregables del enunciado
 
@@ -45,7 +45,7 @@ Este documento describe la arquitectura de la Plataforma para la Gestión de Des
 
 | Mínimo del proyecto | Qué se entrega | Dónde |
 | --- | --- | --- |
-| a. App móvil que recolecta y caracteriza | App de campo .NET MAUI con SQLite: captura sin conexión y sincronización. `servidor` ya ofrece la caracterización (C2) y el catálogo de tipos de activo (C1); la pantalla de la app que los usa está en curso | §6.4, §8.5 |
+| a. App móvil que recolecta y caracteriza | App de campo .NET MAUI con SQLite: captura sin conexión y sincronización. Caracteriza el desastre (C2) y elige el tipo de activo (C1) sin conexión, probado en un celular real (`evidencias/rol2-campo/`) | §6.4, §8.5 |
 | b. Reconstrucción física | UD-06 Reconstrucción, en Spring Boot con REST y gRPC | §5.3, §6.5 |
 | c. Mapa con desastres, evaluaciones y proyectos | Tablero del desastre en el portal (UD-09), armado por el servlet multihilo del servicio de tablero (UD-10) | §6.6 |
 | d. Evaluación de daños | Evaluaciones versionadas con fotografía en `servidor` (UD-03) | §5.3, §6.4 |
@@ -246,7 +246,7 @@ De Sahana Eden, analizada en el SRS, se toman la plataforma web como punto comú
 | UD-08 | Integración | Jakarta EE, RabbitMQ | SRV-11: un adaptador por sistema externo | Pendientes | Según adaptador | Diseñada |
 | UD-09 | Portal web (`portal`) | ASP.NET Core 10, Razor Pages | Única interfaz web; consume los demás servicios | Tokens de sesión en memoria | Crítica | Construida |
 | UD-10 | Servicio de tablero (`tablero`) | Java 21, Spring Boot 3.3, Tomcat | Tablero de un desastre: `TableroServlet` multihilo | Ninguno | Degradable | Construida |
-| — | App de campo (`campo`) | .NET MAUI, SQLite | Captura sin conexión y sincronización | Capturas por organismo y usuario | Crítica | Construida; mejoras en curso |
+| — | App de campo (`campo`) | .NET MAUI, SQLite | Captura sin conexión y sincronización | Capturas por organismo y usuario | Crítica | Construida; probada en un celular real |
 | INF-01 | Cola de mensajes | RabbitMQ 4.1 | — | Mensajes en tránsito | Crítica | Construida, un nodo |
 | INF-02 | Monitoreo | Sondas y métricas | — | Métricas | Crítica | Solo sondas de salud |
 
@@ -323,7 +323,7 @@ Todo cambio de fase exige motivo y guarda versión, valor anterior y nuevo, y au
 
 | Aspecto | Construido | Diseñado o en curso |
 | --- | --- | --- |
-| Datos | Identificador del dispositivo, desastre, evaluador y organismo de la sesión, ubicación, tipo de activo con catálogo (C1) y activo en texto, nivel de afectación 1 a 5, descripción, foto y versión | Elegir el tipo de activo en la app, en curso |
+| Datos | Identificador del dispositivo, desastre, evaluador y organismo de la sesión, ubicación, tipo de activo con catálogo (C1) y activo en texto, nivel de afectación 1 a 5, descripción, foto y versión | — |
 | Estados | Preliminar (sin desastre) y Registrada | Validada por un coordinador distinto del evaluador, Devuelta y Duplicada |
 | Evidencias | Una foto JPEG o PNG de hasta 5 MB; correcciones con historial que no tocan la captura original | Documentos PDF; hasta cinco evidencias |
 | Uso | Mapa de calor y panorama | Estimación de costo y prioridad por zona |
@@ -480,7 +480,7 @@ Las fotos van después de los lotes, una por petición, para que una foto pesada
 | --- | --- |
 | Se corta una evaluación con foto, o se reenvía un lote | No queda nada a medias; lo repetido responde «repetida» y no se duplica |
 | Otra persona corrigió antes la evaluación | Conflicto: se conservan la propuesta y el dato del servidor, y decide el evaluador |
-| La sesión venció | 401; la app debe conservar los pendientes y pedir sesión (en curso) |
+| La sesión venció | 401; la app avisa que la sesión venció, conserva los pendientes y no reintenta hasta un nuevo inicio de sesión |
 | El núcleo no responde | `servidor` rechaza; la app sigue capturando y reintenta |
 | El desastre aún no está en la copia de `servidor` | La evaluación queda preliminar y se vincula después |
 | La carga supera la capacidad | Incorporación diferida (ADR-18) |
@@ -570,7 +570,7 @@ Las mediciones anteriores se conservan como evidencia de cada cambio: `medicion_
 | Teléfono Android | App de campo | .NET MAUI + SQLite | — | `web` → `api` (`/api/campo/lotes`) |
 
 - **Inicio y secretos.** `./iniciar.sh` construye las imágenes, aplica las migraciones del núcleo y levanta los 12 contenedores. Los secretos viven en `servidor/.env`, que no se versiona y que `iniciar.sh` crea desde `.env.ejemplo`; Compose no tiene contraseñas escritas. Los puertos solo escuchan en 127.0.0.1.
-- **Verificación.** `./verificar.sh` corre 9 pruebas de punta a punta: API, integración, campo, Reconstrucción con gRPC, evolución, unificación, caracterización, portal y seguridad. El 17-nov-2026, con el portal en .NET, pasaron con 248 comprobaciones (`evidencias/rol1-build/2026-11-17_verificar_portal_net.log`); el número varía en dos o tres entre corridas porque algunas se repiten dentro de un ciclo de espera. La instalación en limpio, desde un clon nuevo, también pasa (`evidencias/rol1-build/`).
+- **Verificación.** `./verificar.sh` corre 9 pruebas de punta a punta: API, integración, campo, Reconstrucción con gRPC, evolución, unificación, caracterización, portal y seguridad. El 17-nov-2026, con el portal en .NET, C1, C2 y el consumidor de avisos, pasaron con 271 comprobaciones (`evidencias/rol1-build/2026-11-17_verificar_final.log`); el número varía en dos o tres entre corridas porque algunas se repiten dentro de un ciclo de espera. La instalación en limpio, desde un clon nuevo, también pasa (`evidencias/rol1-build/`).
 - **Alcance.** Este ambiente prueba el comportamiento funcional y sirve para medir (ADR-29). No prueba la disponibilidad ni la carga de 10.000 usuarios.
 
 ### 7.2 Despliegue objetivo: tres centros de datos (diseñado)
@@ -704,8 +704,8 @@ Diseñadas, sin código: validación y duplicados de evaluaciones, documentos PD
 
 | Contrato entre unidades | Qué fija | Estado |
 | --- | --- | --- |
-| C1 Tipos de activo | Nueve códigos (vivienda, edificio público, escuela, centro de salud, vía, puente, red de agua, red de energía, otro) en la tabla configurable `tipos_activo`, publicados en `GET /api/catalogos`. La evaluación guarda el código tal como llega; al leerse, uno desconocido o ausente queda como OTRO y se conserva el original, para no perder capturas de apps anteriores ni romper la idempotencia | Construido en `servidor`, el tablero y Reconstrucción; elegirlo en la app, en curso |
-| C2 Caracterización | `PATCH /eventos/{id}/caracterizacion` en el núcleo (§5.3), que `servidor` ofrece a la app como `PATCH /api/desastres/{id}/caracterizacion` y reenvía tal cual (200, 409 con la versión actual, 403, 404) | Construido en el núcleo y en `servidor`; la pantalla de la app, en curso |
+| C1 Tipos de activo | Nueve códigos (vivienda, edificio público, escuela, centro de salud, vía, puente, red de agua, red de energía, otro) en la tabla configurable `tipos_activo`, publicados en `GET /api/catalogos`. La evaluación guarda el código tal como llega; al leerse, uno desconocido o ausente queda como OTRO y se conserva el original, para no perder capturas de apps anteriores ni romper la idempotencia | Construido en `servidor`, el tablero, Reconstrucción y la app |
+| C2 Caracterización | `PATCH /eventos/{id}/caracterizacion` en el núcleo (§5.3), que `servidor` ofrece a la app como `PATCH /api/desastres/{id}/caracterizacion` y reenvía tal cual (200, 409 con la versión actual, 403, 404) | Construido en el núcleo, en `servidor` y en la app (probado en un celular real) |
 | C3 Resumen de evaluaciones | Totales por nivel y por tipo de activo | Opcional: el tablero lo arma con `/api/panorama` |
 | C4 Sesión | Token Bearer validado con `/auth/me`; 401 vencido, 403 sin permiso | Construido |
 | C5 Eventos de Reconstrucción | `idEvento` (también es el id del mensaje AMQP), `tipo`, `ocurridoEn`, `desastreId` (el UUID que usa Reconstrucción), `proyectoId`, `organismoId` y `datos`; intercambio `reconstruccion.eventos`, cola `integracion.reconstruccion` | Publicación y consumo construidos (ADR-27) |
@@ -727,8 +727,8 @@ Cada cola tiene su `<cola>.reintento`, que devuelve el mensaje a los 5 s, y su `
 - SQLite es la fuente de verdad local. Catálogo y capturas se separan por organismo, y las capturas también por usuario.
 - Sin conexión se captura y se corrige. Cada operación lleva un identificador del dispositivo y la versión base (ADR-04). Ante un conflicto, el evaluador elige y su decisión es una operación nueva.
 - El dispositivo no borra una captura hasta la confirmación. Revocar la sesión de un dispositivo perdido impide sincronizar, pero no borra lo guardado; por eso solo guarda catálogos y capturas del propio usuario. **Limitación:** el SQLite no va cifrado.
-- **En curso (Rol 2, 18-nov):** tratar el 401 aparte de la falta de red y reanudar tras un nuevo inicio de sesión, porque un evaluador puede pasar más de 8 horas sin señal; elegir el tipo de activo (C1); y caracterizar el desastre desde la app (C2). Lo que necesitan del lado de `servidor` ya está construido y probado (`verificar_caracterizacion.py`).
-- **Evidencia:** `verificar_android_instrumentado.py` ejecuta en el emulador la desconexión real, la persistencia, el conflicto y su resolución.
+- La app trata el 401 aparte de la falta de red, porque un evaluador puede pasar más de 8 horas sin señal: avisa que la sesión venció, conserva lo pendiente y no reintenta hasta un nuevo inicio de sesión. También elige el tipo de activo del catálogo descargado (C1) sin perder el texto libre, y caracteriza el desastre sin conexión (C2). Ante un 409, la caracterización queda en conflicto hasta que el evaluador decide.
+- **Evidencia:** `verificar_android_instrumentado.py` ejecuta los métodos reales del APK con desconexión real, persistencia, conflicto y resolución, C1, C2, el 409 y el 401. El 17-nov pasó con 30 comprobaciones en un celular real (Samsung SM-A155M, Android 16). El registro y 18 capturas de la interfaz están en `evidencias/rol2-campo/`.
 
 ### 8.6 Concurrencia y consistencia
 
@@ -971,7 +971,7 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
 - **Justificación.** Sin carga tarda lo de la fuente más lenta; una fuente caída no tumba el tablero; el pool limita la presión sobre los servicios. Las tres cosas están medidas (§6.6).
 - **Consecuencias.** Trade-off medido: con 20 clientes en una sola máquina el paralelo no gana (p95 de 366 frente a 355 ms), porque los servicios de atrás ya están saturados. El salto del portal al servicio de tablero cuesta unos 6 ms en p95 con un cliente. Puntos de sensibilidad: el tamaño del pool, la cola, el límite por fuente y la vigencia de la copia del catálogo en Reconstrucción.
 
-#### ADR-25 — Operación sin conexión con .NET MAUI y SQLite · Construido; caracterización desde la app en curso
+#### ADR-25 — Operación sin conexión con .NET MAUI y SQLite · Construido y probado en un celular real
 
 - **Requisitos.** Restricción del curso (componentes .NET para operar sin conexión); CON-08; QA-DIS-03, QA-CNF-01; mínimos a y d.
 - **Contexto.** Los evaluadores trabajan donde no hay señal y pueden pasar más de un turno sin conexión. Capturar no puede depender de la red, y lo capturado no puede perderse ni duplicarse al sincronizar. El TallerNetCore tenía la app en Flutter.
@@ -987,7 +987,7 @@ Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 0
   - El token va en el almacenamiento seguro del dispositivo; un 401 pide sesión sin borrar lo pendiente.
 - **Justificación.** Nada se pierde (QA-DIS-03): la captura no se borra hasta que `servidor` la confirma. Lo repetido no se duplica y los conflictos son explícitos. Comparte la plataforma .NET y los contratos con `servidor`, y cumple la restricción del curso.
 - **Consecuencias.**
-  - A favor: `verificar_android_instrumentado.py` prueba en el emulador la desconexión real, la persistencia, el conflicto y su resolución; `verificar_campo.py` prueba los lotes y su idempotencia.
+  - A favor: `verificar_android_instrumentado.py` prueba la desconexión real, la persistencia, el conflicto y su resolución, la caracterización (C2), el tipo de activo (C1) y la sesión vencida. El 17-nov pasó en un celular real (`evidencias/rol2-campo/`). `verificar_campo.py` prueba los lotes y su idempotencia.
   - En contra: solo Android. El SQLite no va cifrado (riesgo aceptado; SQLCipher como mejora). El primer inicio de sesión exige conexión, y con más de 8 horas sin señal el token vence y hay que entrar de nuevo antes de sincronizar. La pantalla de captura aún no separa un modelo de vista (MVVM, ADR-23): se adapta de forma progresiva.
 - *Borrador de Rol 1 para revisión de Rol 2.*
 
@@ -1091,7 +1091,7 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Tokens de sesión del portal en memoria | Varias instancias exigen afinidad; un reinicio del portal pide entrar de nuevo | Abierto | Afinidad en la entrada o almacén compartido (por ejemplo, Redis) |
 | Sin pruebas de carga de 10.000 usuarios ni de 500 equipos con fotos | Metas de escala sin evidencia | Abierto | Prueba con red real |
 | Validación de evaluaciones sin código | Reconstrucción toma como validada una evaluación vinculada a un desastre | Abierto | Validación por un coordinador distinto |
-| La app aún no caracteriza ni elige el tipo de activo | Sin la versión nueva de la app, el mínimo a se cumple desde el portal y las capturas quedan como OTRO | En curso (Rol 2, 18-nov) | `servidor`, el tablero y Reconstrucción ya usan C1 y C2 |
+| Con la sesión vencida, «Cerrar sesión» en la app falla con un mensaje de falta de conexión | El evaluador no puede cerrar sesión hasta entrar de nuevo; no se pierde nada | Abierto (hallazgo de la prueba en un celular real) | Borrar la sesión local sin llamar al servidor cuando ya venció |
 | Un cambio de fase del coordinador no emite aviso | Los organismos no se enteran de un cierre directo | Abierto | Emitirlo desde la bandeja de salida |
 | Sin TLS ni cifrado en reposo; puertos de prueba en 127.0.0.1 | Datos en claro dentro de la máquina | Aceptado para el laboratorio | Despliegue objetivo; cerrar el puerto del núcleo tras C2 |
 | Catálogos fijos; consolidación, dos fechas, coordinación y auditoría consolidada sin código | QA-MOD-01, QA-CNF-02 y QA-TRZ-02 solo en diseño | Abierto | ADR-05, 06, 08, 19 y 20 |

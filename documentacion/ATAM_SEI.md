@@ -8,16 +8,6 @@
 
 **Pontificia Universidad Javeriana** · Arquitectura de Software
 
-## Control de versiones
-
-| Versión | Fecha | Cambios |
-| --- | --- | --- |
-| Primera entrega | 19-sep-2026 | Primera evaluación. Observación del profesor: «Mejorar todo el documento» |
-| 1.0 | Nov-2026 | Nueve pasos, árbol de utilidad, diez análisis y riesgos sobre el SAD v1.0. Su evidencia es anterior al código actual |
-| 2.0 | 18-nov-2026 | Estructura del informe del SEI. Evalúa el SAD v2.2. Cada resultado dice si está medido, con su evidencia, o solo diseñado. Agrega Reconstrucción, el tablero multihilo y la presentación en .NET |
-
-**Convención de estado.** *Medido*: hay un registro de una prueba o medición (ver «Anexo. Registro de evidencias»). *Diseñado, sin evidencia*: decidido y razonado, sin código o sin prueba. *Parcial*: una parte medida y otra diseñada.
-
 ## Resumen ejecutivo
 
 **Qué y cómo.** Se evaluó la arquitectura del SAD v2.2 (17-nov-2026), construida y diseñada, con los nueve pasos del ATAM (Kazman, Klein y Clements, 2000), en una evaluación interna del equipo, sobre once grupos de escenarios.

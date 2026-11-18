@@ -713,12 +713,12 @@ Diseñadas, sin código: validación y duplicados de evaluaciones, documentos PD
 
 | Aviso | Origen y canal | Estado |
 | --- | --- | --- |
-| DESASTRE_REGISTRADO, DESASTRE_GRAVEDAD_CAMBIADA | Núcleo → bandeja de salida → notificaciones → cola por suscriptor (una cola por sistema suscrito) y correo | Construido |
+| DESASTRE_REGISTRADO, DESASTRE_GRAVEDAD_CAMBIADA | Núcleo → bandeja de salida → notificaciones → cola por suscriptor y correo | Construido |
 | PROYECTO_CREADO, PROYECTO_APROBADO, PROYECTO_ESTADO_CAMBIADO, PROYECTO_CON_SOBRECOSTO, PRESUPUESTO_MODIFICADO, DESASTRE_EN_RECONSTRUCCION, DESASTRE_CERRADO | Reconstrucción → bandeja de salida → C5 → notificaciones | Construido: correo para PROYECTO_APROBADO, PROYECTO_CON_SOBRECOSTO y DESASTRE_CERRADO; los demás se registran sin correo |
 | Alerta externa | SE-01 → intercambio desastres.entrada, cola desastres.registro | Cola construida; adaptadores diseñados |
 | Fase cambiada por el coordinador, delimitación, tarea, sistema externo caído | Núcleo y UD-08 | Diseñado |
 
-Cada cola tiene su la cola de reintento, que devuelve el mensaje a los 5 s, y su la cola de errores, visible para un operador. Los mensajes son JSON persistentes con identificador único.
+Cada cola tiene su cola de reintento, que devuelve el mensaje a los 5 s, y su cola de errores, visible para un operador. Los mensajes son JSON persistentes con identificador único.
 
 **Garantías de entrega.** *Sin pérdida:* el aviso se guarda con su cambio y se entrega hasta que se acepta. *Al menos una vez:* un aviso puede repetirse y el destinatario lo descarta por su identificador. *Orden no garantizado:* cada aviso lleva el recurso y su versión, y el destinatario conserva la más alta. *Capacidad:* 10 alertas críticas simultáneas, porque el modelo de carga supone menos de 10 mensajes por segundo de todos los externos; por encima, se atiende por severidad y la espera crece, como degradación declarada. *Evolución:* dentro de una versión solo se agregan campos opcionales.
 

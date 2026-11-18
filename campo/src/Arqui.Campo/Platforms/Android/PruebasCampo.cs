@@ -108,7 +108,13 @@ public class PruebasCampo:Instrumentation {
    Check((await tras401.ObtenerAsync(trasVencer.EvaluacionId)).Estado is null && (await tras401.CaracterizacionesAsync()).First(c=>c.ClaveIdempotencia==otraCaracterizacion.ClaveIdempotencia).Estado=="pendiente","401: la evaluación y la caracterización pendientes siguen en SQLite");
    bool bloqueada=false;try{await SincronizadorCampo.EnviarAsync(tras401,destino);}catch(SesionVencidaException){bloqueada=true;}
    Check(bloqueada,"401: no se reintenta con el token vencido hasta iniciar sesión otra vez");
+   // Cerrar sesión con la sesión vencida: limpia la sesión local sin llamar al servidor y no toca SQLite.
+   await SesionCampo.Salir(destino);
+   Check(SesionCampo.Token is null && !SesionCampo.SesionVencida && string.IsNullOrEmpty(SesionCampo.Organizacion) && await SecureStorage.Default.GetAsync("arqui-sesion") is null,"401: cerrar sesión con la sesión vencida limpia la sesión local, sin error");
+   var crudo=new SQLite.SQLiteAsyncConnection(ruta);
+   Check(await crudo.ExecuteScalarAsync<int>("SELECT count(*) FROM EvaluacionPendiente WHERE EvaluacionId=? AND Estado IS NULL",trasVencer.EvaluacionId)==1 && await crudo.ExecuteScalarAsync<int>("SELECT count(*) FROM CaracterizacionPendiente WHERE ClaveIdempotencia=? AND Estado='pendiente'",otraCaracterizacion.ClaveIdempotencia)==1,"401: después de cerrar sesión, la evaluación y la caracterización pendientes siguen en SQLite");
    await SesionCampo.Entrar(destino,usuario,clave);Check(!SesionCampo.SesionVencida && !string.IsNullOrEmpty(SesionCampo.Token),"401: nuevo inicio de sesión");
+   Check((await tras401.ObtenerAsync(trasVencer.EvaluacionId)).Estado is null,"401: al entrar de nuevo, la captura pendiente sigue disponible para el mismo usuario");
    await SincronizadorCampo.EnviarAsync(tras401,destino);
    Check((await tras401.ObtenerAsync(trasVencer.EvaluacionId)).Estado=="incorporada" && (await tras401.CaracterizacionesAsync()).First(c=>c.ClaveIdempotencia==otraCaracterizacion.ClaveIdempotencia).Estado=="incorporada","401: tras iniciar sesión otra vez se sincroniza lo pendiente, sin pérdida");
 

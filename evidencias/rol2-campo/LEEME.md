@@ -1,7 +1,7 @@
 # Evidencia de la app de campo en un celular real (17-nov-2026)
 
 - **Dispositivo:** Samsung Galaxy A15 (SM-A155M), Android 16, conectado por USB. No es un emulador.
-- **App:** rama `rol2/campo-caracterizacion`, commit `cae6039`, compilada en Debug para `net10.0-android`.
+- **App:** rama `rol2/campo-caracterizacion`, compilada en Debug para `net10.0-android`. Primero se probó el commit `cae6039` (secciones 1 y 2). Después se volvió a probar el commit `1a26bd3`, que corrige los dos hallazgos (sección 3).
 - **Conexión:** el celular llega al servidor por `adb reverse tcp:8084 tcp:18085`. En la app el servidor es `http://127.0.0.1:8084`.
 - **Cómo se cortó la red:** la prueba instrumentada detiene el contenedor `api`. En las capturas se quitó el túnel con `adb reverse --remove tcp:8084`, así que el celular dejó de alcanzar el servidor.
 - **Cómo se venció la sesión:**
@@ -41,8 +41,27 @@ Todo se hizo con la app normal (sin el ejecutor de pruebas), sobre el desastre `
 | 17 | **Hallazgo:** con la sesión vencida, "Cerrar sesión" responde "No se pudo cerrar sesión en el servidor. Reintenta con conexión", aunque sí hay conexión. Ver la nota abajo |
 | 18 | Después de iniciar sesión otra vez y sincronizar, las dos evaluaciones quedan *Sincronizadas*. En el servidor la de la escuela tiene `tipoActivo=ESCUELA` |
 
-## Hallazgos para corregir en la rama de la app
+## Hallazgos de la primera prueba
 
-1. **Cerrar sesión con la sesión vencida (captura 17).** `SesionCampo.Salir` llama a `Autorizar`, que lanza `SesionVencidaException` cuando la sesión ya está marcada como vencida. Si la sesión está vencida, `Salir` debería borrar la sesión local sin llamar al servidor, porque el servidor ya rechaza ese token. Mientras tanto se puede iniciar sesión otra vez, y eso sí funciona.
-2. **Servidor por defecto.** La app trae ahora `http://127.0.0.1:18085`, pero el README, el guion de la demo y la prueba instrumentada usan el túnel `adb reverse tcp:8084 tcp:18085` y `http://127.0.0.1:8084`. Con el túnel documentado, el valor por defecto no conecta. Hay que volver a `8084` o documentar `adb reverse tcp:18085 tcp:18085`.
-3. **Menor.** Los tipos de activo se ordenan por nombre, así que OTRO queda en medio de la lista. El servidor envía `orden` y se podría usar ese.
+1. **Cerrar sesión con la sesión vencida (captura 17).** `SesionCampo.Salir` llamaba a `Autorizar`, que lanza `SesionVencidaException` cuando la sesión ya está marcada como vencida. **Corregido en `1a26bd3`:** con la sesión vencida, `Salir` borra la sesión local sin llamar al servidor. Verificado en la sección 3.
+2. **Servidor por defecto.** La app traía `http://127.0.0.1:18085`, pero el README, el guion de la demo y la prueba instrumentada usan el túnel `adb reverse tcp:8084 tcp:18085`. **Corregido en `1a26bd3`:** el valor por defecto vuelve a ser `http://127.0.0.1:8084`. Verificado en la sección 3.
+3. **Menor, sin corregir.** Los tipos de activo se ordenan por nombre, así que OTRO queda en medio de la lista. El servidor envía `orden` y se podría usar ese.
+
+## 3. Segunda prueba, con las correcciones (`1a26bd3`)
+
+La rama `pruebas-android` une `1a26bd3` y suma tres comprobaciones a la prueba instrumentada.
+
+**Prueba instrumentada.** Archivo: `2026-11-17_android_instrumentado_SM-A155M_1a26bd3.log`. Resultado: **33 comprobaciones OK y RESULTADO ANDROID: APROBADO**. Las 3 nuevas:
+- "401: cerrar sesión con la sesión vencida limpia la sesión local, sin error". Con el código anterior, este paso lanzaba una excepción.
+- "401: después de cerrar sesión, la evaluación y la caracterización pendientes siguen en SQLite". Se consulta la base directamente, sin filtrar por la sesión.
+- "401: al entrar de nuevo, la captura pendiente sigue disponible para el mismo usuario".
+
+**Capturas, con la app normal.** El APK se compiló con los ensamblados dentro (`-p:EmbedAssembliesIntoApk=true`) para poder borrar los datos de la app y probar una instalación limpia. Con Fast Deployment, borrar los datos borra también los ensamblados y la app no arranca; eso es propio de la compilación de depuración, no de la app.
+
+| Captura | Qué muestra |
+|---|---|
+| 19 | Instalación limpia (datos borrados): el servidor por defecto es `http://127.0.0.1:8084` |
+| 20 | Con el túnel `adb reverse tcp:8084 tcp:18085`, se inicia sesión y el catálogo se descarga por el puerto 8084 (99 desastres) |
+| 21 | Con la sesión vencida en el núcleo, se guarda una evaluación (Casa familia Rojas, VIVIENDA). Al sincronizar aparece "Sesión vencida…" y la evaluación queda *Pendiente* |
+| 22 | "Cerrar sesión" con la sesión vencida funciona sin error y vuelve a "Inicia sesión antes de capturar o sincronizar". La base SQLite del celular, copiada en ese momento, conserva la evaluación pendiente |
+| 23 | Al iniciar sesión otra vez y sincronizar, la evaluación queda *Sincronizada*. En el servidor tiene `tipoActivo=VIVIENDA` y `activo="Casa familia Rojas"` |

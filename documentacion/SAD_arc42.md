@@ -94,6 +94,7 @@ El profesor y los evaluadores esperan decisiones justificadas y evidencia; los c
 | CON-07: tecnologías de los talleres del curso | Jakarta EE, Spring Boot, .NET, PostgreSQL, RabbitMQ y Nginx, por unidad (ADR-17) |
 | CON-08: móvil parcialmente sin conexión | SQLite en el dispositivo y reconciliación (ADR-04, ADR-25) |
 | CON-09: protección de datos personales | La plataforma no guarda datos de personas afectadas (ADR-28); las cuentas de usuario se protegen según §8.1 |
+| CON-10: toda la presentación en .NET | Portal en ASP.NET Core Razor Pages (ADR-23) y app de campo en .NET MAUI (ADR-25); los servicios Java no sirven vistas |
 
 ### 2.2 Restricciones del curso
 

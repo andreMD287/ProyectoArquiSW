@@ -1055,12 +1055,12 @@ Los riesgos se ordenan por su efecto sobre las metas de calidad. *Aceptado* sign
 
 ## Anexo. Registro de evidencias
 
-Los resultados medidos citan su evidencia con un identificador. Son los mismos identificadores del ATAM, por eso la numeración salta los que el SAD no usa.
+Los resultados medidos citan su evidencia con un identificador. Son los mismos identificadores del ATAM, por eso la numeración salta los que el SAD no usa. Cada fila resume qué se ejecutó y qué resultó, para que el documento se sostenga sin acceso al código.
 
-| ID | Qué muestra | Registro |
+| ID | Qué se ejecutó | Qué resultó |
 | --- | --- | --- |
-| E1 | Verificación de punta a punta: 271 comprobaciones de API, integración, campo, Reconstrucción, evolución, unificación, caracterización, portal, seguridad y EJB remoto | evidencias/rol1-build/2026-11-18_verificar_r1-08.log |
-| E2 | Mediciones del tablero con 1 y 20 clientes y con Reconstrucción congelada | evidencias/rol1-tablero/ |
-| E3 | Prueba instrumentada de la app en un celular real: 33 comprobaciones y capturas de la interfaz | evidencias/rol2-campo/ |
-| E7 | Pruebas del dominio y de los casos de uso de Reconstrucción | Informe de las pruebas de Reconstrucción |
-| E8 | Inicio y cierre de sesión por EJB remoto | evidencias/evolucion-rpc-pruebas.log |
+| E1 | Verificación de punta a punta de la versión final en el ambiente entregado (Docker Compose en una máquina): API, integración y sincronización de campo; Reconstrucción por REST y gRPC; evolución de los servicios existentes; unificación de datos; caracterización y tipos de activo; portal .NET y tablero; seguridad y EJB remoto | 271 comprobaciones correctas y ninguna fallida: Reconstrucción 85, unificación 54, portal y tablero 47, evolución 38, caracterización y tipos de activo 32, seguridad 10, EJB remoto 2, y los conjuntos de API, integración y campo. Confirmó además que la imagen del núcleo no guarda la clave EJB y que RabbitMQ no publica puertos fuera de la red interna |
+| E2 | Tres corridas de medición del tablero en el ambiente entregado, cada una con 100 solicitudes de un cliente, 300 de 20 clientes simultáneos y 60 con Reconstrucción congelada; pool de 16 hilos, cola de 64 y límite de 1,5 s por fuente | Todas las solicitudes respondieron. En la corrida final, el percentil 95 fue de 50 ms con un cliente y de 366 ms con 20. Con Reconstrucción congelada, las 60 respuestas llegaron parciales en unos 1,5 s: una fuente caída no bloquea el tablero |
+| E3 | Prueba instrumentada de la app de campo en un celular real (Samsung Galaxy A15, Android 16) contra el ambiente entregado, más un recorrido de la interfaz con capturas | 33 comprobaciones correctas: caracterización sin conexión que persiste, tipos de activo, sincronización al volver la red, conflicto de versión sin sobrescribir y sesión vencida sin perder lo pendiente. Las 23 capturas muestran esos casos; los dos hallazgos del primer recorrido se corrigieron y se volvieron a probar |
+| E7 | Pruebas automatizadas de Reconstrucción sobre la versión final, en memoria, sin red ni base de datos | 32 pruebas correctas en menos de un segundo: 14 de las reglas del proyecto y 18 de los casos de uso |
+| E8 | Inicio y cierre de sesión de un cliente Java por EJB remoto contra el núcleo, en el ambiente entregado | 2 comprobaciones correctas: el EJB remoto reutiliza la identidad y el token de la plataforma REST, y su cierre revoca la misma sesión |

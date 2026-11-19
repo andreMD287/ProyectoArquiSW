@@ -1,7 +1,7 @@
 @startuml despliegue_entregado
 !include <C4/C4_Deployment>
 !include estilo.iuml
-title Despliegue entregado: Docker Compose en una máquina (arc42 §7.1)
+title Despliegue entregado: Docker Compose en una máquina
 
 Deployment_Node(movil, "Teléfono Android", "Android 10 o superior") {
   Container(app, "App de campo", ".NET MAUI, SQLite local", "Funciona sin conexión", $tags="construido")
@@ -21,7 +21,7 @@ Deployment_Node(equipo, "Equipo del laboratorio", "Windows o macOS con Docker De
     Container(rec, "reconstruccion", "Spring Boot 3.3 · REST 8086, gRPC 9096 (127.0.0.1:19096)", "", $tags="construido")
     ContainerDb(recdb, "reconstruccion-db", "PostgreSQL 17", "Base reconstruccion", $tags="bd")
     Container(desastres, "desastres", "Payara 6 · 8080", "", $tags="construido")
-    ContainerQueue(rabbit, "rabbitmq", "RabbitMQ 4.1 · 127.0.0.1:15683-15684", "", $tags="construido")
+    ContainerQueue(rabbit, "rabbitmq", "RabbitMQ 4.1 · solo red interna", "", $tags="construido")
     Container(mailpit, "mailpit", "Mailpit · 127.0.0.1:18026", "Buzón de pruebas", $tags="construido")
   }
 }

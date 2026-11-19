@@ -12,21 +12,13 @@
 
 **Qué y cómo.** Se evaluó la arquitectura del SAD v2.2 (17-nov-2026), construida y diseñada, con los nueve pasos del ATAM (Kazman, Klein y Clements, 2000), en una evaluación interna del equipo, sobre once grupos de escenarios.
 
-| Estado | Análisis |
-| --- | --- |
-| Medido | AN-01 Tablero; AN-06 Reconstrucción |
-| Parcial | AN-02 Falla interna; AN-03 Falla externa; AN-04 Sin conexión; AN-05 Seguridad; AN-08 Extensión; AN-09 Alerta |
-| Diseñado, sin evidencia | AN-07 Aumento de usuarios; AN-10 Ingesta de campo; AN-11 Disponibilidad |
+Dos de los once análisis quedaron medidos de punta a punta: el tablero de un desastre (AN-01) y la reconstrucción física (AN-06). Seis quedaron parciales, con una parte medida y otra solo diseñada: la falla de una fuente interna, la falla de un sistema externo, el trabajo sin conexión, la seguridad, la extensión con sistemas nuevos y la alerta crítica. Los tres restantes, el aumento repentino de usuarios, la ingesta masiva desde campo y la disponibilidad, solo tienen sustento de diseño. En total resultaron 17 puntos de sensibilidad, 19 trade-offs, 31 riesgos y 16 no-riesgos, agrupados en siete temas de riesgo.
 
-Resultaron 17 puntos de sensibilidad, 19 trade-offs, 31 riesgos y 16 no-riesgos, agrupados en siete temas de riesgo.
+**Lo que la evidencia sostiene.** La verificación de punta a punta del 17-nov pasó con 271 comprobaciones (E1), entre ellas 87 de Reconstrucción, 47 del portal, 32 de caracterización y tipos de activo y 10 de seguridad. La app de campo, probada en un celular real, pasó 33 comprobaciones de caracterización, tipo de activo, conflicto de versión y sesión vencida (E3). El tablero cumple su meta de consulta en una máquina, con un p95 de 50 ms para un cliente y de 366 ms para 20, y cuando Reconstrucción deja de responder entrega respuestas parciales en lugar de fallar: 60 de 60, con un p95 de 1.528 ms.
 
-**Hallazgos principales.**
+**Lo que la evaluación encontró.** La medición mostró un trade-off que el diseño no anticipaba. Consultar las tres fuentes en paralelo gana con un cliente (p95 de 50 frente a 64 ms), pero con 20 clientes en una sola máquina resulta un poco más lento que en secuencia (366 frente a 355 ms), porque triplica la carga simultánea sobre servicios que ya están ocupados. Los riesgos de más peso son estructurales: el núcleo valida cada sesión y, sin un modo degradado construido, su caída detiene todo lo protegido (R-13); notificaciones todavía no admite varias instancias (R-15); y el SQLite del teléfono no va cifrado (R-07). La evaluación agregó dos riesgos nuevos, el límite de inicios de sesión por IP (R-30) y la fuente interna colgada en el tablero (R-31), y dio por mitigado el riesgo de que la app confunda la sesión vencida con la falta de red (R-24).
 
-1. La verificación de punta a punta del 17-nov pasó con 271 comprobaciones (E1): 87 de Reconstrucción, 47 del portal, 32 de caracterización y tipos de activo, 10 de seguridad, entre otras. En un celular real (Samsung SM-A155M, Android 16), la prueba de la app pasó 33 comprobaciones de caracterización (C2), tipo de activo (C1), conflicto de versión y sesión vencida, incluido cerrar sesión con la sesión vencida (E3).
-2. El tablero cumple la meta de consulta en una máquina: p95 de 50 ms con 1 cliente y de 366 ms con 20. Con Reconstrucción congelada, 60 de 60 respuestas fueron parciales (p95 de 1.528 ms).
-3. Trade-off medido: el paralelo gana con 1 cliente (p95 de 50 frente a 64 ms), pero no con 20 en una máquina (366 frente a 355 ms). El salto del portal al servicio de tablero cuesta unos 6 ms de p95 con 1 cliente.
-4. La disponibilidad del 99,95 % y la escala (10.000 usuarios, 500 equipos con fotos) solo tienen sustento de diseño.
-5. Riesgos de más peso: el núcleo valida cada sesión (R-13); notificaciones no admite varias instancias (R-15); el SQLite del teléfono no está cifrado (R-07). La app ya separa la sesión vencida de la falta de red, probado en un celular real (R-24, mitigado). Riesgos nuevos de esta evaluación: el límite de inicios de sesión por IP (R-30) y la fuente colgada en el tablero (R-31).
+**Lo que falta.** La disponibilidad del 99,95 % y la escala de 10.000 usuarios y 500 equipos con fotos todavía no tienen evidencia: exigen el despliegue en tres centros y pruebas de carga que el ambiente de una sola máquina no permite.
 
 ## El método ATAM
 
@@ -34,19 +26,17 @@ El ATAM evalúa una arquitectura frente a sus metas de calidad; no da una nota. 
 
 ### Pasos
 
-La fase 0 reúne las entradas, descritas en «Adaptación a una evaluación interna». La fase 1 cubre los pasos 1 a 6; la fase 2, los pasos 7 a 9; la fase 3 es el seguimiento, en el «Plan de verificación».
+La fase 0 reúne las entradas, descritas en «Adaptación a una evaluación interna». La fase 1 cubre los pasos 1 a 6; la fase 2, los pasos 7 a 9; la fase 3 es el seguimiento, en el «Plan de verificación». Cada paso queda en una sección de este documento:
 
-| Paso | Sección |
-| --- | --- |
-| 1. Presentar el método | El método ATAM |
-| 2. Presentar los impulsores de negocio | Impulsores de negocio y restricciones |
-| 3. Presentar la arquitectura | Arquitectura presentada |
-| 4. Identificar los enfoques arquitectónicos | Enfoques arquitectónicos identificados |
-| 5. Generar el árbol de utilidad | Árbol de utilidad |
-| 6. Analizar los enfoques | Análisis de escenarios |
-| 7. Lluvia de ideas y priorización de escenarios | Escenarios agregados y priorización |
-| 8. Analizar de nuevo con los escenarios agregados | Análisis de escenarios |
-| 9. Presentar resultados | Riesgos y trade-offs; temas de riesgo; plan de verificación |
+1. Presentar el método, en «El método ATAM».
+2. Presentar los impulsores de negocio, en «Impulsores de negocio y restricciones».
+3. Presentar la arquitectura, en «Arquitectura presentada».
+4. Identificar los enfoques arquitectónicos, en «Enfoques arquitectónicos identificados».
+5. Generar el árbol de utilidad, en «Árbol de utilidad».
+6. Analizar los enfoques, en «Análisis de escenarios».
+7. Hacer la lluvia de ideas y priorizar escenarios, en «Escenarios agregados y priorización».
+8. Analizar de nuevo con los escenarios agregados, también en «Análisis de escenarios».
+9. Presentar los resultados, en «Riesgos, no-riesgos, puntos de sensibilidad y trade-offs», «Temas de riesgo» y «Plan de verificación».
 
 ### Vocabulario
 
@@ -64,19 +54,13 @@ El SEI supone un equipo evaluador externo. Aquí, evaluadores y arquitectos son 
 
 ## Impulsores de negocio y restricciones
 
-Una organización gubernamental necesita coordinar a varios organismos durante un desastre y en la reconstrucción, con información repartida en ocho tipos de sistemas que no va a reemplazar.
+Una organización gubernamental necesita coordinar a varios organismos durante un desastre y en la reconstrucción, con información repartida en ocho tipos de sistemas que no va a reemplazar. De esa necesidad salen nueve objetivos de negocio, y cada uno exige un atributo de calidad que el SRS precisa en sus escenarios.
 
-| Objetivo de negocio | Qué exige | Atributo | Escenarios |
-| --- | --- | --- | --- |
-| Que la plataforma funcione justo cuando ocurre el desastre | 99,95 % mensual en lo crítico; recuperar en 15 min sin pérdida | Disponibilidad | QA-DIS-01, 02 |
-| Atender el pico tras el evento | De 1.000 a 10.000 usuarios; 500 equipos de campo | Escalabilidad | QA-ESC-01, 02 |
-| Que los organismos actúen a tiempo | Consulta en 2 s, registro en 3 s, alerta en 5 s | Rendimiento | QA-REN-01 a 03 |
-| No depender de que todo esté arriba | Una falla no se vuelve general | Resiliencia | QA-RES-01, 02 |
-| Integrar sin reemplazar | Tecnologías distintas y sistemas nuevos | Interoperabilidad, extensibilidad | QA-INT-01, 02; QA-EXT-01 |
-| Proteger la información de cada organismo | Acceso por rol y organismo; sin datos de personas afectadas (ADR-28) | Seguridad | QA-SEG-01, 02 |
-| Rendir cuentas por proyectos y presupuestos | Quién, qué, cuándo, sobre qué y resultado | Trazabilidad | QA-TRZ-01, 02 |
-| Servir para desastres y organismos nuevos | Cambios por configuración | Modificabilidad | QA-MOD-01, 02 |
-| Confiar en los reportes de campo | Nada se pierde ni se sobrescribe | Confiabilidad | QA-CNF-01, 02; QA-DIS-03 |
+El primero es que la plataforma funcione justo cuando ocurre el desastre, que es cuando más se la necesita: lo crítico debe estar disponible el 99,95 % del mes y recuperarse en 15 minutos sin perder datos (disponibilidad, QA-DIS-01 y 02). En ese mismo momento llega el pico de uso, de 1.000 a 10.000 usuarios y 500 equipos de campo, que la plataforma debe absorber (escalabilidad, QA-ESC-01 y 02). Y los organismos necesitan actuar a tiempo, con consultas en 2 s, registros en 3 s y alertas en 5 s (rendimiento, QA-REN-01 a 03).
+
+Como depende de sistemas que no controla, la plataforma no puede exigir que todo esté arriba: una falla debe quedar contenida y no volverse general (resiliencia, QA-RES-01 y 02). Por la misma razón debe integrar tecnologías distintas y sumar sistemas nuevos sin reemplazar los existentes (interoperabilidad y extensibilidad, QA-INT-01 y 02, QA-EXT-01).
+
+Los demás objetivos protegen la confianza en la información. Cada organismo ve solo lo suyo, según su rol, y no se guardan datos de personas afectadas (seguridad, QA-SEG-01 y 02; ADR-28). Los proyectos y presupuestos de reconstrucción deben rendir cuentas de quién hizo qué, cuándo, sobre qué y con qué resultado (trazabilidad, QA-TRZ-01 y 02). Los reportes de campo no pueden perderse ni sobrescribirse (confiabilidad, QA-CNF-01 y 02, QA-DIS-03). Y la plataforma debe servir para desastres y organismos nuevos con cambios de configuración y no de código (modificabilidad, QA-MOD-01 y 02).
 
 **Mínimos del proyecto** (SAD, «Propósito y alcance»): a) app móvil que recolecta y caracteriza; b) reconstrucción física; c) mapa con desastres, evaluaciones y proyectos; d) evaluación de daños; más autenticación y autorización.
 
@@ -84,7 +68,7 @@ Una organización gubernamental necesita coordinar a varios organismos durante u
 
 ## Arquitectura presentada
 
-El detalle está en el SAD v2.2, de la estrategia de solución a las decisiones arquitectónicas. Son servicios de grano grueso, separados por consistencia transaccional y por perfil de carga, cada uno dueño de sus datos. Se llaman por REST o gRPC cuando necesitan la respuesta y se avisan por colas cuando no, siempre desde una bandeja de salida.
+El detalle está en el SAD v2.2, de la estrategia de solución a las decisiones arquitectónicas. Son servicios de grano grueso, separados por consistencia transaccional y por perfil de carga, cada uno dueño de sus datos. Cuando una unidad necesita la respuesta de otra para continuar, la llama de forma síncrona, y el protocolo lo fija el par de unidades, no cada llamada. Reconstrucción ofrece gRPC, con un contrato tipado y compartido, como canal interno hacia el portal y el servicio de tablero; también expone sus operaciones por REST para clientes externos y pruebas (ADR-26). Todas las demás llamadas síncronas son REST, entre ellas las de la app, el portal y el servicio de tablero hacia el núcleo y hacia servidor. Los sistemas que no usan REST pueden iniciar sesión por SOAP o por EJB remoto. Cuando no necesita la respuesta, la unidad avisa por colas, siempre desde una bandeja de salida.
 
 ![Contenedores de la plataforma](diagramas/contenedores.png)
 
@@ -96,23 +80,21 @@ Construidos: UD-01 Entrada (Nginx), UD-02 Núcleo (Jakarta EE), UD-03 servidor (
 
 ## Enfoques arquitectónicos identificados
 
-Las tácticas siguen los nombres de Bass, Clements y Kazman.
+Las tácticas siguen los nombres de Bass, Clements y Kazman. Se agrupan por el atributo al que sirven; entre paréntesis van las decisiones del SAD que las adoptan y su estado.
 
-| Atributo | Táctica o patrón | ADR | Estado |
-| --- | --- | --- | --- |
-| Rendimiento | Introducir concurrencia, acotar la cola y limitar el tiempo (servlet asíncrono del tablero) | 24 | Medido |
-| Rendimiento | Mantener copias de los datos | 03, 24 | Construido |
-| Disponibilidad | Degradación controlada: respuesta parcial y 503 | 11, 24 | Medido |
-| Disponibilidad | Transacciones y reintento: bandeja de salida | 02, 15 | Medido |
-| Disponibilidad | Redundancia, réplica, conmutación y monitoreo en tres centros | 09, 12, 16 | Diseñado |
-| Escalabilidad | Unidades que crecen por separado; entrada única; incorporación diferida | 01, 14, 18 | Construido; sin prueba de carga |
-| Resiliencia | Tiempo de espera, corte de circuito, cola por destino y confirmación explícita | 07, 15, 21 | Colas construidas; adaptadores diseñados |
-| Seguridad | Autenticar y autorizar en el núcleo; restringir el inicio de sesión; revocar; separar organismos | 10, 14, 19, 23 | Construido; ámbito de evento diseñado |
-| Trazabilidad | Auditar en la transacción del cambio | 20 | Local construida |
-| Confiabilidad | Identificador del cliente y versión base | 04 | Medido |
-| Interoperabilidad | Adaptar la interfaz: REST, gRPC, SOAP, EJB remoto, adaptadores | 07, 17, 26 | Accesos construidos |
-| Modificabilidad | Restringir dependencias (capas, contratos C1 a C5); diferir el enlace (catálogos) | 08, 26 | Construido en parte |
-| Presentación | MVVM del lado del servidor (Razor Pages) | 23 | Construido |
+**Rendimiento.** El servlet asíncrono del tablero introduce concurrencia, acota la cola y limita el tiempo de cada fuente (ADR-24; medido). Las copias de lectura de los datos de otras unidades evitan una consulta remota en cada solicitud (ADR-03 y 24; construido).
+
+**Disponibilidad y resiliencia.** Cuando una fuente falla, la respuesta se degrada de forma controlada: el tablero devuelve lo que tiene y, si su cola se llena, responde 503 (ADR-11 y 24; medido). Cada cambio y su aviso se guardan en la misma transacción y el aviso sale por una bandeja de salida con reintento (ADR-02 y 15; medido). Hacia los sistemas externos se usan tiempo de espera, corte de circuito, una cola por destino y confirmación explícita (ADR-07, 15 y 21): las colas están construidas y los adaptadores, diseñados. La redundancia, la réplica, la conmutación y el monitoreo en tres centros están solo diseñados (ADR-09, 12 y 16).
+
+**Escalabilidad.** Las unidades crecen por separado detrás de una entrada única, y la incorporación de evaluaciones puede diferirse en los picos (ADR-01, 14 y 18). Está construido, pero sin prueba de carga.
+
+**Seguridad.** El núcleo autentica y autoriza; se restringe el inicio de sesión, se revocan sesiones y se separan los organismos (ADR-10, 14, 19 y 23). Está construido, salvo el ámbito por evento, que está diseñado.
+
+**Trazabilidad y confiabilidad.** Cada cambio se audita en la misma transacción que lo produce (ADR-20; construido en cada unidad). Cada operación de campo lleva el identificador del cliente y la versión base, lo que impide sobrescribir en silencio (ADR-04; medido).
+
+**Interoperabilidad y modificabilidad.** La interfaz se adapta a cada consumidor con REST, gRPC, SOAP, EJB remoto y adaptadores (ADR-07, 17 y 26; los accesos están construidos y los adaptadores, diseñados). Las dependencias se restringen con capas y con los contratos C1 a C5, y el enlace se difiere con catálogos configurables (ADR-08 y 26; construido en parte).
+
+**Presentación.** El portal sigue MVVM del lado del servidor con Razor Pages (ADR-23; construido).
 
 ## Árbol de utilidad
 
@@ -561,30 +543,31 @@ Se conservan los identificadores de la v1.0; los nuevos empiezan en PS-13, TO-14
 
 ## Temas de riesgo
 
-| Tema | Riesgos | Impulsor de negocio amenazado |
-| --- | --- | --- |
-| T1. Disponibilidad y escala descansan en infraestructura y pruebas que no existen | R-01, 02, 03, 11, 12, 18, 19 | Funcionar cuando ocurre el desastre; atender el pico |
-| T2. El núcleo es punto común de cada solicitud | R-13, 22, 31 | Funcionar cuando ocurre el desastre; actuar a tiempo |
-| T3. Unidades que aún no corren con varias instancias | R-10, 15, 16, 17, 23 | Funcionar cuando ocurre el desastre; actuar a tiempo |
-| T4. El teléfono y la sesión en campo | R-04, 07, 24 | Confiar en los reportes de campo; proteger la información |
-| T5. Integraciones y avisos dependen de terceros o de diseño | R-05, 06, 09, 20, 28, 29 | Integrar sin reemplazar; actuar a tiempo |
-| T6. Controles de seguridad de laboratorio | R-21, 25, 27, 30 | Proteger la información de cada organismo |
-| T7. Reglas que dependen de capacidades sin código | R-08, 14, 26 | Rendir cuentas; servir para desastres nuevos |
+Los 31 riesgos se agrupan en siete temas. Cada tema reúne riesgos con una causa común y amenaza a uno o más objetivos de negocio.
 
-T1 y T2 pesan más: tocan los escenarios (A, A) y no se reducen sin el despliegue objetivo y pruebas de carga.
+**Disponibilidad y escala sin la infraestructura que las sostiene** (R-01, 02, 03, 11, 12, 18 y 19). La meta del 99,95 % y la escala de 10.000 usuarios dependen de tres centros de datos, de réplicas con promoción del primario y de pruebas de carga que todavía no existen. Mientras no existan, no se sabe si los centros caerían juntos, cuánta latencia habría entre ellos ni cuánta carga aguanta cada instancia. Amenaza los objetivos de funcionar cuando ocurre el desastre y de atender el pico.
+
+**El núcleo como punto común de cada solicitud** (R-13, 22 y 31). Todas las unidades validan la sesión contra el núcleo, y el tablero multiplica esa carga al consultar tres fuentes a la vez. Si el núcleo cae o se satura, nada protegido funciona, porque el modo degradado de servidor no tiene código. Amenaza los objetivos de funcionar cuando ocurre el desastre y de actuar a tiempo.
+
+**Unidades que todavía no corren con varias instancias** (R-10, 15, 16, 17 y 23). Notificaciones guarda su estado en archivos y el portal guarda los tokens en memoria, así que ninguna de las dos puede duplicarse sin perder estado; además, operar nueve unidades en dos plataformas ya pesa sobre el equipo. Amenaza los mismos dos objetivos.
+
+**El teléfono y la sesión en campo** (R-04, 07 y 24). Un teléfono perdido guarda capturas en un SQLite sin cifrar, y en un desastre grande los conflictos de versión pueden superar a quienes los resuelven. La confusión entre sesión vencida y falta de red, en cambio, ya quedó mitigada. Amenaza la confianza en los reportes de campo y la protección de la información.
+
+**Integraciones y avisos que dependen de terceros o solo del diseño** (R-05, 06, 09, 20, 28 y 29). Los adaptadores hacia los sistemas externos están diseñados pero no construidos, y la entrega de avisos depende de colas, correo y mapas de terceros. Amenaza los objetivos de integrar sin reemplazar y de actuar a tiempo.
+
+**Controles de seguridad de laboratorio** (R-21, 25, 27 y 30). El ambiente entregado no tiene TLS ni cifrado en reposo, notificaciones no autentica a quien la llama y el límite de inicios de sesión por IP puede bloquear a un puesto de mando completo. Amenaza la protección de la información de cada organismo.
+
+**Reglas que dependen de capacidades sin código** (R-08, 14 y 26). Algunas reglas suponen funciones que aún no existen, como validar evaluaciones o administrar catálogos, y la historia de un evento largo puede volver lenta la consulta. Amenaza los objetivos de rendir cuentas y de servir para desastres nuevos.
+
+Los dos primeros temas pesan más: tocan los escenarios de mayor importancia y dificultad, y no se reducen sin el despliegue objetivo y pruebas de carga.
 
 ## Plan de verificación y conclusiones
 
 ### Qué cambió por la evaluación y la medición
 
-| Hallazgo | Cambio |
-| --- | --- |
-| v1.0, R-16: un mensaje por segundo por cola | ADR-27: hasta 20 por ciclo; consumo de C5 con deduplicación |
-| v1.0, R-17: varias instancias publicarían dos veces | Reclamo de filas que salta las ya tomadas |
-| Plazo de 5 s: 25 de 60 respuestas del tablero fueron 503 | Plazo igual al límite de la fuente |
-| Reconstrucción descargaba el catálogo en cada consulta | Copia de 3 s para lecturas |
-| El paralelo no gana con 20 clientes | Se registra el trade-off (ADR-24) |
-| Anotación del profesor sobre los escenarios | p50 y p95 (ADR-29) |
+La evaluación y la medición cambiaron seis cosas del diseño. Dos riesgos de la versión 1.0 se corrigieron en el código: el consumo de un mensaje por segundo por cola, que retrasaba las alertas, ahora toma hasta 20 por ciclo y descarta los avisos repetidos (ADR-27; antes R-16), y la publicación duplicada con varias instancias se evita reclamando las filas de la bandeja sin tomar las que ya tiene otra instancia (antes R-17).
+
+La primera medición del tablero mostró que un plazo general de 5 s producía 25 respuestas 503 de 60; desde entonces, el plazo de cada cliente es el límite de su fuente. También mostró que Reconstrucción descargaba el catálogo en cada consulta, y ahora usa una copia de 3 s para las lecturas. El hallazgo de que el paralelo no gana con 20 clientes quedó registrado como trade-off en ADR-24. Por último, la anotación del profesor sobre los escenarios llevó a expresar las metas con p50 y p95 (ADR-29).
 
 ### Plan de verificación
 
@@ -602,10 +585,13 @@ T1 y T2 pesan más: tocan los escenarios (A, A) y no se reducen sin el despliegu
 
 ### Conclusiones
 
-- La arquitectura responde con razonamiento a todos los escenarios del árbol. Con evidencia sostiene el tablero, la reconstrucción con sus reglas y su auditoría, la reconciliación sin sobrescribir, la separación por organismo y la entrega de avisos sin pérdida.
-- La medición del tablero corrigió dos defectos y mostró que el paralelo no siempre gana: la evidencia sirvió para corregir decisiones, no para adornarlas.
-- Los escenarios (A, A) de disponibilidad y escala siguen sin evidencia. Son el mayor riesgo y exigen el despliegue objetivo y pruebas de carga.
-- La app de campo se probó en un celular real con C1, C2, el 409 y el 401 (AN-04). Quedan pendientes la prueba de 100 capturas en el teléfono y la medición de 10 alertas simultáneas.
+La evaluación muestra una arquitectura que responde con razonamiento a todos los escenarios del árbol de utilidad y que, donde hay código, lo sostiene con evidencia. Las decisiones que más pesan en la operación diaria están medidas: el tablero cumple su meta de consulta y se degrada sin caerse cuando una fuente falla; la reconstrucción aplica sus reglas en un dominio aislado y audita cada cambio y cada intento rechazado; la reconciliación de campo no sobrescribe en silencio, también en un celular real; los organismos quedan separados en cada lectura y escritura; y los avisos esperan en la bandeja cuando RabbitMQ se detiene y se entregan al volver.
+
+Además de confirmar el diseño, la medición lo corrigió. Destapó dos defectos del tablero, el plazo general que producía respuestas 503 y la descarga del catálogo en cada consulta, y mostró que la concurrencia no siempre gana: en una sola máquina y con 20 clientes, consultar en paralelo resultó un poco más lento que hacerlo en secuencia, porque las tres fuentes ya estaban ocupadas y todas validan la sesión contra el núcleo. Ese resultado convierte ADR-24 en un trade-off explícito: el paralelo se justifica por la latencia sin carga y por el aislamiento de fallas, y bajo carga en una máquina no aporta rendimiento.
+
+El punto más débil es estructural. El núcleo es el punto común de cada solicitud, y mientras el modo degradado no tenga código su caída detiene todo lo protegido. Notificaciones y el portal todavía no corren con varias instancias. Son riesgos conocidos y con una acción definida, pero hoy limitan la disponibilidad real más que cualquier otra decisión.
+
+La evaluación también deja claro lo que no puede afirmar. Los escenarios de mayor importancia y dificultad, la disponibilidad del 99,95 % y la escala de 10.000 usuarios, solo tienen sustento de diseño, porque exigen tres centros de datos y pruebas de carga que el ambiente de una sola máquina no permite. Faltan además dos pruebas más acotadas: 100 capturas seguidas en el teléfono y 10 alertas simultáneas. El siguiente paso es medir lo que hoy está solo razonado, y el plan de verificación ya define esas pruebas y su criterio de aceptación.
 
 ## Referencias
 

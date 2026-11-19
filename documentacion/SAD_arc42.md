@@ -2,106 +2,56 @@
 
 **Documento de arquitectura de software, organizado según arc42**
 
-**Versión:** 2.2 · **Fecha:** 17 de noviembre de 2026
+**Versión:** 2.2 · **Fecha:** 18 de noviembre de 2026
 
 **Equipo:** Andrés Barrios, Nicolás Parra, Thomás López, André Landinez
 
 **Pontificia Universidad Javeriana** · Arquitectura de Software
 
-## Cómo se cubren las vistas 4+1 y los entregables del enunciado
-
-| Vista o entregable | Sección |
-| --- | --- |
-| Vista lógica | «Contenedores (C4 nivel 2)» y «Reglas de dominio por capacidad» |
-| Vista de desarrollo | «Componentes (C4 nivel 3)» y «Organización del código» |
-| Vista de procesos | «Vista de ejecución» |
-| Vista física | «Vista de despliegue» |
-| Escenarios (+1) | «Vista de ejecución» y «Requisitos de calidad» |
-| Diagramas de contenedores, componentes y despliegue | Figuras 2 a 5, 11 y 12 |
-| Modelo de integración con sistemas externos | «Sistemas externos» y «Modelo de integración» |
-| Diseño de APIs y eventos | «APIs y eventos» |
-| Decisiones arquitectónicas | «Decisiones arquitectónicas» |
-| Estrategia de seguridad | «Seguridad» |
-| Estrategia de resiliencia y recuperación | «Resiliencia y recuperación» y «Despliegue objetivo: tres centros de datos (diseñado)» |
-| Estrategia de escalabilidad | «Escalabilidad y rendimiento» |
-
-**Convención de estado.** *Construido*: tiene código y pasa la verificación del ambiente entregado («Ambiente entregado: Docker Compose en una máquina»). *Diseñado* o *sin código*: está decidido, pero no implementado. *En curso*: cambio de código que el equipo está haciendo y que aún no se entrega.
-
 ## Introducción y metas
 
 ### Propósito y alcance
 
-Este documento describe la arquitectura de la Plataforma para la Gestión de Desastres y Reconstrucción y justifica sus decisiones con los atributos de calidad del SRS. Es una sola arquitectura: la que implementa el código entregado, extendida a las partes que aún no tienen código.
+Este documento describe la arquitectura de la Plataforma para la Gestión de Desastres y Reconstrucción y justifica cada decisión con los requisitos del SRS. La plataforma reúne en un solo lugar la información que hoy está dispersa entre organismos durante una emergencia: el registro y la caracterización del desastre, la evaluación de daños hecha en campo, la coordinación entre organismos y la reconstrucción física posterior. Debe hacerlo con sistemas externos que no controla y que pueden fallar, con equipos de campo que trabajan sin señal y con picos de miles de usuarios en las primeras horas de un evento.
 
-| Mínimo del proyecto | Qué se entrega | Dónde |
-| --- | --- | --- |
-| a. App móvil que recolecta y caracteriza | App de campo .NET MAUI con SQLite: captura sin conexión y sincronización. Caracteriza el desastre (C2) y elige el tipo de activo (C1) sin conexión, probado en un celular real (E3) | «Escenario D: evaluación distribuida y sincronización sin conexión», «Operación sin conexión» |
-| b. Reconstrucción física | UD-06 Reconstrucción, en Spring Boot con REST y gRPC | «Reglas de dominio por capacidad», «Escenario E: reconstrucción» |
-| c. Mapa con desastres, evaluaciones y proyectos | Tablero del desastre en el portal (UD-09), armado por el servlet multihilo del servicio de tablero (UD-10) | «Tablero de un desastre (servlet multihilo)» |
-| d. Evaluación de daños | Evaluaciones versionadas con fotografía en servidor (UD-03) | «Reglas de dominio por capacidad», «Escenario D: evaluación distribuida y sincronización sin conexión» |
-| Autenticación y autorización | Sesión del núcleo validada en cada solicitud; permisos por rol y organismo | «Seguridad» |
+Esta versión entrega cuatro capacidades, además de la autenticación y la autorización que las protegen:
 
-Personas afectadas, gestión de recursos y donaciones quedan fuera de alcance por indicación del profesor (ADR-28): son sistemas externos (SE-04 y SE-05) y UD-05 se retira. Quedan diseñados, sin código: la coordinación de organismos, la consulta pública (UD-07), la integración (UD-08), el modo degradado de servidor y el despliegue en tres centros de datos.
+- **Captura en campo:** una app móvil que registra evaluaciones de daños y caracteriza el desastre sin conexión, y sincroniza sin perder ni duplicar lo capturado.
+- **Evaluación de daños:** evaluaciones versionadas con su fotografía, consultables en un mapa.
+- **Tablero del desastre:** un mapa que reúne el desastre, sus evaluaciones y sus proyectos de reconstrucción.
+- **Reconstrucción física:** proyectos con aprobación, presupuesto, avance, evidencias y auditoría.
 
-### Metas de calidad
+La gestión de personas afectadas y la de recursos y donaciones ya existen en otras entidades. La plataforma no las duplica: se integra con ellas como sistemas externos (SE-04 y SE-05, ADR-28). Quedan diseñadas, con sus contratos definidos, la coordinación de organismos, la consulta pública, la unidad de integración, el modo degradado y el despliegue en tres centros de datos.
 
-Cinco escenarios del SRS tienen importancia y dificultad altas, y son los que más condicionan la arquitectura. El resto está en «Requisitos de calidad».
-
-| Escenario | Qué exige | Consecuencia para el diseño | Estado |
-| --- | --- | --- | --- |
-| QA-DIS-01 | 99,95 % mensual en las funciones críticas | Redundancia de lo crítico; lo degradable aparte | Meta de diseño |
-| QA-DIS-02 | Recuperar lo crítico en 15 min sin perder operaciones confirmadas | Datos en dos centros; conmutación automática | Meta de diseño |
-| QA-ESC-01 | De 1.000 a 10.000 usuarios, creciendo solo lo saturado | Unidades separadas por perfil de carga | Unidades construidas; sin prueba de carga |
-| QA-ESC-02 | 500 equipos de campo sin afectar la coordinación | Evaluaciones en una unidad distinta del núcleo | Construido; sin prueba de carga |
-| QA-CNF-01 | Reconciliar sin sobrescribir tras trabajar sin conexión | Operaciones con identidad propia y conflictos explícitos | Construido y probado |
+El documento describe una sola arquitectura. Las partes **construidas** tienen código y pasan la verificación del ambiente entregado; las **diseñadas** están decididas y especificadas, pero no implementadas. Se distinguen porque las metas de disponibilidad y de escala dependen sobre todo de lo diseñado, y el lector debe saber qué está demostrado y qué no. Las vistas del modelo 4+1 se reparten así: la lógica en «Vista de bloques», la de desarrollo en «Organización del código», la de procesos en «Vista de ejecución», la física en «Vista de despliegue», y los escenarios en «Vista de ejecución» y «Requisitos de calidad». Las restricciones del SRS (CON-01 a CON-10) se explican en la sección donde condicionan el diseño.
 
 ### Metas cuantitativas
 
-| Meta | Valor | Cómo se verifica |
-| --- | --- | --- |
-| Disponibilidad de las funciones críticas | 99,95 % mensual (21,6 min de caída como máximo) | Meta de diseño del despliegue objetivo |
-| Usuarios concurrentes | De 1.000 a 10.000 en 10 minutos | Meta de diseño; modelo de capacidad en «Escalabilidad y rendimiento» |
-| Consulta frecuente | Menos de 2 s | p50 y p95 medidos en el ambiente entregado (ADR-29) |
-| Registro de un desastre | Menos de 3 s | Ídem |
-| Alerta crítica | Menos de 5 s, con hasta 10 alertas simultáneas | Ídem; las 10 simultáneas dependen de ADR-27 |
-| Recuperación de lo crítico | 15 minutos, 0 operaciones confirmadas perdidas | Meta de diseño |
+Cinco escenarios del SRS tienen importancia y dificultad altas, y son los que más condicionan la arquitectura. La tabla los resume con la decisión que provocan; el resto está en «Requisitos de calidad».
 
-Una meta de tiempo se cumple cuando el p95 queda dentro del tiempo, ninguna operación supera el doble y menos del 0,1 % termina con error. Cada medición indica el número de solicitudes y la concurrencia.
+| Meta | Valor | Consecuencia en el diseño |
+| --- | --- | --- |
+| Disponibilidad de las funciones críticas (QA-DIS-01) | 99,95 % mensual: 21,6 minutos de caída como máximo | Lo crítico se separa de lo degradable y se replica en tres centros |
+| Recuperación tras perder un centro (QA-DIS-02) | Lo crítico en 15 minutos, sin perder operaciones confirmadas | Cada cambio se confirma en dos centros antes de responder |
+| Aumento repentino de usuarios (QA-ESC-01) | De 1.000 a 10.000 en 10 minutos, creciendo solo lo saturado | Unidades separadas por perfil de carga |
+| Ingesta de campo (QA-ESC-02) | 500 equipos con un reporte por minuto, sin afectar la coordinación | Las evaluaciones viven en una unidad distinta del núcleo |
+| Reconciliación sin conexión (QA-CNF-01) | Ningún conflicto resuelto por sobrescritura silenciosa | Cada operación viaja con identidad propia y versión base |
+| Consulta frecuente y registro (QA-REN-01, QA-REN-02) | Menos de 2 s y de 3 s | Presupuesto de tiempo por tramo («Escalabilidad y rendimiento») |
+| Alerta crítica (QA-REN-03) | Menos de 5 s, con hasta 10 alertas simultáneas | La alerta no espera a sistemas externos |
+
+Una meta de tiempo se cumple cuando el percentil 95 queda dentro del tiempo, ninguna operación supera el doble y menos del 0,1 % termina con error. El promedio no sirve como criterio porque esconde las solicitudes lentas, que son las que sufre un coordinador en plena emergencia (ADR-29).
 
 ### Interesados
 
-El profesor y los evaluadores esperan decisiones justificadas y evidencia; los coordinadores y autoridades, fases, tablero y proyectos auditados; los evaluadores de campo, una captura que no pierde datos; los operadores, saber desplegar, verificar y recuperar; y los responsables de sistemas externos y el equipo de desarrollo, contratos estables entre unidades.
-
-## Restricciones
-
-### Restricciones del SRS
-
-| Restricción | Efecto en el diseño |
+| Interesado | Qué espera de la arquitectura |
 | --- | --- |
-| CON-01 a CON-03: no se reemplazan los sistemas existentes y cada uno conserva su mecanismo | Un adaptador por sistema externo (ADR-07) |
-| CON-04: los sistemas externos pueden no estar disponibles | Tiempo de espera, reintentos, corte de circuito y cola de pendientes |
-| CON-05 y CON-06: hay operaciones inmediatas y otras diferibles | Cada interacción declara su mecanismo («Modelo de integración») |
-| CON-07: tecnologías de los talleres del curso | Jakarta EE, Spring Boot, .NET, PostgreSQL, RabbitMQ y Nginx, por unidad (ADR-17) |
-| CON-08: móvil parcialmente sin conexión | SQLite en el dispositivo y reconciliación (ADR-04, ADR-25) |
-| CON-09: protección de datos personales | La plataforma no guarda datos de personas afectadas (ADR-28); las cuentas de usuario se protegen según «Seguridad» |
-| CON-10: toda la presentación en .NET | Portal en ASP.NET Core Razor Pages (ADR-23) y app de campo en .NET MAUI (ADR-25); los servicios Java no sirven vistas |
-
-### Restricciones del curso
-
-| Restricción | Cómo se cumple |
-| --- | --- |
-| Toda la presentación en .NET, con MVC, MVP o MVVM (aclaración del 17-nov-2026) | Portal en ASP.NET Core Razor Pages, MVVM del lado del servidor (ADR-23), y app de campo en .NET MAUI |
-| Multihilo con servlets | Servlet asíncrono con pool acotado, en el servicio de tablero que consume el portal (ADR-24) |
-| Componentes .NET para operar sin conexión | App de campo .NET MAUI con SQLite (ADR-25) |
-| Autenticación y autorización | Sesión del núcleo validada en cada unidad; permisos en el backend («Seguridad») |
-| Alcance indicado en clase | Personas, recursos y donaciones como sistemas externos (ADR-28) |
-
-### Restricciones organizativas y convenciones
-
-- Se entrega un ambiente de una máquina con Docker Compose («Ambiente entregado: Docker Compose en una máquina»). Los tres centros de datos quedan diseñados («Despliegue objetivo: tres centros de datos (diseñado)»).
-- Plantilla arc42 y diagramas C4: azul sólido es construido; gris con borde punteado, diseñado.
-- Se conservan los identificadores del SRS y de la versión 1.0 (RF, QA, CON, SE, UD, ADR). RN-01 a RN-21 son las reglas de negocio de Reconstrucción.
-- Cada unidad de despliegue lleva el nombre de su contenedor: núcleo (UD-02), servidor (UD-03), Reconstrucción (UD-06), portal (UD-09) y servicio de tablero (UD-10).
+| Coordinadores y autoridades de los organismos | Registrar y seguir el desastre, coordinar la respuesta y aprobar proyectos con trazabilidad |
+| Evaluadores de campo | Capturar sin señal y no perder ni duplicar nada al sincronizar |
+| Auditores y entes de control | Saber quién hizo qué, cuándo y sobre qué dato |
+| Ciudadanos | Consultar información pública aunque la plataforma esté bajo carga |
+| Responsables de los sistemas externos | Contratos estables que no les exijan cambiar sus sistemas |
+| Operación de la plataforma | Desplegar, verificar y recuperar con procedimientos claros |
+| Equipo de desarrollo y revisores de arquitectura | Decisiones justificadas, contratos explícitos entre unidades y evidencia de lo construido |
 
 ## Contexto y alcance
 
@@ -138,51 +88,81 @@ flowchart LR
 
 *Figura 1. Contexto de la plataforma. Línea continua: uso o llamada inmediata. Línea punteada: mensajes en cola o canal diseñado.*
 
+Las personas entran por dos clientes: el portal web, para la operación y el seguimiento, y la app de campo, para la captura. Los sistemas externos quedan a los lados porque la plataforma no los reemplaza ni los controla: recibe de ellos alertas y datos de referencia, y les entrega avisos y compromisos. Cada rol de la plataforma tiene un rol equivalente en Reconstrucción, porque esa capacidad aplica reglas propias de aprobación y responsabilidad.
+
 | Actor | Rol en la plataforma | Rol en Reconstrucción | Qué hace |
 | --- | --- | --- | --- |
 | Coordinador | COORDINADOR | AUTORIDAD | Registra el desastre y cambia su fase y nivel; crea, aprueba y cancela proyectos; administra los usuarios de su organismo |
 | Evaluador de campo | EVALUADOR | RESPONSABLE | Captura evaluaciones; caracteriza el desastre; opera el proyecto que tiene asignado |
 | Consulta | CONSULTA | AUDITOR | Solo lectura, incluida la auditoría |
 | Ciudadano | Sin sesión | — | Consulta pública (diseñada) |
-| Sistema que no usa REST | Cuenta de la plataforma | — | Inicia sesión por SOAP o por EJB remoto (construido) |
+| Sistema que no usa REST | Cuenta de la plataforma | — | Inicia sesión por SOAP o por EJB remoto |
 
 ### Sistemas externos
 
-Cada sistema externo sigue siendo dueño de sus datos; la plataforma guarda una copia con su fuente y su hora. La columna de protección indica tiempo de espera, reintentos y umbral del corte de circuito.
+La plataforma no puede cambiar a los sistemas externos ni garantizar su disponibilidad (CON-01 a CON-04). Por eso cada uno sigue siendo dueño de sus datos, y la plataforma guarda una copia con su fuente y su hora: así puede seguir operando con el último dato conocido y mostrar qué tan reciente es. La columna de protección indica el tiempo de espera, los reintentos y el umbral que abre el corte de circuito.
 
 | Sistema | Mecanismo | Qué cruza la frontera | Protección | Si no responde | Estado |
 | --- | --- | --- | --- | --- | --- |
-| SE-01a, b, c Alertas, meteorología, sismos | Entrada: cola, o webhook que deja el mensaje en la cola | Fenómeno, magnitud, ubicación y hora; JSON o CAP. Se reconoce por fuente e identificador | El emisor reintenta | Siempre se recibe; lo inválido queda en cuarentena visible | Cola de entrada construida; adaptadores diseñados |
-| SE-02 GIS | REST inmediato | Geometrías GeoJSON con la versión de su catálogo | 2 s; 2; 5 fallas en 30 s | Última geometría conocida, marcada «por actualizar» | Diseñado |
-| SE-03 Hospitalarios | Cola diferida y consulta cada 60 s | Sale el aviso de desastre; entra la capacidad disponible. Sin datos de pacientes (ADR-28) | 5 s; 3; 3 seguidas | Datos marcados desactualizados; pendientes en cola | Cola del aviso construida; adaptador diseñado |
-| SE-04 Gestión de recursos | Cola diferida y consulta cada 5 min | Disponibilidad con su hora; es dueño de recursos y donaciones | 5 s; 3; 3 seguidas | Última disponibilidad con su hora | Diseñado |
-| SE-05 Identificación y atención de personas | REST inmediato y cola | Es dueño de los datos de personas; solo cruzarían identificadores | 3 s; 2; 5 en 30 s | Sin efecto en lo crítico | Diseñado |
-| SE-06 Administrativos y financieros | Cola diferida | Compromiso presupuestal (proyecto, monto, versión) y su respuesta | 10 s; 5; 3 seguidas | Operación en conciliación (ADR-21) | Diseñado |
-| SE-07 Proyectos de infraestructura | Cola diferida | Proyectos, avances, estado y contratista | 10 s; 5; 3 seguidas | Pendientes en cola | Diseñado |
-| SE-08 Comunicación y notificación | Salida: cola por sistema suscrito y correo SMTP | Aviso JSON con su identificador | Reintento a los 5 s | Pendiente hasta que el canal confirma; lo no procesable va a errores | Construido |
+| SE-01a, b, c Alertas, meteorología, sismos | Entrada: cola, o webhook que deja el mensaje en la cola | Fenómeno, magnitud, ubicación y hora, en JSON o CAP | El emisor reintenta | La alerta siempre se recibe; lo inválido queda en cuarentena visible | Cola de entrada construida; adaptadores diseñados |
+| SE-02 GIS | REST inmediato | Geometrías GeoJSON con la versión de su catálogo | 2 s; 2; 5 fallas en 30 s | El evento se registra con la última zona conocida, marcada como pendiente de actualizar; al volver el GIS se reemplaza por la vigente | Diseñado |
+| SE-03 Hospitalarios | Cola diferida y consulta cada 60 s | Sale el aviso de desastre; entra la capacidad disponible, sin datos de pacientes | 5 s; 3; 3 seguidas | Se muestra la última capacidad con su hora; los avisos esperan en cola | Cola del aviso construida; adaptador diseñado |
+| SE-04 Gestión de recursos | Cola diferida y consulta cada 5 min | Disponibilidad con su hora | 5 s; 3; 3 seguidas | Última disponibilidad con su hora | Diseñado |
+| SE-05 Identificación y atención de personas | REST inmediato y cola | Solo identificadores; los datos de personas siguen en su sistema | 3 s; 2; 5 en 30 s | Sin efecto en las funciones críticas | Diseñado |
+| SE-06 Administrativos y financieros | Cola diferida | Compromiso presupuestal (proyecto, monto, versión) y su respuesta | 10 s; 5; 3 seguidas | La operación queda En conciliación (ADR-21) | Diseñado |
+| SE-07 Proyectos de infraestructura | Cola diferida | Proyectos, avances, estado y contratista | 10 s; 5; 3 seguidas | Los envíos esperan en cola | Diseñado |
+| SE-08 Comunicación y notificación | Salida: cola por sistema suscrito y correo | Aviso JSON con su identificador | Reintento a los 5 s | El aviso queda pendiente hasta que el canal lo confirma | Construido |
 
-Un circuito abierto se prueba con una sonda cada 30 s y se cierra con la primera respuesta correcta.
+Los valores de protección siguen la urgencia de cada intercambio. El GIS se consulta mientras un coordinador espera, por eso tiene la espera más corta y nunca bloquea el registro. Los sistemas administrativos se usan en procesos diferidos y toleran esperas y reintentos más largos. Un circuito abierto se prueba con una sonda cada 30 s y se cierra con la primera respuesta correcta.
 
 ### Modelo de integración
 
-Toda comunicación con un sistema externo pasa por su adaptador en la unidad de integración (UD-08, diseñada). Un adaptador tiene cuatro piezas: el **conector**, con el protocolo y la credencial del externo; el **traductor**, entre el formato externo y el modelo común; el **validador**, que rechaza lo inválido con un error explícito; y la **protección**. Ninguna unidad interna conoce formatos ajenos.
+Los ocho tipos de sistemas externos usan formatos y mecanismos propios, no se pueden modificar y fallan por su cuenta. Si cada unidad interna hablara directamente con ellos, cada cambio de un externo obligaría a cambiar código del núcleo, y la caída de uno podría bloquear una operación crítica. Por eso toda comunicación con el exterior pasa por la unidad de integración (UD-08, diseñada), que tiene un adaptador por sistema. Las unidades internas solo conocen el modelo común de la plataforma.
+
+Un adaptador tiene cuatro piezas, que una alerta de entrada recorre en este orden:
+
+1. El **conector** recibe la alerta por el mecanismo del sistema emisor (webhook, cola o consulta periódica) y la deja en la cola de entrada antes de responder. Desde ese momento la alerta no se pierde, aunque la plataforma esté ocupada.
+2. El **validador** revisa formato y contenido. Lo inválido pasa a cuarentena con un error explícito, nunca se descarta en silencio, y lo repetido se reconoce por fuente e identificador.
+3. El **traductor** convierte el mensaje al modelo común. Es la única pieza que conoce el formato del emisor; si el emisor cambia su contrato, solo cambia el traductor (QA-INT-02).
+4. La **protección** (tiempo de espera, reintentos y corte de circuito) rodea toda llamada al exterior, para que un sistema lento no retenga hilos ni conexiones de la plataforma.
+
+Con la alerta ya traducida, el adaptador la entrega a la unidad dueña por su API habitual, por ejemplo al núcleo para crear el evento preliminar. La salida recorre el camino inverso: un cambio confirmado genera un aviso, el aviso llega a la cola propia de cada sistema suscrito, y el adaptador de ese sistema lo traduce y lo envía con su protección. Cada intercambio tiene un estado visible: Recibido, Validado, Incorporado o Rechazado con su causa en las entradas, y Aceptado o En conciliación (ADR-21) en las salidas.
+
+El mecanismo se elige según lo que necesita quien inicia el intercambio (CON-05 y CON-06):
 
 | Mecanismo | Cuándo se usa | Garantía |
 | --- | --- | --- |
-| API REST inmediata | Quien llama necesita la respuesta | Respuesta o error dentro del tiempo de espera |
-| Cola diferida | El destino puede no estar; importa que llegue | Al menos una vez; se guarda hasta su aceptación |
-| Avisos por cola | Varios interesados en un cambio confirmado | Al menos una vez a cada suscriptor |
+| API REST inmediata | Quien llama necesita la respuesta para continuar | Respuesta o error dentro del tiempo de espera |
+| Cola diferida | El destino puede no estar disponible y lo importante es que el mensaje llegue | Al menos una vez; se guarda hasta que el destino lo acepta |
+| Avisos por cola | Varios interesados deben enterarse de un cambio ya confirmado | Al menos una vez a cada suscriptor, sin que uno retrase a otro |
 | Webhook de entrada | El externo avisa sin que se le pregunte | La recepción queda en cola antes de responder |
 
-Todo mensaje lleva un identificador único y quien lo recibe descarta los repetidos. Cada intercambio tiene un estado visible: Recibido, Validado, Incorporado; en las salidas, Aceptado o En conciliación (ADR-21); o Rechazado, con su causa. Un sistema nuevo es un adaptador nuevo que se despliega solo (QA-EXT-01); uno que solo recibe avisos se suscribe con POST /sistemas, sin código nuevo, y eso ya está construido. Un cambio de contrato toca solo el traductor (QA-INT-02).
+Todo mensaje lleva un identificador único y quien lo recibe descarta los repetidos, porque las colas entregan al menos una vez. Un sistema nuevo es un adaptador nuevo que se despliega solo, sin tocar los existentes (QA-EXT-01). Un sistema que solo necesita recibir avisos se suscribe por configuración, sin código nuevo; esa parte ya está construida.
 
 ## Estrategia de solución
 
 ### Estilo arquitectónico
 
-La plataforma usa servicios de grano grueso, separados por consistencia transaccional y por perfil de carga, cada uno dueño de sus datos. Se llaman por REST o gRPC cuando necesitan la respuesta y se avisan por colas cuando no. Así, lo consistente se guarda en una transacción local y lo que recibe la carga crece por separado.
+La plataforma se organiza en servicios de grano grueso, cada uno dueño de su base de datos. Las fronteras se trazan con dos criterios. El primero es la **consistencia transaccional**: lo que debe guardarse junto, como un cambio y su auditoría, queda en la misma unidad, para resolverse con una transacción local y no con una distribuida. El segundo es el **perfil de carga**: lo que recibe picos distintos, como la ingesta de campo o la consulta ciudadana, va en unidades distintas, para crecer por separado (QA-ESC-01).
 
-| Atributo (1 a 5) | A. Monolito modular | B. Núcleo y tres satélites | C. Servicios por consistencia y carga | D. Un servicio por componente |
+Las unidades se comunican de tres formas, según lo que necesita quien llama:
+
+- **REST** cuando quien llama necesita la respuesta para continuar y el contrato debe ser abierto: entre .NET y Java, hacia la app y hacia los sistemas externos. Es el mecanismo por defecto, porque cualquier tecnología lo consume y se prueba con herramientas comunes.
+- **gRPC** solo en el canal interno de Reconstrucción hacia el portal y el servicio de tablero. Ese canal tiene catorce operaciones con mensajes estructurados, y un contrato único compilado en Java y en .NET detecta en la compilación cualquier diferencia entre cliente y servidor (ADR-26).
+- **Colas** cuando nadie espera la respuesta y lo importante es que el mensaje llegue: avisos y notificaciones, siempre publicados desde una bandeja de salida.
+
+No se trata de dos opciones intercambiables: REST es la regla, y gRPC es la excepción para un contrato interno extenso entre servicios propios.
+
+**Cómo se eligió el estilo.** Se compararon cuatro estilos frente a los atributos que más pesan en el árbol de calidad:
+
+- **A. Monolito modular:** una sola aplicación desplegable con módulos internos.
+- **B. Núcleo con tres satélites:** el diseño de la primera entrega, con un núcleo amplio y tres servicios a su alrededor.
+- **C. Servicios por consistencia y carga:** el estilo descrito arriba.
+- **D. Un servicio por componente:** microservicios finos.
+
+Cada atributo se calificó de 1 a 5 según las propiedades conocidas de cada estilo. Los puntajes son valoraciones del equipo, no mediciones, y la tabla sirve para hacer explícito el razonamiento y sus puntos sensibles.
+
+| Atributo (1 a 5) | A | B | C | D |
 | --- | --- | --- | --- | --- |
 | Disponibilidad de lo crítico | 3 | 3 | 4 | 4 |
 | Escalabilidad por partes | 2 | 3 | 4 | 5 |
@@ -194,28 +174,38 @@ La plataforma usa servicios de grano grueso, separados por consistencia transacc
 | Simplicidad de operación | 5 | 4 | 3 | 1 |
 | **Total** | **28** | **28** | **31** | **30** |
 
-Los puntajes son valoraciones del equipo, no mediciones. A y B pierden en escalabilidad porque el Escenario B pide crecer solo lo necesario. El resultado es sensible: sin la fila de integridad o la de simplicidad ganaría D. Esas filas pesan porque la trazabilidad es obligatoria y es más segura cuando el cambio y su registro son una transacción, y porque la plataforma la opera una entidad pública, no un equipo dedicado a decenas de servicios. Ningún escenario exige lo que D hace mejor: escalar un componente aislado del núcleo.
+A y B pierden porque crecer solo lo saturado es una meta explícita: en ellos, atender un pico de consultas obliga a duplicar también lo que no lo necesita. D gana en escalabilidad y resiliencia, pero pierde en dos atributos decisivos. La **integridad de los cambios** importa porque la trazabilidad es obligatoria, y es más segura cuando el cambio y su registro ocurren en una sola transacción. La **simplicidad de operación** importa porque la plataforma la opera una entidad pública, no un equipo dedicado a decenas de servicios. El resultado es sensible: sin cualquiera de esas dos filas ganaría D. Se elige C porque ningún escenario exige lo que D hace mejor, que es escalar por separado una pieza pequeña del núcleo.
 
 ### Patrones
 
-| Patrón | Dónde | Estado |
-| --- | --- | --- |
-| Transacción local: cambio, historial, auditoría y aviso juntos | Núcleo, servidor, Reconstrucción | Construido |
-| Bandeja de salida | Núcleo y Reconstrucción | Construido |
-| Publicar y suscribir con una cola por suscriptor | Notificaciones | Construido |
-| Entrada única | Nginx | Construido |
-| MVVM del lado del servidor (vista Razor y PageModel) | Portal | Construido |
-| Composición de API: consultas en paralelo con pool acotado y respuesta parcial | Servlet asíncrono del servicio de tablero | Construido |
-| Puertos y adaptadores (hexagonal) | Reconstrucción; capas en todas las unidades | Construido |
-| Fachada de API | servidor ofrece a la app una sola API y delega sesión y desastres en el núcleo | Construido |
-| Copia de lectura derivada | Catálogo de desastres en servidor; consulta pública | Construido; consulta pública diseñada |
-| Adaptador por sistema externo | UD-08 | Diseñado |
+Cada patrón responde a un problema concreto que plantean los atributos de calidad. Se agrupan por el problema que resuelven.
 
-### Tecnología y relación con Sahana Eden
+**Consistencia y trazabilidad.** La plataforma no puede registrar un cambio sin su historial ni sin su auditoría (QA-TRZ-01), y tampoco puede perder el aviso que ese cambio debe generar (QA-REN-03). Una transacción distribuida entre la base y el gestor de colas es frágil y bloquea cuando falla el gestor. Por eso se usan dos patrones juntos. La **transacción local** guarda el cambio, su historial, su auditoría y su aviso en la base de la unidad dueña, en una sola transacción. La **bandeja de salida** (*outbox*) entrega después ese aviso a la cola: si el gestor no responde, el aviso espera y nada se pierde. Ambos están construidos en el núcleo, en servidor y en Reconstrucción.
 
-Java atiende el *back-office* en línea: el núcleo en Jakarta EE, por sus transacciones JTA, y Reconstrucción y el servicio de tablero en Spring Boot 3.3. .NET atiende toda la presentación (el portal en Razor Pages y la app MAUI) y servidor, que comparte con la app los contratos de sincronización (ADR-17, ADR-23).
+**Integración y mensajería.** El **adaptador por sistema externo** (capa anticorrupción) aísla los formatos ajenos («Modelo de integración»). El patrón **publicar y suscribir con una cola por suscriptor** hace que un sistema caído acumule sus propios avisos sin retrasar a los demás. La cola de reintento y la de errores evitan que un mensaje defectuoso bloquee la cola.
 
-De Sahana Eden, analizada en el SRS, se toman la plataforma web como punto común, la configurabilidad por catálogos, la información geográfica transversal y el control de acceso por organización. No se toman su unidad única de despliegue ni su base compartida, porque impiden escalar y proteger lo crítico por separado.
+**Acceso y presentación.** La **entrada única** (Nginx) es el único punto expuesto. Enruta hacia las unidades, limita el tamaño de las solicitudes y los intentos de inicio de sesión, y oculta la topología interna. La **fachada de API** da a la app una sola API: servidor delega la sesión y los desastres en el núcleo, de modo que la app no cambia si cambian las unidades internas. Esto importa porque las apps instaladas en campo se actualizan con lentitud.
+
+En el portal se usa **MVVM** (modelo, vista y modelo de vista). La vista solo muestra y enlaza datos; el modelo de vista expone esos datos y atiende las acciones del usuario; el modelo es la información de los servicios dueños. La organización exige que toda interfaz de usuario se construya en .NET con un patrón que separe la vista de la lógica de presentación. En ASP.NET Core Razor Pages, cada página tiene una vista Razor y un PageModel que cumple el papel de modelo de vista. Así se elige MVVM del lado del servidor (ADR-23). Frente a MVC, evita un controlador común para pantallas que son formularios independientes. Frente a una aplicación de una sola página, el token de la sesión nunca llega al navegador.
+
+**Rendimiento y aislamiento de fallas.** La **composición de API** arma el tablero del desastre consultando en paralelo a sus tres dueños con un pool de hilos acotado. Tarda lo que la fuente más lenta, no la suma de las tres, y si una falla responde con las demás (ADR-24). La **copia de lectura derivada** permite consultar datos de otra unidad sin leer su base: servidor guarda una copia del catálogo de desastres, y la consulta pública tendrá la suya. La arquitectura **hexagonal** (puertos y adaptadores) separa las reglas de Reconstrucción de los frameworks. Las reglas RN-01 a RN-21 se prueban sin base de datos y los mismos casos de uso atienden REST y gRPC.
+
+### Tecnologías
+
+La organización exige que toda interfaz de usuario se construya en .NET (CON-10) y dispone de experiencia en Jakarta EE, Spring Boot, PostgreSQL y RabbitMQ (CON-07). Dentro de esos límites, cada unidad usa la tecnología que mejor resuelve su necesidad principal:
+
+- **Núcleo en Jakarta EE (WildFly):** su operación central guarda el desastre, su historial, su auditoría y su aviso juntos, y las transacciones administradas por el contenedor (JTA) lo garantizan sin código propio. Ofrece además SOAP y EJB remoto con las mismas cuentas, para los sistemas que no usan REST (CON-02).
+- **Reconstrucción y servicio de tablero en Spring Boot:** son servicios aparte, con su propio servidor embebido, que exponen REST y gRPC con poca configuración. Usan el mismo lenguaje que el núcleo, así que el equipo comparte conocimiento y bibliotecas. El tablero necesita un servlet asíncrono con su propio pool de hilos, y Tomcat lo da directamente.
+- **Notificaciones en Jakarta EE (Payara):** se reutiliza un componente existente y probado, con temporizadores y consumo de colas, en lugar de reescribirlo.
+- **Portal y servidor en ASP.NET Core:** el portal cumple la restricción de presentación en .NET. servidor usa la misma plataforma que la app móvil, de modo que comparten los modelos de datos y los contratos de sincronización: la parte más delicada de la operación sin conexión se escribe una sola vez.
+- **App de campo en .NET MAUI con SQLite:** es una app nativa que accede a la cámara, al GPS y al almacenamiento sin conexión. SQLite es una base transaccional embebida, que no pierde capturas si la app se cierra a mitad de una operación.
+- **PostgreSQL** en cada unidad: transacciones confiables, bloqueo por fila y la lectura que salta filas ya tomadas, con la que varias instancias reparten la bandeja de salida sin publicar dos veces.
+- **RabbitMQ:** colas durables, una por suscriptor, con reintento y cola de errores, y clientes estándar en Java y en .NET.
+- **Nginx:** proxy inverso maduro que limita la tasa y el tamaño de las solicitudes sin desarrollo propio.
+
+### Referente: Sahana Eden
+
+Sahana Eden, la plataforma abierta de gestión de desastres analizada en el SRS, sirve de referente. De ella se toman cuatro ideas probadas en emergencias reales: la plataforma web como punto común entre organismos, la configuración por catálogos, la información geográfica como eje transversal y el control de acceso por organización. No se toman su unidad única de despliegue ni su base compartida, porque impiden escalar y proteger lo crítico por separado, que son metas centrales de esta plataforma.
 
 ## Vista de bloques
 
@@ -225,25 +215,43 @@ De Sahana Eden, analizada en el SRS, se toman la plataforma web como punto comú
 
 *Figura 2. Contenedores de la plataforma (C4 nivel 2). Azul: construido. Gris punteado: diseñado.*
 
+La figura se lee de arriba abajo. Arriba están las personas y sus dos clientes, el navegador y la app de campo. Todo el tráfico entra por la entrada única y de allí va al portal, a servidor o a Reconstrucción. En el centro están las unidades de negocio, cada una con su base. A la derecha y abajo están la mensajería y las notificaciones, que reciben los avisos de las bandejas de salida. En gris quedan la consulta pública y la unidad de integración.
+
 | ID | Unidad | Tecnología | Responsabilidad | Datos propios | Criticidad | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| UD-01 | Entrada (web) | Nginx 1.28 | SRV-01: acceso único; enruta y limita tamaño e intentos de inicio de sesión | Ninguno | Crítica | Construida |
-| UD-02 | Núcleo (nucleo) | Java 21, Jakarta EE, WildFly 41 | SRV-02 identidad y sesiones; SRV-03 desastres (registro, nivel, fases, caracterización); SRV-12 auditoría; bandeja de salida | Base propia | Crítica | Construida; delimitación, consolidación, coordinación y auditoría consolidada diseñadas |
-| UD-03 | Campo y mapas (servidor) | ASP.NET Core 10 | SRV-05 evaluaciones; SRV-06 fotos; mapa; copia del catálogo de desastres; API de la app | Base propia | Crítica | Construida; validación y duplicados diseñados |
-| UD-04 | Notificaciones (desastres) | Java 17, Jakarta EE, Payara 6 | SRV-04: cola por suscriptor, correo, registro de entregas; entrada de alertas | Registro de entregas y bandeja de entrada (archivos) | Crítica | Construida, con consumo de los avisos de Reconstrucción (ADR-27) |
-| UD-05 | Personas afectadas | — | SRV-07 | — | — | Retirada (ADR-28) |
-| UD-06 | Reconstrucción | Java 17, Spring Boot 3.3, REST y gRPC | SRV-09: proyectos de reconstrucción física; RN-01 a RN-21 | Base propia | Degradable | Construida |
-| UD-07 | Consulta pública | ASP.NET Core | SRV-10: copia pública de solo lectura | Copia derivada | Degradable | Diseñada |
-| UD-08 | Integración | Jakarta EE, RabbitMQ | SRV-11: un adaptador por sistema externo | Pendientes | Según adaptador | Diseñada |
-| UD-09 | Portal web (portal) | ASP.NET Core 10, Razor Pages | Única interfaz web; consume los demás servicios | Tokens de sesión en memoria | Crítica | Construida |
-| UD-10 | Servicio de tablero (tablero) | Java 21, Spring Boot 3.3, Tomcat | Tablero de un desastre: servlet asíncrono multihilo | Ninguno | Degradable | Construida |
-| — | App de campo (campo) | .NET MAUI, SQLite | Captura sin conexión y sincronización | Capturas por organismo y usuario | Crítica | Construida; probada en un celular real |
-| INF-01 | Cola de mensajes | RabbitMQ 4.1 | — | Mensajes en tránsito | Crítica | Construida, un nodo |
-| INF-02 | Monitoreo | Sondas y métricas | — | Métricas | Crítica | Solo sondas de salud |
+| UD-01 | Entrada | Nginx 1.28 | Acceso único; enruta y limita tamaño e intentos de inicio de sesión | Ninguno | Crítica | Construida |
+| UD-02 | Núcleo | Java 21, Jakarta EE, WildFly 41 | Identidad y sesiones; gestión de desastres; auditoría; bandeja de salida | Base propia | Crítica | Construida; delimitación, consolidación y coordinación diseñadas |
+| UD-03 | Campo y mapas (servidor) | ASP.NET Core 10 | Evaluaciones, fotos, mapa, copia del catálogo de desastres y API de la app | Base propia | Crítica | Construida; validación y duplicados diseñados |
+| UD-04 | Notificaciones | Java 17, Jakarta EE, Payara 6 | Cola por suscriptor, correo, registro de entregas y entrada de alertas | Registro de entregas | Crítica | Construida |
+| UD-06 | Reconstrucción | Java 17, Spring Boot 3.3 | Proyectos de reconstrucción física (RN-01 a RN-21) | Base propia | Degradable | Construida |
+| UD-07 | Consulta pública | ASP.NET Core | Copia pública de solo lectura | Copia derivada | Degradable | Diseñada |
+| UD-08 | Integración | Jakarta EE, RabbitMQ | Un adaptador por sistema externo | Intercambios pendientes | Según el adaptador | Diseñada |
+| UD-09 | Portal web | ASP.NET Core 10, Razor Pages | Única interfaz web | Sesiones en memoria | Crítica | Construida |
+| UD-10 | Servicio de tablero | Java 21, Spring Boot 3.3 | Tablero de un desastre con un servlet asíncrono | Ninguno | Degradable | Construida |
+| — | App de campo | .NET MAUI, SQLite | Captura sin conexión y sincronización | Capturas del usuario | Crítica | Construida |
+| INF-01 | Mensajería | RabbitMQ 4.1 | Colas durables | Mensajes en tránsito | Crítica | Construida, un nodo |
+| INF-02 | Monitoreo | Sondas y métricas | Detectar fallas y saturación | Métricas | Crítica | Solo sondas de salud |
 
-SRV-07 (personas) y SRV-08 (recursos) salen de alcance (ADR-28). El código de Solicitudes de recursos del Taller 2 sigue en el núcleo y en servidor hasta que el equipo acuerde retirarlo; el portal ya no lo ofrece y este documento no lo trata como funcionalidad. La web estática de servidor y la interfaz React de Reconstrucción ya no se sirven.
+La criticidad sigue la clasificación del SRS. Una función es **crítica** si su ausencia hace perder información operativa o detiene la respuesta inmediata: recibir alertas, registrar el desastre, notificar, sincronizar evaluaciones, coordinar, consultar el estado y autenticar. Es **esencial** si se necesita durante la emergencia pero tolera una espera breve: validar evaluaciones, consolidar duplicados y consultar el mapa de daños. Es **degradable** si puede suspenderse para liberar capacidad: fotografías, consulta pública, reconstrucción y consultas históricas. UD-05, la unidad de personas afectadas, se retiró al tratar ese dominio como sistema externo (ADR-28); su identificador no se reutiliza.
 
-**Agrupación.** Identidad, desastres y auditoría van juntos en el núcleo porque comparten transacciones. La evaluación de daños va aparte porque recibe la escritura de 500 equipos (QA-ESC-02), y la foto va con su evaluación (ADR-13). Las notificaciones van aparte para que el registro siga aunque fallen RabbitMQ o el correo. Reconstrucción va aparte porque opera meses después y es degradable. El portal va aparte porque no guarda estado de vista y habla con cada dueño de datos. Ninguna unidad lee la base de otra.
+**Por qué estas unidades.** Cada frontera responde a una razón de consistencia o de carga:
+
+- **El núcleo reúne tres responsabilidades que cambian juntas.** La *identidad* (usuarios, organismos, roles y sesiones) dice quién actúa y con qué permisos. La *gestión de desastres* registra el desastre y cambia su nivel, su fase y su caracterización. La *auditoría* deja constancia de cada cambio. Una sola operación, como reclasificar un desastre, necesita las tres: comprobar el rol y el organismo de quien la pide, cambiar el desastre, guardar el historial y el registro de auditoría, y dejar el aviso para los organismos. Si estuvieran en unidades distintas, la operación necesitaría una transacción distribuida o podría quedar un cambio sin auditoría.
+- **Las evaluaciones van aparte** porque reciben la escritura de 500 equipos de campo, con fotos y ráfagas al reconectar (QA-ESC-02). Separadas, esa carga crece sola y no le quita capacidad al registro de desastres. La foto va con su evaluación (ADR-13).
+- **Las notificaciones van aparte** para que registrar un desastre no dependa del correo ni del gestor de colas: el núcleo confirma el registro y el aviso sale después.
+- **Reconstrucción va aparte** porque opera durante meses después de la emergencia, tiene reglas propias y es degradable. Su falla no debe tocar lo crítico.
+- **El portal y el servicio de tablero van aparte** porque no guardan datos de negocio: consultan a cada dueño y crecen con el número de usuarios.
+
+**Propiedad de los datos.** Cada unidad es dueña de su base y ninguna lee la base de otra. La regla tiene cuatro razones:
+
+- Cada unidad puede cambiar su esquema sin coordinar con las demás.
+- Una consulta pesada en una unidad no bloquea las tablas de otra.
+- Una credencial comprometida solo expone los datos de su unidad.
+- Cada base se replica y crece según su propia carga.
+
+Cuando una unidad necesita datos de otra, los pide por su API o mantiene una copia de lectura alimentada por avisos. Por ejemplo, servidor guarda una copia del catálogo de desastres para vincular evaluaciones sin consultar al núcleo en cada captura. Esa copia puede ir unos segundos atrás. Se acepta porque una evaluación de un desastre recién creado queda preliminar y se vincula sola cuando llega la copia, sin perder nada (ADR-03).
+
+El núcleo y servidor conservan una funcionalidad de solicitudes de recursos anterior a la definición del alcance. No está expuesta en el portal y se retirará, porque la gestión de recursos es un sistema externo («Riesgos y deuda técnica»).
 
 ### Componentes (C4 nivel 3)
 
@@ -253,91 +261,108 @@ SRV-07 (personas) y SRV-08 (recursos) salen de alcance (ADR-28). El código de S
 
 *Figura 3. Componentes del núcleo (C4 nivel 3).*
 
-El filtro de autenticación valida el token en cada solicitud y compara la clave de integración en tiempo constante. El servicio de identidad maneja usuarios, contraseñas y tokens, y lo usan por igual REST, SOAP y EJB remoto. El registro integrado inscribe el desastre y cambia nivel, fase y caracterización con su historial, en una transacción JTA. El publicador de la bandeja de salida entrega los avisos a notificaciones y purga las sesiones vencidas («Concurrencia y consistencia»).
+El núcleo tiene dos tipos de clientes: las unidades internas, que usan REST con el token del usuario, y los sistemas que no usan REST, que inician sesión por SOAP o EJB remoto. Toda solicitud REST pasa primero por el **filtro de autenticación**. El filtro valida el token contra las sesiones guardadas y, en las rutas internas, compara la clave de integración en tiempo constante, para que el tiempo de respuesta no revele cuántos caracteres acertó un atacante. Solo con la identidad validada la solicitud llega a los **recursos REST**, que exponen la sesión, los desastres con su fase, su caracterización y su historial, y el catálogo interno.
+
+Los recursos delegan en dos servicios. El **servicio de identidad** guarda las contraseñas con PBKDF2 y emite tokens de 8 horas, de los que guarda solo el hash. Lo usan por igual REST, SOAP y EJB remoto, de modo que hay una sola fuente de usuarios y una revocación surte efecto en todos los canales. El **registro integrado** aplica las reglas del desastre: registro, transiciones de fase protegidas, caracterización y nivel. Cada cambio, su historial, su auditoría y su aviso se guardan en una transacción JTA, la razón por la que el núcleo usa Jakarta EE. Fuera de esa transacción, el **publicador de la bandeja de salida** reclama los avisos pendientes cada segundo y los entrega a notificaciones. Lo hace fuera de la transacción para que una falla de notificaciones nunca deshaga un registro. El mismo publicador purga las sesiones vencidas.
 
 #### Portal web (UD-09)
 
 ![Componentes del portal web](diagramas/componentes_portal.png)
 
-*Figura 4. Componentes del portal web (C4 nivel 3): ASP.NET Core Razor Pages.*
+*Figura 4. Componentes del portal web (C4 nivel 3).*
 
-| Parte del MVVM | En el portal |
-| --- | --- |
-| Vista | Página Razor: HTML generado en el servidor; el mapa usa Leaflet, servido por el portal |
-| Modelo de vista | El PageModel de cada página: propiedades que la vista enlaza, validadas con anotaciones, y los comandos de lectura y de envío |
-| Modelo | Datos de los servicios dueños, que traen los clientes del núcleo y de servidor (REST), de Reconstrucción (gRPC, generado del contrato compartido) y del servicio de tablero (REST) |
+El portal es la única interfaz web y no tiene lógica de negocio: cada pantalla es una página Razor con su PageModel, que consulta a los dueños de los datos por clientes dedicados. Usa REST para el núcleo, servidor y el servicio de tablero, y gRPC para Reconstrucción. Las pantallas cubren:
 
-Pantallas: inicio de sesión; desastres con filtro por fase, registro, caracterización, cambio de fase e historial; tablero con mapa; evaluaciones con historial y foto; Reconstrucción completa; usuarios del organismo. La autenticación por cookie envía al inicio de sesión a quien no tiene sesión; la cookie solo lleva la identidad y un id, y el token del núcleo queda en la memoria del portal. Cada formulario lleva un token antifalsificación. Los botones dependen del rol, pero cada servicio valida los permisos.
+- el inicio de sesión;
+- los desastres, con su registro, su caracterización, el cambio de fase y el historial;
+- el tablero con el mapa;
+- las evaluaciones con su historial y su foto;
+- la reconstrucción completa;
+- los usuarios del organismo.
+
+El portal también protege la sesión. La cookie del navegador solo lleva la identidad y un identificador de sesión, y el token del núcleo se queda en la memoria del portal: así, un script malicioso en el navegador no puede robar el token. Cada formulario lleva un token antifalsificación contra solicitudes forjadas desde otro sitio. Los botones se muestran según el rol, pero esa es solo una ayuda de usabilidad: cada servicio vuelve a validar los permisos, porque una solicitud puede construirse sin pasar por la pantalla.
 
 #### Servicio de tablero (UD-10)
 
 ![Componentes del servicio de tablero](diagramas/componentes_tablero.png)
 
-*Figura 4b. Componentes del servicio de tablero (C4 nivel 3): servlet asíncrono multihilo.*
+*Figura 5. Componentes del servicio de tablero (C4 nivel 3): servlet asíncrono multihilo.*
 
-No tiene interfaz: solo lo llama el portal, con el token del usuario en la cabecera de autorización. El servlet reparte las tres consultas en un pool acotado («Tablero de un desastre (servlet multihilo)») y cada fuente valida el token contra el núcleo; si alguna responde 401, el servlet responde 401 y el portal cierra la sesión. No se publica en el equipo.
+No tiene interfaz y solo lo llama el portal, con el token del usuario. El servlet libera el hilo del servidor web y reparte las tres consultas en un pool acotado. Cada fuente valida el token contra el núcleo; si alguna responde que venció, el servlet responde lo mismo y el portal cierra la sesión («Tablero de un desastre (servlet multihilo)»).
 
 #### Reconstrucción (UD-06)
 
 ![Componentes de Reconstrucción](diagramas/componentes_reconstruccion.png)
 
-*Figura 5. Componentes de Reconstrucción (C4 nivel 3): arquitectura hexagonal.*
+*Figura 6. Componentes de Reconstrucción (C4 nivel 3): arquitectura hexagonal.*
 
-- **Entrada:** REST y gRPC (14 RPC). Ambos validan el token contra el núcleo y aceptan la versión esperada: la cabecera If-Match en REST y un campo de versión en gRPC.
-- **Casos de uso CU-01 a CU-09:** autorizan por rol y organismo, auditan cambios e intentos rechazados (RN-17) y abren la transacción.
-- **Dominio:** el proyecto, los estados del proyecto y del desastre y la evaluación de daño, sin Spring, gRPC ni JDBC; 31 pruebas en memoria (E7).
-- **Salida:** repositorio con control optimista; bandeja de salida hacia RabbitMQ; un adaptador hacia el núcleo (catálogo y cambio de fase) y otro hacia servidor (evaluaciones, con el token del usuario).
+Reconstrucción tiene las reglas de negocio más numerosas de la plataforma (RN-01 a RN-21) y dos canales de entrada. La arquitectura hexagonal pone las reglas en el centro, sin dependencia de frameworks:
 
-En servidor (UD-03) los componentes son la fachada de API, la recepción de lotes inmediata o diferida (ADR-18), las evaluaciones versionadas, los mapas y la copia del catálogo de desastres.
+- **Entrada:** REST y gRPC. Ambos validan el token contra el núcleo y reciben la versión que el cliente espera modificar.
+- **Casos de uso (CU-01 a CU-09):** autorizan por rol y organismo, abren la transacción y auditan tanto los cambios como los intentos rechazados (RN-17).
+- **Dominio:** el proyecto, sus estados y los del desastre, y la evaluación de daño. No conoce Spring, gRPC ni la base de datos, y por eso sus reglas se prueban en memoria con rapidez (E7).
+- **Salida:** el repositorio con control optimista de versiones, la bandeja de salida hacia la mensajería, y los adaptadores hacia el núcleo (catálogo y cambio de fase) y hacia servidor (evaluaciones, con el token del usuario).
+
+Así, agregar un canal o cambiar la base toca un adaptador y no las reglas. En servidor (UD-03) los componentes son la fachada de API de la app, la recepción de lotes inmediata o diferida (ADR-18), las evaluaciones versionadas, los mapas y la copia del catálogo de desastres.
 
 ### Reglas de dominio por capacidad
 
 #### Gestión de desastres (núcleo)
 
-El registro guarda identificador del cliente, tipo (lista fija), fecha, ubicación, nivel de 1 a 4, descripción, organismo (de la sesión), fase y versión; la caracterización agrega punto y radio. Quedan diseñados el área delimitada con versiones, la fuente de la información y el responsable de la emergencia.
+El registro guarda el identificador que genera el cliente, el tipo, la fecha, la ubicación, el nivel de 1 a 4, la descripción, el organismo, la fase y la versión. El organismo sale de la sesión y no de lo que envía el cliente, para que nadie registre a nombre de otro organismo. La caracterización agrega el punto y el radio del área afectada. El identificador del cliente permite reenviar el registro sin duplicarlo cuando la red falla después de guardar.
 
-**Fases.** Son las cuatro del profesor (Registro, Caracterización, Reconstrucción y Cierre), en una columna con CHECK.
+**Fases.** Un desastre pasa por cuatro fases: Registro, Caracterización, Reconstrucción y Cierre. Estados como «Detectado», «En atención» o «En recuperación» describen situaciones dentro de esas fases, no transiciones del sistema. Las transiciones están protegidas porque cada una habilita acciones con consecuencias: iniciar la reconstrucción compromete presupuesto, y cerrar congela el registro.
 
-| Transición | Quién la pide | Condición |
-| --- | --- | --- |
-| Registro → Caracterización | El coordinador, o automática con la primera caracterización | — |
-| Caracterización → Reconstrucción | Solo el módulo de Reconstrucción (token del usuario y clave de integración) | RN-01, RN-02: al menos una evaluación validada con daño moderado o superior |
-| Reconstrucción → Cierre | Solo el módulo de Reconstrucción | RN-04: ningún proyecto sin finalizar ni cancelar |
-| Registro o Caracterización → Cierre | El coordinador, no Reconstrucción (RN-03) | Motivo, por ejemplo una falsa alarma |
-| Desde Cierre | Nadie | Terminal (RN-05) |
+| Transición | Quién la pide | Condición | Por qué |
+| --- | --- | --- | --- |
+| Registro → Caracterización | El coordinador, o automática con la primera caracterización | — | Caracterizar es la evidencia de que el evento es real y tiene área |
+| Caracterización → Reconstrucción | Solo Reconstrucción, con el token del usuario y la clave de integración | Al menos una evaluación validada con daño moderado o superior (RN-01, RN-02) | No se compromete presupuesto sin daño evaluado; la regla la conoce Reconstrucción y no el núcleo |
+| Reconstrucción → Cierre | Solo Reconstrucción | Ningún proyecto sin finalizar ni cancelar (RN-04) | Cerrar con obras abiertas dejaría proyectos sin desastre vigente |
+| Registro o Caracterización → Cierre | El coordinador, con motivo (RN-03) | — | Permite cerrar una falsa alarma sin pasar por reconstrucción |
+| Desde Cierre | Nadie | Fase terminal (RN-05) | Un desastre cerrado es un registro histórico y no se reabre |
 
-Todo cambio de fase exige motivo y guarda versión, valor anterior y nuevo, y autor. Si un coordinador pide por la API una transición que depende de RN-01, RN-02 o RN-04, el núcleo la rechaza. *Equivalencia con los estados de ejemplo del enunciado:* Detectado y Registrado → Registro; Activo, En evaluación y En atención → Caracterización; En recuperación y En reconstrucción → Reconstrucción; Cerrado → Cierre.
+Todo cambio de fase exige un motivo y guarda la versión, el valor anterior, el nuevo y el autor, porque las decisiones sobre un desastre deben poder explicarse después (QA-TRZ-01). Si un coordinador intenta por la API una transición reservada a Reconstrucción, el núcleo la rechaza.
 
-**Caracterización (contrato C2).** PATCH /eventos/{id}/caracterizacion recibe latitud, longitud, radio en km (hasta 500), nivel de 1 a 4 opcional, descripción, versión base y claveIdempotencia. Repetir la clave devuelve lo mismo; una versión vieja responde 409 VERSION_DESACTUALIZADA con la versión actual. Queda en el historial y, si cambia el nivel, emite un aviso. La hacen coordinador y evaluador. El nivel 1 a 4 del desastre no es el nivel de afectación 1 a 5 de una evaluación.
+**Caracterización (contrato C2).** Recibe latitud, longitud, radio en kilómetros (hasta 500), nivel opcional, descripción, la versión base y una clave de idempotencia. La app la envía desde campo, a veces horas después y varias veces por una red intermitente. Por eso repetir la clave devuelve el mismo resultado sin aplicarlo dos veces. Si alguien cambió el desastre entretanto, una versión vieja recibe un conflicto con la versión actual, en lugar de sobrescribir el cambio ajeno. La caracterización queda en el historial y, si cambia el nivel, avisa a los organismos. El nivel del desastre (1 a 4) no es el nivel de afectación de una evaluación (1 a 5): uno clasifica el evento y el otro, un activo dañado.
 
 #### Evaluación de daños (servidor y app)
 
-| Aspecto | Construido | Diseñado o en curso |
-| --- | --- | --- |
-| Datos | Identificador del dispositivo, desastre, evaluador y organismo de la sesión, ubicación, tipo de activo con catálogo (C1) y activo en texto, nivel de afectación 1 a 5, descripción, foto y versión | — |
-| Estados | Preliminar (sin desastre) y Registrada | Validada por un coordinador distinto del evaluador, Devuelta y Duplicada |
-| Evidencias | Una foto JPEG o PNG de hasta 5 MB; correcciones con historial que no tocan la captura original | Documentos PDF; hasta cinco evidencias |
-| Uso | Mapa de calor y panorama | Estimación de costo y prioridad por zona |
+| Aspecto | Construido | Diseñado | Por qué |
+| --- | --- | --- | --- |
+| Datos | Identificador del dispositivo, desastre, evaluador y organismo de la sesión, ubicación, tipo de activo del catálogo (C1) y en texto, nivel de afectación 1 a 5, descripción, foto y versión | — | El identificador del dispositivo permite crear la evaluación sin conexión; el organismo sale de la sesión |
+| Estados | Preliminar (sin desastre vinculado) y Registrada | Validada por un coordinador distinto del evaluador, Devuelta y Duplicada | Una evaluación puede capturarse antes de que el desastre exista en la plataforma; la validación por otra persona evita que alguien apruebe su propio reporte |
+| Evidencias | Una foto JPEG o PNG de hasta 5 MB; correcciones con historial que no tocan la captura original | Documentos PDF; hasta cinco evidencias | El límite cuida el ancho de banda de campo; el original se conserva como prueba |
+| Uso | Mapa de calor y panorama | Estimación de costo y prioridad por zona | El mapa orienta la respuesta; la estimación es degradable |
 
-Mientras no exista la validación, Reconstrucción considera validada una evaluación vinculada a un desastre registrado («Riesgos y deuda técnica»).
+Mientras la validación no esté construida, Reconstrucción toma como validada una evaluación vinculada a un desastre registrado. Es una simplificación declarada en «Riesgos y deuda técnica».
 
 #### Reconstrucción física (UD-06)
 
-| Transición del proyecto | Quién | Condición |
-| --- | --- | --- |
-| Propuesto → Aprobado | Una autoridad distinta de quien lo formuló (RN-20) | Presupuesto mayor que cero, financiación y responsable (RN-11, RN-12) |
-| Aprobado → En ejecución | El responsable asignado (RN-21) | Contratista y cronograma (RN-11) |
-| En ejecución ↔ Suspendido | Autoridad o responsable asignado | Motivo (RN-16) |
-| En ejecución → Finalizado | Autoridad o responsable asignado | Avance 100 %, una evidencia como mínimo y sin sobrecosto (RN-15) |
-| No terminal → Cancelado | Solo la autoridad (RN-21) | Motivo; sus evaluaciones quedan libres |
+| Transición del proyecto | Quién | Condición | Por qué |
+| --- | --- | --- | --- |
+| Propuesto → Aprobado | Una autoridad distinta de quien lo formuló (RN-20) | Presupuesto mayor que cero, financiación y responsable (RN-11, RN-12) | Nadie aprueba el gasto que propuso; control contra el fraude |
+| Aprobado → En ejecución | El responsable asignado (RN-21) | Contratista y cronograma (RN-11) | La obra empieza cuando hay quién la ejecuta y cuándo |
+| En ejecución ↔ Suspendido | Autoridad o responsable asignado | Motivo (RN-16) | Una suspensión debe explicarse ante los entes de control |
+| En ejecución → Finalizado | Autoridad o responsable asignado | Avance del 100 %, al menos una evidencia y sin sobrecosto (RN-15) | No se da por terminada una obra sin prueba ni con el presupuesto excedido |
+| No terminal → Cancelado | Solo la autoridad (RN-21) | Motivo; sus evaluaciones quedan libres | Las evaluaciones liberadas pueden originar otro proyecto |
 
-Finalizado y Cancelado son terminales (RN-16). Un proyecto nace con el desastre en Reconstrucción (RN-06), de evaluaciones del mismo desastre y organismo, sin repetirlas (RN-07); con destrucción total es de reconstrucción y no de reparación (RN-08). Una evaluación origina a lo sumo un proyecto no cancelado, y lo garantiza una restricción de unicidad en la base (RN-09). En lote, cada ítem va en su transacción (RN-18). Cada organismo ve solo sus proyectos (RN-10). Solo la autoridad modifica el presupuesto, con motivo (RN-12); el avance solo baja como corrección con motivo (RN-13); el sobrecosto se marca y se avisa sin bloquear el registro del costo (RN-14). El tipo de activo se copia de las evaluaciones y el avance del desastre se pondera por presupuesto. No se guardan datos de personas. El presupuesto es más simple que en la versión 1.0, sin versiones propuestas y autorizadas por separado; el compromiso ante SE-06 queda diseñado (ADR-21).
+Finalizado y Cancelado son terminales (RN-16), para que el historial de un proyecto cerrado no cambie. Un proyecto nace cuando el desastre está en Reconstrucción (RN-06), a partir de evaluaciones del mismo desastre y organismo que no estén en otro proyecto (RN-07). Si hubo destrucción total, es de reconstrucción y no de reparación (RN-08). Una evaluación origina a lo sumo un proyecto no cancelado, y lo garantiza una restricción de unicidad en la base, que también resuelve dos solicitudes simultáneas (RN-09). Cada organismo ve solo sus proyectos (RN-10).
 
-#### Diseñados sin código
+Solo la autoridad modifica el presupuesto, y siempre con motivo (RN-12). El avance solo baja como corrección con motivo (RN-13). El sobrecosto se marca y se avisa, pero no bloquea el registro del costo (RN-14): impedir que se anote un gasto real ocultaría el problema en vez de mostrarlo. Al crear el proyecto se copian sus evaluaciones de origen, para que conserve la evidencia que lo justificó aunque después alguien corrija la evaluación. El compromiso presupuestal ante el sistema financiero (SE-06) queda diseñado (ADR-21).
 
-La coordinación de organismos (participación por desastre y tareas con estados Pendiente, Asignada, En curso, Terminada y Cancelada); los catálogos configurables (ADR-08), hoy listas fijas; la consulta pública, solo con lo publicable; la delimitación con dos fechas (ADR-06) y la consolidación con alias (ADR-05).
+#### Capacidades diseñadas sin código
+
+Esta versión priorizó las cuatro capacidades del alcance. Quedan diseñadas, con sus decisiones tomadas para que se incorporen sin cambiar los contratos existentes:
+
+- la coordinación de organismos, con participación por desastre y tareas con estados (ADR-19);
+- los catálogos configurables de tipos de desastre y organismos, hoy listas fijas (ADR-08);
+- la consulta pública, que solo mostrará lo publicable;
+- la delimitación del área con dos fechas por versión (ADR-06);
+- la consolidación de reportes duplicados con alias (ADR-05).
 
 ### Organización del código
+
+Todas las unidades siguen las mismas capas, con dependencias que solo apuntan hacia adentro, para que las reglas de negocio no dependan de la tecnología de entrada ni de la base:
 
 | Capa | Contiene | Depende de |
 | --- | --- | --- |
@@ -346,11 +371,11 @@ La coordinación de organismos (participación por desastre y tareas con estados
 | Adaptadores | Controladores REST y gRPC, mensajería, repositorios | Casos de uso |
 | Infraestructura | Base de datos, colas, red, configuración | Adaptadores |
 
-Hay una carpeta y un contenedor por unidad, más una carpeta con los clientes de prueba de SOAP y EJB remoto. Ninguna unidad importa código de otra: se comunican por contratos REST, gRPC (un contrato compartido, copiado en el portal y en el tablero) y de eventos («APIs y eventos»). Las pruebas de punta a punta viven junto a las unidades y un solo comando las corre todas (E1).
+Cada unidad tiene su propio módulo de código y su propio contenedor. Ninguna importa código de otra: se comunican solo por contratos REST, gRPC y de eventos («APIs y eventos»). Así, cada una se compila, se prueba y se despliega por separado. El contrato gRPC se copia en el portal y en el tablero, y una prueba comprueba que las copias son idénticas a la de Reconstrucción.
 
 ## Vista de ejecución
 
-Esta sección recorre los escenarios A a E del enunciado, el tablero multihilo y la sincronización sin conexión. Flecha continua: llamada inmediata. Flecha punteada: mensaje en cola o respuesta diferida.
+Esta sección recorre los cinco escenarios de operación que más exigen a la arquitectura, el tablero multihilo y la sincronización sin conexión. En los diagramas, la flecha continua es una llamada inmediata, y la punteada, un mensaje en cola o una respuesta diferida.
 
 ### Escenario A: inicio de una emergencia
 
@@ -374,12 +399,16 @@ sequenceDiagram
   G->>X: Pide las zonas afectadas
   X->>G: Zonas
   C->>G: Caracteriza con ubicación, radio y nivel
-  G->>G: Pasa a Caracterización, que equivale a Activo
+  G->>G: Pasa a Caracterización
 ```
 
-*Figura 6. Escenario A: inicio de una emergencia.*
+*Figura 7. Escenario A: inicio de una emergencia.*
 
-**Construido:** registro con su aviso en una transacción, bandeja de salida, cola por suscriptor, correo, caracterización y cambio de fase. **Diseñado:** los adaptadores de SE-01 y SE-02 y el registro automático del evento preliminar; la cola de entrada ya existe. La alerta no espera al GIS y se cuenta hasta que el aviso queda en la cola de cada suscriptor y el servidor de correo lo acepta.
+Un sensor detecta un sismo y la alerta entra por su adaptador a la cola de entrada, donde queda a salvo aunque la plataforma esté ocupada. Notificaciones la valida, descarta repetidos y pide al núcleo el registro del evento preliminar. El núcleo guarda el desastre y su aviso en una sola transacción. Después, la bandeja de salida entrega el aviso a notificaciones, que lo publica en la cola de cada organismo suscrito y envía el correo. Mientras tanto, el núcleo pide al GIS las zonas afectadas, y un coordinador o evaluador caracteriza el desastre, que pasa a Caracterización.
+
+La decisión clave es que **la alerta no espera al GIS**: avisar a los organismos es crítico y debe ocurrir en menos de 5 s (QA-REN-03), mientras que la zona exacta puede llegar después. Por eso el aviso sale de la bandeja de salida y no de una cadena de llamadas.
+
+**Qué está construido y por qué el resto está diseñado.** Está construido lo que determina la calidad del escenario: el registro con su aviso en una transacción, la bandeja de salida, la cola por suscriptor, el correo, la caracterización y el cambio de fase. Los adaptadores de SE-01 y SE-02 y el registro automático del evento preliminar están diseñados, porque las redes de sensores y el GIS son sistemas de otras entidades que no están disponibles para integrarlos en esta versión. La cola de entrada ya existe, así que agregar esos adaptadores no cambia el flujo.
 
 | Tramo de la alerta | Presupuesto |
 | --- | --- |
@@ -390,27 +419,27 @@ sequenceDiagram
 | Margen | 1,3 s |
 | **Total (QA-REN-03)** | **5,0 s** |
 
-Con avisos aislados, la versión 1.0 midió 2,7 s y 3,2 s, con un ciclo de 5 s que hoy es de 1 s. Desde el 18-nov el consumidor procesa hasta 20 mensajes por cola en cada ciclo de 1 s, en vez de uno (ADR-27). Con 10 alertas simultáneas no está medido.
+Con avisos aislados, la alerta tardó 2,7 s y 3,2 s, con un ciclo de bandeja de 5 s que hoy es de 1 s. El consumidor procesa hasta 20 mensajes por cola en cada ciclo, para atender las 10 alertas simultáneas de la meta (ADR-27). Esa simultaneidad aún no está medida.
 
-| Situación | Qué hace la plataforma |
-| --- | --- |
-| Mensaje inválido o repetido | Lo inválido va a la cola de errores; lo repetido se descarta por fuente e identificador |
-| El núcleo no responde al registrar | El mensaje vuelve a su cola de reintento cada 5 s |
-| El GIS no responde | El evento se crea; la geometría queda pendiente |
-| Notificaciones o RabbitMQ no responden | El aviso espera en la bandeja de salida (verificado deteniendo RabbitMQ) |
+| Situación | Qué hace la plataforma | Por qué |
+| --- | --- | --- |
+| Mensaje inválido o repetido | Lo inválido va a la cola de errores; lo repetido se descarta por fuente e identificador | Un sensor puede reenviar la misma alerta, y un mensaje defectuoso no debe bloquear a los demás |
+| El núcleo no responde al registrar | El mensaje vuelve a su cola de reintento cada 5 s | La alerta no se pierde y se registra en cuanto el núcleo vuelve |
+| El GIS no responde | El evento se crea con la última zona conocida, pendiente de actualizar | La zona no es necesaria para alertar |
+| Notificaciones o RabbitMQ no responden | El aviso espera en la bandeja de salida | El registro ya está confirmado; el aviso sale al recuperarse (verificado deteniendo RabbitMQ) |
 
 ### Escenario B: aumento repentino de usuarios
 
-Los ciudadanos usarían la consulta pública (diseñada), que lee su propia copia desde caché, con límite de tasa, y nunca llama al núcleo. Los funcionarios usan el portal y la app. Cada unidad crece por separado cuando su métrica lo pide («Escalabilidad y rendimiento»). El tablero acota sus hilos: con el pool lleno responde 503 en lugar de cargar más a los servicios de atrás.
+Al inicio de una emergencia, los usuarios pasan de 1.000 a 10.000 en diez minutos, la mayoría ciudadanos que consultan. La arquitectura separa esas consultas del trabajo de los funcionarios. Los ciudadanos usarán la consulta pública, que lee su propia copia desde caché, con límite de tasa, y nunca llama al núcleo. Los funcionarios usan el portal y la app, que sí llegan a las unidades de negocio. Cada unidad crece por separado cuando su métrica lo pide («Escalabilidad y rendimiento»), así que un pico ciudadano agrega instancias de la consulta pública y no del núcleo.
 
-| Situación | Qué hace la plataforma |
-| --- | --- |
-| Las consultas ciudadanas superan el límite | La entrada responde 429; los funcionarios usan otras rutas |
-| Una unidad pasa de 60 % de uso sostenido | Se agregan instancias solo de esa unidad |
-| La carga supera la capacidad | Se degrada en el orden de «Resiliencia y recuperación»; lo crítico no |
-| El núcleo no responde | Las operaciones protegidas se rechazan; la consulta pública sigue |
+| Situación | Qué hace la plataforma | Por qué |
+| --- | --- | --- |
+| Las consultas ciudadanas superan el límite | La entrada responde 429 y los funcionarios siguen por sus rutas | El exceso ciudadano no consume la capacidad de la operación |
+| Una unidad pasa del 60 % de uso sostenido | Se agregan instancias solo de esa unidad | Crecer antes de saturarse da margen al tiempo de arranque |
+| La carga supera la capacidad | Se degrada en el orden de «Resiliencia y recuperación» | Lo degradable cede capacidad a lo crítico |
+| El núcleo no responde | Se rechazan las operaciones protegidas; la consulta pública sigue | La consulta pública no depende de la sesión |
 
-Evidencia: el tablero con 20 clientes responde con p95 de 366 ms en una máquina («Tablero de un desastre (servlet multihilo)»). No hay prueba con 10.000 usuarios.
+El tablero, la consulta más compuesta, acota sus hilos: con el pool lleno responde 503 en lugar de cargar más a los servicios de atrás. Con 20 clientes simultáneos respondió con un percentil 95 de 366 ms en una sola máquina (E2). No hay prueba con 10.000 usuarios.
 
 ### Escenario C: falla de un sistema externo
 
@@ -438,9 +467,13 @@ sequenceDiagram
   H->>I: Datos
 ```
 
-*Figura 7. Escenario C: falla del sistema hospitalario.*
+*Figura 8. Escenario C: falla del sistema hospitalario.*
 
-Mientras el hospital no responde, las demás unidades y suscriptores siguen trabajando, porque ninguno lo llama. **Construido:** cada sistema suscrito tiene su cola durable, y si deja de consumir, sus avisos esperan sin afectar a los demás. **Diseñado:** el adaptador con corte de circuito y la consulta de capacidad. Tras una caída de horas, los pendientes salen por lotes y lo más reciente primero; los datos viejos se muestran con su hora; una operación sin respuesta en el plazo queda En conciliación (ADR-21).
+El aviso de un desastre llega a la cola propia del sistema hospitalario. El adaptador intenta enviarlo con un tiempo de espera de 5 s y tres reintentos. Si el hospital sigue sin responder, abre el circuito: deja de llamarlo, lo marca como no disponible y lo prueba con una sonda cada 30 s. Mientras tanto, los avisos siguientes esperan en su cola. Cuando el hospital responde, el adaptador envía los pendientes en orden y pide la capacidad hospitalaria desde la última sincronización.
+
+La falla queda contenida porque **ninguna unidad interna llama al hospital**: solo su adaptador lo hace, y lo hace desde una cola propia. Los demás suscriptores y las funciones críticas siguen trabajando (QA-RES-01). Tras una caída de horas, los pendientes salen por lotes, primero lo más reciente; los datos viejos se muestran con su hora; y una operación sin respuesta en el plazo queda En conciliación, sin darse por hecha ni por rechazada (ADR-21).
+
+**Qué está construido y por qué el resto está diseñado.** Está construido el mecanismo que aísla la falla: cada sistema suscrito tiene su cola durable, y si deja de consumir, sus avisos esperan sin afectar a los demás. El adaptador con corte de circuito y la consulta de capacidad están diseñados, porque el sistema hospitalario es de otra entidad y no hay una instancia disponible para integrarlo. Cuando se construya, el adaptador se conectará a la cola existente sin cambiar al núcleo ni a notificaciones.
 
 ### Escenario D: evaluación distribuida y sincronización sin conexión
 
@@ -452,7 +485,7 @@ sequenceDiagram
   participant G as UD-02 Núcleo
   D->>D: Guarda evaluaciones y fotos sin conexión en SQLite
   D->>GW: Lote de hasta 20 evaluaciones sin foto
-  GW->>E: POST /api/campo/lotes
+  GW->>E: Lote de operaciones de campo
   E->>G: Valida la sesión
   G->>E: Usuario, rol y organismo
   E->>E: Compara cada operación con la versión vigente
@@ -463,18 +496,20 @@ sequenceDiagram
   D->>D: Marca como sincronizada
 ```
 
-*Figura 8. Escenario D: sincronización de evaluaciones de campo.*
+*Figura 9. Escenario D: sincronización de evaluaciones de campo.*
 
-Las fotos van después de los lotes, una por petición, para que una foto pesada no retrase a las demás. Evaluador y organismo salen de la sesión, no de lo que envía la app. El tiempo de confirmación no está medido en campo; se estima en unos 8 s para subir una foto de 1 MB a 1 Mbps, más 1,8 s para confirmar, frente a la meta de 10 minutos (QA-ESC-02). Hoy la app sincroniza cada 8 s mientras la pantalla de captura está abierta; lo que está en curso se describe en «Operación sin conexión».
+El evaluador captura sin señal y la app guarda cada evaluación y su foto en SQLite. Al recuperar conexión, la app envía primero lotes de hasta 20 evaluaciones sin foto. servidor valida la sesión con el núcleo y compara cada operación con la versión vigente, y responde por operación si quedó incorporada, repetida, en conflicto o rechazada. Después la app envía cada foto con su evaluación, una por petición, y marca como sincronizado lo que servidor confirma. Las fotos van después porque una foto pesada en una red débil no debe retrasar los datos que la coordinación necesita para decidir (QA-ESC-02). Evaluador y organismo salen siempre de la sesión, nunca de lo que envía la app.
 
-| Situación | Qué hace la plataforma |
-| --- | --- |
-| Se corta una evaluación con foto, o se reenvía un lote | No queda nada a medias; lo repetido responde «repetida» y no se duplica |
-| Otra persona corrigió antes la evaluación | Conflicto: se conservan la propuesta y el dato del servidor, y decide el evaluador |
-| La sesión venció | 401; la app avisa que la sesión venció, conserva los pendientes y no reintenta hasta un nuevo inicio de sesión |
-| El núcleo no responde | servidor rechaza; la app sigue capturando y reintenta |
-| El desastre aún no está en la copia de servidor | La evaluación queda preliminar y se vincula después |
-| La carga supera la capacidad | Incorporación diferida (ADR-18) |
+El tiempo de confirmación no está medido en campo. Se estima en unos 8 s para subir una foto de 1 MB a 1 Mbps, más 1,8 s para confirmar, frente a la meta de 10 minutos. Hoy la app sincroniza cada 8 s mientras la pantalla de captura está abierta.
+
+| Situación | Qué hace la plataforma | Por qué |
+| --- | --- | --- |
+| Se corta el envío de una evaluación con foto, o se reenvía un lote | Nada queda a medias; lo repetido responde «repetida» y no se duplica | Cada operación lleva un identificador generado en el dispositivo, así que reenviar es seguro |
+| Otra persona corrigió antes la misma evaluación | Conflicto: se conservan la propuesta y el dato vigente, y decide el evaluador | Ninguna versión sobrescribe a otra en silencio (QA-CNF-01) |
+| La sesión venció | La app avisa, conserva los pendientes y no reintenta hasta un nuevo inicio de sesión | Un evaluador puede pasar más de un turno sin señal; confundir sesión vencida con falta de red retrasaría los envíos sin aviso |
+| El núcleo no responde | servidor rechaza el lote; la app sigue capturando y reintenta después | Sin validar la sesión no se acepta nada; lo capturado sigue a salvo en el dispositivo |
+| El desastre aún no está en la copia de servidor | La evaluación queda preliminar y se vincula sola cuando llega la copia | La consistencia eventual de segundos no hace perder capturas |
+| La carga supera la capacidad | El lote se recibe y se incorpora en diferido (ADR-18) | Recibir rápido protege al dispositivo; incorporar después protege a servidor |
 
 ### Escenario E: reconstrucción
 
@@ -501,23 +536,27 @@ sequenceDiagram
   P->>R: ConsultarSeguimiento y ConsultarAuditoria
 ```
 
-*Figura 9. Escenario E: reconstrucción física.*
+*Figura 10. Escenario E: reconstrucción física.*
 
-Cada proyecto guarda una copia de sus evaluaciones de origen y la conserva aunque la evaluación se corrija. Las reglas están en «Reglas de dominio por capacidad». Lo prueban la verificación de punta a punta de Reconstrucción (87 comprobaciones el 17-nov, incluidas aprobación por la misma persona, sobrecosto, cancelación sin permiso y gRPC; E1) y 31 pruebas del dominio (E7). Si servidor no responde, no se crea el proyecto y se reintenta con el mismo identificador; si dos personas cambian el proyecto a la vez, la segunda recibe 409; si RabbitMQ no responde, el aviso espera en la bandeja de salida; un compromiso sin respuesta del sistema financiero quedaría En conciliación (ADR-21, diseñado).
+Una autoridad inicia la reconstrucción desde el portal. Reconstrucción valida la sesión, lee las evaluaciones del desastre en servidor y, si se cumplen las reglas, pide al núcleo la fase Reconstrucción. Luego la autoridad crea proyectos a partir de las evaluaciones, cada uno en su propia transacción, para que un proyecto inválido no impida crear los demás. Otra autoridad aprueba con presupuesto y responsable, y el aviso sale por la bandeja de salida. Finalmente se consultan el seguimiento y la auditoría.
+
+Las fallas se tratan así. Si servidor no responde, no se crea el proyecto y se reintenta con el mismo identificador. Si dos personas cambian el proyecto a la vez, la segunda recibe un conflicto de versión. Si la mensajería no responde, el aviso espera en la bandeja de salida. Un compromiso sin respuesta del sistema financiero quedaría En conciliación (ADR-21, diseñado). La verificación de punta a punta de Reconstrucción comprueba, entre otros casos, que nadie aprueba su propio proyecto, el sobrecosto, la cancelación sin permiso y el canal gRPC (E1); las reglas del dominio se prueban aparte (E7).
 
 ### Tablero de un desastre (servlet multihilo)
 
 ![Secuencia del tablero](diagramas/secuencia_tablero.png)
 
-*Figura 10. Tablero de un desastre: el portal .NET consume el servlet asíncrono, que consulta tres fuentes en paralelo.*
+*Figura 11. Tablero de un desastre: el portal consume el servlet asíncrono, que consulta tres fuentes en paralelo.*
 
-1. El navegador pide /tablero al portal. El portal toma el token de la sesión y llama al servicio de tablero con Authorization: Bearer.
-2. El servlet pasa la solicitud a modo asíncrono, lo que libera el hilo de Tomcat.
-3. Un pool de 16 hilos con cola de 64 consulta en paralelo el desastre (núcleo), sus evaluaciones (servidor) y sus proyectos (Reconstrucción, por gRPC). Cada fuente tiene 1,5 s de límite, y la respuesta, 3 s.
-4. Si una fuente falla o vence, responde con las demás e indica cuáles no respondieron; si una responde 401, el token venció y el portal cierra la sesión.
-5. Con el pool y la cola llenos responde 503 con Retry-After; nunca encola sin límite.
+El tablero junta datos de tres dueños: el desastre (núcleo), sus evaluaciones (servidor) y sus proyectos (Reconstrucción). Consultarlos en secuencia sumaría sus tiempos, y la falla de uno tumbaría la página. Por eso:
 
-Medición del 17-nov-2026 en el ambiente entregado, de punta a punta: navegador, Nginx, portal .NET, servicio de tablero y tres fuentes (E2):
+1. El portal llama al servicio de tablero con el token del usuario.
+2. El servlet pasa la solicitud a modo asíncrono y libera el hilo del servidor web, para que las esperas no agoten los hilos que atienden solicitudes nuevas.
+3. Un pool de 16 hilos con cola de 64 consulta las tres fuentes en paralelo. Cada fuente tiene 1,5 s de límite, y la respuesta completa, 3 s.
+4. Si una fuente falla o vence, responde con las demás e indica cuál faltó. Si una responde que el token venció, el portal cierra la sesión.
+5. Con el pool y la cola llenos responde 503 con la hora de reintento. Nunca encola sin límite, porque una cola infinita convertiría un pico en una caída.
+
+Se midió de punta a punta en el ambiente entregado, pasando por el navegador, Nginx, el portal, el servicio de tablero y las tres fuentes (E2):
 
 | Escenario | Solicitudes | Clientes | p50 | p95 | Lectura |
 | --- | --- | --- | --- | --- | --- |
@@ -527,14 +566,9 @@ Medición del 17-nov-2026 en el ambiente entregado, de punta a punta: navegador,
 | Secuencial | 300 | 20 | 182 ms | 355 ms | |
 | Reconstrucción congelada | 60 | 20 | 1.515 ms | 1.528 ms | 60 de 60 respuestas parciales, sin errores |
 
-El salto del portal al servicio de tablero, que llegó con la presentación en .NET (ADR-23), cuesta unos 6 ms en p95 con un cliente (44 ms en la medición del 15-nov, sin ese salto). Con 20 clientes cuesta más (de 241 a 366 ms), porque en la misma máquina compiten dos contenedores más.
+Con un cliente, el paralelo gana lo esperado. Con 20 clientes en una sola máquina no gana, porque los servicios de atrás ya están saturados y el paralelo triplica la carga simultánea sobre ellos. Es un compromiso aceptado (ADR-24): en el despliegue objetivo cada fuente tiene sus propias instancias. Con una fuente congelada, el tablero respondió parcial en todos los casos, sin errores, que es la propiedad que más importa en una emergencia.
 
-Con 20 clientes, el paralelo triplica la carga simultánea sobre servicios ya saturados, que validan todos el token contra el núcleo: con una sola máquina no gana, y es un trade-off aceptado (ADR-24). Medir corrigió dos defectos:
-
-- Con el plazo de 5 s de las páginas, una fuente colgada retenía los hilos y 25 de 60 respuestas eran 503 (corrida de prueba que no se guardó; el ajuste está explicado en la configuración del servicio de tablero). Hoy el plazo de cada cliente del tablero es el límite de su fuente.
-- La fuente de Reconstrucción descargaba el catálogo completo del núcleo en cada consulta. Hoy las consultas de solo lectura usan una copia de hasta 3 s; las operaciones que deciden reglas leen siempre el dato fresco.
-
-Las mediciones anteriores se conservan como evidencia de cada cambio (E2): la del 15-nov a las 13:34, ya con el plazo corregido pero antes de la copia del catálogo en Reconstrucción (p95 de 56 ms frente a 67 ms con 1 cliente y de 323 ms frente a 288 ms con 20), y la del 15-nov a las 23:29, con el portal anterior en Spring (p95 de 44 ms frente a 61 ms con 1 cliente y de 241 ms frente a 233 ms con 20).
+Medir corrigió dos defectos. Con el plazo de 5 s de las páginas, una fuente colgada retenía los hilos y se rechazaban solicitudes; hoy el plazo de cada cliente es el límite de su fuente. Además, la fuente de Reconstrucción descargaba el catálogo completo del núcleo en cada consulta; hoy las consultas de solo lectura usan una copia de hasta 3 s, y las operaciones que deciden reglas leen siempre el dato fresco.
 
 ## Vista de despliegue
 
@@ -542,35 +576,37 @@ Las mediciones anteriores se conservan como evidencia de cada cambio (E2): la de
 
 ![Despliegue entregado](diagramas/despliegue_entregado.png)
 
-*Figura 11. Despliegue entregado: Docker Compose en una máquina, más el teléfono Android.*
+*Figura 12. Despliegue entregado: Docker Compose en una máquina, más el teléfono Android.*
+
+El ambiente entregado reproduce todas las unidades construidas en una máquina, cada una en su contenedor y con su base, para probar el comportamiento funcional y medir. Solo la entrada publica un puerto de uso. Los demás puertos publicados sirven a las pruebas y escuchan únicamente en la máquina local.
 
 | Contenedor | Unidad | Tecnología | Puerto en el equipo | Habla con |
 | --- | --- | --- | --- | --- |
-| web | UD-01 Entrada | Nginx 1.28 | 127.0.0.1:18085 | portal (/), api (/api/), reconstruccion (/api/reconstruccion/) |
-| portal | UD-09 Portal web | ASP.NET Core 10, Razor Pages, Kestrel | — | nucleo (REST), api (REST), reconstruccion (gRPC 9096), tablero (REST) |
-| tablero | UD-10 Servicio de tablero | Spring Boot 3.3, Tomcat | — | nucleo (REST), api (REST), reconstruccion (gRPC 9096) |
-| nucleo | UD-02 Núcleo | Jakarta EE en WildFly 41 (EJB, JPA, JTA, JAX-RS, SOAP, EJB remoto) | 127.0.0.1:18092 (pruebas) | database, desastres (HTTP, bandeja de salida) |
+| web | UD-01 Entrada | Nginx 1.28 | 127.0.0.1:18085 | portal, api y reconstruccion |
+| portal | UD-09 Portal web | ASP.NET Core 10, Razor Pages | — | nucleo, api y tablero (REST); reconstruccion (gRPC) |
+| tablero | UD-10 Servicio de tablero | Spring Boot 3.3, Tomcat | — | nucleo y api (REST); reconstruccion (gRPC) |
+| nucleo | UD-02 Núcleo | Jakarta EE en WildFly 41 | 127.0.0.1:18092 (pruebas) | database; desastres (bandeja de salida) |
 | database | Base del núcleo | PostgreSQL 17 | — | — |
-| api | UD-03 Campo y mapas | ASP.NET Core 10 | — | db, nucleo (REST: sesión y catálogo), desastres |
+| api | UD-03 Campo y mapas | ASP.NET Core 10 | — | db; nucleo (sesión y catálogo); desastres |
 | db | Base de servidor | PostgreSQL 17 | — | — |
-| desastres | UD-04 Notificaciones | Jakarta EE en Payara 6 | — | rabbitmq (AMQP), mailpit (SMTP) |
-| rabbitmq | Mensajería | RabbitMQ 4.1 | Ninguno: solo la red interna; las pruebas lo consultan desde dentro del contenedor | — |
+| desastres | UD-04 Notificaciones | Jakarta EE en Payara 6 | — | rabbitmq; mailpit |
+| rabbitmq | Mensajería | RabbitMQ 4.1 | Ninguno: solo la red interna | — |
 | mailpit | Buzón de pruebas | Mailpit | 127.0.0.1:18026 | — |
-| reconstruccion | UD-06 Reconstrucción | Spring Boot 3.3 (REST 8086, gRPC 9096) | 127.0.0.1:19096 (gRPC) | reconstruccion-db, nucleo (sesión y fase), api (evaluaciones), rabbitmq |
+| reconstruccion | UD-06 Reconstrucción | Spring Boot 3.3 | 127.0.0.1:19096 (pruebas gRPC) | reconstruccion-db; nucleo; api; rabbitmq |
 | reconstruccion-db | Base de Reconstrucción | PostgreSQL 17 | — | — |
-| Teléfono Android | App de campo | .NET MAUI + SQLite | — | web → api (/api/campo/lotes) |
+| Teléfono Android | App de campo | .NET MAUI y SQLite | — | web, hacia api |
 
-- **Inicio y secretos.** Un script de arranque construye las imágenes, aplica las migraciones del núcleo y levanta los 12 contenedores. Los secretos viven en un archivo de entorno que no se versiona y que el arranque crea desde una plantilla; Compose no tiene contraseñas escritas. Los puertos solo escuchan en 127.0.0.1.
-- **Verificación.** Un solo comando corre 9 pruebas de punta a punta: API, integración, campo, Reconstrucción con gRPC, evolución, unificación, caracterización, portal y seguridad. El 17-nov-2026, con el portal en .NET, C1, C2 y el consumidor de avisos, pasaron con 271 comprobaciones (E1); el número varía en dos o tres entre corridas porque algunas se repiten dentro de un ciclo de espera. La instalación en limpio, desde un clon nuevo, también pasa (E1).
-- **Alcance.** Este ambiente prueba el comportamiento funcional y sirve para medir (ADR-29). No prueba la disponibilidad ni la carga de 10.000 usuarios.
+Un solo comando de arranque construye las imágenes, aplica las migraciones del núcleo y levanta los doce contenedores. Ninguna imagen ni archivo de configuración versionado contiene secretos: el arranque los toma de un archivo de entorno local, como se explica en «Gestión de secretos». El ambiente prueba el comportamiento funcional y sirve para medir (ADR-29), pero no la disponibilidad ni la carga de 10.000 usuarios; esas metas dependen del despliegue objetivo.
 
 ### Despliegue objetivo: tres centros de datos (diseñado)
 
 ![Despliegue objetivo](diagramas/despliegue_objetivo.png)
 
-*Figura 12. Despliegue objetivo en tres centros de datos (diseñado, sin montar).*
+*Figura 13. Despliegue objetivo en tres centros de datos (diseñado, sin montar).*
 
-Las unidades no guardan estado y corren en los tres centros. Cada base PostgreSQL tiene un primario y dos réplicas síncronas, y un cambio se confirma cuando está en el primario y en una réplica. RabbitMQ replica sus colas en tres nodos. Cada 15 minutos se toma una copia aislada con versiones. El centro C solo aloja lo crítico, para mantener la mayoría de dos sobre tres. La sesión vive en la base del núcleo y se valida contra el primario vigente, para que una revocación surta efecto de inmediato.
+El objetivo de 99,95 % deja 21,6 minutos de caída al mes, y la pérdida de un centro no puede perder operaciones confirmadas (QA-DIS-02). Un solo centro no resiste su propia caída. Dos centros, uno activo y otro en espera, no pueden confirmar un cambio en ambos sin detenerse cuando falta uno. Con tres centros, cada cambio se confirma en dos: si se pierde cualquiera, los otros dos tienen todo lo confirmado y siguen formando mayoría.
+
+Las unidades no guardan estado y corren en los tres centros. Cada base PostgreSQL tiene un primario y dos réplicas síncronas, y un cambio se confirma cuando está en el primario y en una réplica. RabbitMQ replica sus colas en tres nodos. Cada 15 minutos se toma una copia aislada con versiones, para recuperarse de una corrupción lógica que la réplica copiaría. El centro C solo aloja lo crítico, porque basta para mantener la mayoría de dos sobre tres. La sesión vive en la base del núcleo y se valida contra el primario vigente, para que una revocación surta efecto de inmediato en todos los centros.
 
 | Elemento | Centros | Instancias mínimas | Crecimiento |
 | --- | --- | --- | --- |
@@ -580,44 +616,76 @@ Las unidades no guardan estado y corren en los tres centros. Cada base PostgreSQ
 | UD-07 Consulta pública | A, B | 2 por centro | Automático, hasta 10 veces |
 | INF-01 RabbitMQ e INF-02 Monitoreo | A, B, C | 1 por centro | Fijo |
 
-**Cálculo ilustrativo de disponibilidad.** Muestra por qué tres centros; no demuestra el 99,95 %. Si cada centro está disponible el 99,5 % (p = 0,995) y sus fallas son independientes, al menos dos de tres lo están con probabilidad 3p²(1 − p) + p³ = 0,999925: unos 3 minutos de caída al mes. Quedan fuera los errores de software y de despliegue, la red entre centros, la conmutación (hasta 5 minutos) y los errores de operación, que deben caber en los 18 minutos restantes; solo la operación real puede confirmarlo. Los centros no deben compartir proveedor de energía ni de red.
+**Cálculo ilustrativo de disponibilidad.** Muestra por qué se eligen tres centros; no demuestra el 99,95 %. Si cada centro está disponible el 99,5 % del tiempo (p = 0,995) y sus fallas son independientes, al menos dos de tres lo están con probabilidad 3p²(1 − p) + p³ = 0,999925, es decir, unos 3 minutos de caída al mes. Los errores de software y de despliegue, la red entre centros, la conmutación (hasta 5 minutos) y los errores de operación deben caber en los 18 minutos restantes. Solo la operación real puede confirmarlo. Para que las fallas sean de verdad independientes, los centros no deben compartir proveedor de energía ni de red.
 
 ## Conceptos transversales
 
 ### Seguridad
 
-Tres reglas: se niega lo que no está permitido; cada permiso depende del rol y del organismo; toda operación crítica deja registro.
+La plataforma sigue tres principios. Se niega todo lo que no está permitido de forma expresa. Cada permiso depende del rol y del organismo de quien actúa. Toda operación crítica deja un registro que no se puede alterar. Varios organismos comparten la plataforma, y un error de permisos entre ellos sería tan grave como una caída (QA-SEG-02).
 
-| Aspecto del enunciado | Construido | Diseñado o pendiente |
-| --- | --- | --- |
-| Autenticación | El núcleo es la autoridad de usuarios, organismos y roles; contraseñas con PBKDF2; el inicio de sesión tarda lo mismo exista o no el usuario; Nginx limita a 30 intentos por minuto por IP (429). SOAP y EJB remoto usan las mismas cuentas | Credencial por sistema externo |
-| Gestión de sesiones | Token de 8 horas (un turno); el núcleo guarda solo su hash y cada unidad lo valida en cada solicitud. Cerrar sesión lo revoca en REST, SOAP y EJB remoto. Las sesiones vencidas se purgan cada 15 min. En el portal, el token vive en la sesión del servidor y el navegador solo tiene una cookie HttpOnly, sin id en la URL | Cerrar sesiones al cambiar rol u organismo; modo degradado de servidor |
-| Autorización y roles | Tres roles por organismo, tomados de la sesión y nunca del cliente. Cada servicio valida en el backend; el portal solo oculta botones. Reconstrucción aplica RN-10, RN-20 y RN-21 | Ámbito de evento (ADR-19) |
-| Control por organización | Núcleo, servidor y Reconstrucción filtran toda lectura y escritura por el organismo de la sesión; las fotos tienen los permisos de su evaluación | Información compartida en un mismo evento |
-| Cifrado | Token de la app en el almacenamiento seguro del dispositivo | TLS; cifrado en reposo; llaves fuera de las unidades. El SQLite del móvil aún no se cifra |
-| Auditoría | Núcleo: creación del desastre e historial de nivel, fase y caracterización, en la transacción del cambio. Reconstrucción: cambios e intentos rechazados (RN-17) | Registro de solo adición; consulta consolidada (ADR-20); accesos denegados e inicios de sesión |
-| Datos personales | No se guardan datos de personas afectadas (ADR-28) | Con SE-03 y SE-05 solo cruzarían identificadores |
-| Secretos | En un archivo de entorno sin versionar. Clave de integración comparada en tiempo constante. La importación por integración, apagada por defecto. La clave EJB no va en la imagen del núcleo: el usuario técnico se crea al arrancar, con las variables de entorno | Autenticación en el servicio de notificaciones |
+**Autenticación.** El núcleo es la única autoridad de usuarios, organismos y roles, y SOAP y EJB remoto usan las mismas cuentas que REST: así hay un solo lugar donde crear, suspender o revocar a un usuario. Las contraseñas se guardan con PBKDF2, un algoritmo deliberadamente lento que encarece los ataques de diccionario. El inicio de sesión tarda lo mismo exista o no el usuario, para no revelar qué cuentas existen. La entrada limita los intentos a 30 por minuto por dirección, para frenar ataques de fuerza bruta. Queda diseñada una credencial propia para cada sistema externo.
 
-**Dos personas.** Un coordinador puede crear otro coordinador de su organismo; así existe la segunda persona que RN-20 exige para aprobar. Con la misma regla quedan diseñadas las operaciones de alto impacto: cambiar políticas de acceso o de sesión, certificar una regla de consolidación, declarar una falla grave y restaurar la copia aislada.
+**Sesiones.** El token dura 8 horas, lo que dura un turno, y el núcleo guarda solo su hash: una copia de la base no permite suplantar a nadie. Cada unidad valida el token contra el núcleo en cada solicitud, en lugar de confiar en un token firmado que se valida solo. Se eligió así porque, si un dispositivo se pierde o un usuario cambia de organismo, la revocación debe surtir efecto de inmediato y no al vencer el token (ADR-10). El costo es una consulta al núcleo por operación, que se mitiga con su redundancia. Cerrar sesión revoca el token en REST, SOAP y EJB remoto. En el portal, el token nunca llega al navegador. Queda diseñado cerrar las sesiones al cambiar el rol o el organismo de un usuario.
 
-**Modo degradado de servidor (diseñado).** Hoy, sin el núcleo, servidor rechaza todo. El diseño: solo mientras el núcleo no responde, permite las consultas del propio organismo con la última validación exitosa de la sesión, durante 15 minutos desde ella, sin renovarse ni pasar del vencimiento. Recibe las capturas como pendientes, sin mostrarlas, y responde 503 a lo demás. Rechaza una sesión que no había validado, y olvida la de una sesión cerrada o declarada inválida. Al volver el núcleo, incorpora cada captura solo si su sesión seguía vigente cuando llegó; si no, la conserva rechazada con su motivo.
+**Autorización y aislamiento entre organismos.** El rol y el organismo salen siempre de la sesión validada, nunca de lo que envía el cliente. Cada servicio comprueba los permisos en el backend, aunque el portal oculte los botones. El núcleo, servidor y Reconstrucción filtran toda lectura y escritura por el organismo de la sesión, y las fotos heredan los permisos de su evaluación. Una solicitud denegada no modifica nada. Queda diseñado el ámbito de evento, que permitirá a varios organismos compartir la información de un desastre en el que participan (ADR-19).
+
+**Cifrado.** En el dispositivo, el token se guarda en el almacenamiento seguro del sistema operativo. El despliegue objetivo cifra el tráfico con TLS y los datos en reposo, con llaves fuera de las unidades. El SQLite del móvil aún no se cifra, una limitación declarada en «Riesgos y deuda técnica».
+
+**Auditoría.** El núcleo registra la creación del desastre y el historial de nivel, fase y caracterización, en la misma transacción del cambio: si existe el cambio, existe su registro. Reconstrucción registra los cambios y también los intentos rechazados (RN-17), porque un intento indebido es información para los entes de control. Quedan diseñados el registro de solo adición y la consulta consolidada de todas las unidades (ADR-20).
+
+**Datos personales.** La plataforma no guarda datos de personas afectadas (ADR-28). Con los sistemas de salud y de atención a personas solo cruzaría identificadores, lo que reduce la superficie que exige la protección de datos personales (CON-09).
+
+**Operaciones de dos personas.** Un coordinador puede crear otro coordinador de su organismo, y así existe la segunda persona que exige la aprobación de proyectos (RN-20). Con la misma regla quedan diseñadas las operaciones de alto impacto: cambiar políticas de acceso o de sesión, certificar una regla de consolidación, declarar una falla grave y restaurar la copia aislada.
+
+**Modo degradado de servidor (diseñado).** Hoy, sin el núcleo, servidor rechaza todo. El diseño permite, solo mientras el núcleo no responde, las consultas del propio organismo con la última validación exitosa de la sesión, durante 15 minutos desde ella y sin pasar de su vencimiento. Las capturas se reciben como pendientes, sin mostrarlas, y lo demás recibe 503. Al volver el núcleo, cada captura se incorpora solo si su sesión seguía vigente cuando llegó. Los 15 minutos equilibran la continuidad del trabajo de campo con el riesgo de aceptar una sesión revocada durante la caída.
+
+#### Gestión de secretos
+
+Un secreto es toda credencial que da acceso: contraseñas de bases de datos, claves de integración, credenciales de sistemas externos y llaves de cifrado. Excluir el archivo de secretos del control de versiones solo evita publicarlos en el repositorio. No los protege en los servidores, donde cualquiera con acceso a la máquina puede leer el archivo, ni en las imágenes, los registros o las copias de respaldo, y tampoco permite saber quién los usó ni cambiarlos sin detener el servicio. Por eso la plataforma sigue cuatro reglas en cualquier ambiente:
+
+- Ningún secreto vive en el código, en una imagen de contenedor ni en un archivo de configuración versionado.
+- Cada unidad recibe solo los secretos que necesita, al arrancar y en tiempo de ejecución.
+- Todo secreto se puede cambiar sin modificar código ni reconstruir imágenes.
+- Todo acceso a un secreto queda registrado.
+
+**En el ambiente entregado (construido).** El arranque crea, a partir de una plantilla, un archivo de entorno local que no se versiona. Docker Compose pasa a cada contenedor solo las variables que usa, y ningún archivo versionado tiene contraseñas. Las imágenes no contienen secretos: por ejemplo, el usuario técnico del EJB remoto se crea al arrancar el núcleo a partir de esas variables, en lugar de grabarse al construir la imagen, donde quedaría en su historial. La clave de integración se compara en tiempo constante, la importación por integración está apagada por defecto y los puertos de prueba solo escuchan en la máquina local. Este esquema es adecuado para una máquina de laboratorio, pero no para producción.
+
+**En el despliegue objetivo (diseñado).** Los secretos viven en un **gestor de secretos** centralizado, por ejemplo HashiCorp Vault o el servicio equivalente del proveedor de nube, replicado en los tres centros:
+
+- **Identidad de carga de trabajo.** Cada instancia se autentica ante el gestor con la identidad que le asigna la plataforma de ejecución, no con una contraseña fija, y recibe solo las políticas de su unidad.
+- **Entrega en memoria.** El secreto llega a la instancia al arrancar, como archivo en memoria o variable del proceso. Nunca se escribe en el disco de la imagen ni aparece en los registros.
+- **Credenciales dinámicas.** Para las bases de datos, el gestor emite credenciales propias de cada instancia con vigencia de horas. Si una se filtra, caduca sola y se sabe de qué instancia salió.
+- **Rotación.** Los secretos estáticos, como las claves de sistemas externos, se rotan periódicamente y de inmediato ante cualquier sospecha, sin desplegar código.
+- **Llaves de cifrado** en un servicio de gestión de llaves o en un módulo de seguridad de hardware. Las unidades piden cifrar o descifrar, pero nunca ven la llave maestra.
+- **Auditoría y separación.** El gestor registra quién leyó cada secreto y cuándo. Cada ambiente (desarrollo, pruebas y producción) tiene secretos distintos, y el acceso de emergencia exige dos personas.
+
+Como defensa complementaria, está diseñado que la integración continua revise cada cambio en busca de secretos antes de aceptarlo en el repositorio.
 
 ### Resiliencia y recuperación
 
+La plataforma debe seguir atendiendo lo crítico aunque falle una parte (QA-RES-01, QA-RES-02) y recuperarse de una falla grave sin perder lo confirmado (QA-DIS-02). Para eso combina mecanismos que contienen una falla donde ocurre con un orden explícito de qué se sacrifica primero.
+
 | Mecanismo | Dónde y con qué valores | Estado |
 | --- | --- | --- |
-| Tiempos de espera | Entrada a las unidades: 5 s de conexión. Portal: 2 s de conexión y 5 s de lectura (4 s hacia el tablero). Servicio de tablero: 1,5 s por fuente y 3 s en total. servidor al núcleo: 5 s. Núcleo a notificaciones: 2 s y 3 s. Adaptadores: 2 a 10 s | Construido, salvo adaptadores |
+| Tiempos de espera | Entrada: 5 s de conexión. Portal: 2 s de conexión y 5 s de lectura (4 s hacia el tablero). Tablero: 1,5 s por fuente y 3 s en total. servidor al núcleo: 5 s. Núcleo a notificaciones: 2 s y 3 s. Adaptadores: 2 a 10 s | Construido, salvo adaptadores |
 | Reintentos | Bandeja de salida en cada ciclo; cola de reintento a los 5 s; la app reenvía con los mismos identificadores | Construido |
 | Corte de circuito | Por adaptador: 3 fallas seguidas o 5 en 30 s; sonda cada 30 s | Diseñado |
-| Colas | Entrada de alertas, una por suscriptor, correo, eventos de Reconstrucción; durables | Construido en un nodo |
-| Procesamiento asíncrono | Notificaciones, lotes diferidos y servlet del tablero | Construido |
-| Degradación controlada | Respuesta parcial del tablero y 503 con el pool lleno; orden de abajo | Tablero construido; resto diseñado |
-| Recuperación automática | Nueva instancia en 2 min; conmutación entre centros en 5 min | Diseñado |
+| Colas durables | Entrada de alertas, una por suscriptor, correo y eventos de Reconstrucción | Construido en un nodo |
+| Degradación controlada | Respuesta parcial del tablero y 503 con el pool lleno; orden descrito abajo | Tablero construido; resto diseñado |
+| Recuperación automática | Nueva instancia en 2 minutos; conmutación entre centros en 5 minutos | Diseñado |
 
-Cada unidad corre en su proceso con su grupo de conexiones, y el pool del tablero no comparte hilos con Tomcat. Dos evidencias están medidas: la bandeja de salida no pierde avisos al detener RabbitMQ, y el tablero responde parcial con Reconstrucción caída.
+Los tiempos de espera son cortos donde un usuario espera y más largos donde el proceso es diferido. Ninguna llamada espera más que el presupuesto de la operación que la contiene. Cada unidad corre en su proceso, con su grupo de conexiones, y el pool del tablero no comparte hilos con el servidor web: una dependencia lenta agota, a lo sumo, los recursos de quien la llama. Dos de estas propiedades están medidas: la bandeja de salida no pierde avisos al detener RabbitMQ, y el tablero responde parcial con Reconstrucción caída (E1, E2).
 
-**Orden de degradación.** 1) Consultas históricas y estimaciones: 503 con hora de reintento. 2) Fotos: primero las evaluaciones sin foto. 3) Consulta pública: última copia en caché; luego, límite de tasa. 4) Reconstrucción: solo lectura; el tablero sigue sin proyectos. 5) Integraciones diferidas: se acumulan en cola. 6) Lo crítico nunca se degrada por la carga de lo anterior.
+**Orden de degradación.** Bajo carga excesiva, la plataforma cede capacidad en este orden, de lo que menos daño causa al suspenderse a lo que más:
+
+1. Consultas históricas y estimaciones: responden 503 con hora de reintento.
+2. Fotos: se aceptan primero las evaluaciones sin foto, y las fotos esperan en el dispositivo.
+3. Consulta pública: sirve la última copia en caché y luego aplica límite de tasa.
+4. Reconstrucción: pasa a solo lectura y el tablero se muestra sin proyectos.
+5. Integraciones diferidas: se acumulan en sus colas.
+
+Lo crítico nunca se degrada por la carga de lo anterior. Los dos primeros pasos no pierden información, porque lo pedido puede repetirse y lo capturado sigue en el dispositivo. Por eso van antes que los que afectan a usuarios externos o a procesos de otras entidades.
 
 En el despliegue objetivo, cada tipo de falla se trata así:
 
@@ -626,19 +694,25 @@ En el despliegue objetivo, cada tipo de falla se trata así:
 | Cae una instancia (sonda cada 5 s) | El tráfico va a las demás y se crea otra | Sí | Sin interrupción | Ninguna |
 | Caen las instancias del núcleo de un centro | Tráfico a otro centro; servidor en modo degradado; la app sigue capturando | Sí | 5 min | Ninguna |
 | Falla un sistema externo | Contención en el adaptador; pendientes en cola | Sí | Sin interrupción de lo crítico | Ninguna |
-| Se pierde un centro | Los otros dos siguen confirmando | Sí | 5 min | Ninguna: cada cambio estaba en 2 de 3 |
+| Se pierde un centro | Los otros dos siguen confirmando | Sí | 5 min | Ninguna: cada cambio estaba en dos de tres |
 | Se pierden dos centros | Dos personas declaran la falla, bloquean los centros perdidos y el sobreviviente asume | No | 15 min | Posible: lo confirmado solo en los perdidos |
 | Corrupción lógica | Se detienen las escrituras y se restaura la copia aislada | No: dos personas | 4 horas | Hasta 15 min; se completa con los dispositivos |
 
-QA-DIS-02 se cumple con la cuarta fila; las dos últimas son más raras y el SRS no exige cubrirlas sin pérdida.
+QA-DIS-02 se cumple con la pérdida de un centro. Las dos últimas filas son más raras, y no se automatizan porque una decisión equivocada causaría más daño que la demora: promover el centro equivocado podría dejar dos primarios, y restaurar una copia sin confirmar la corrupción borraría datos válidos.
 
-**Conmutación (5 minutos).** Los dos centros restantes confirman la pérdida (30 s), el balanceador retira el tráfico (30 s), una réplica asume si allí estaba el primario (1 min), las unidades críticas crecen (2 min) y queda 1 minuto de margen. Un coordinador con un miembro por centro mantiene el turno del primario con mayoría de dos y promueve la réplica más adelantada; el primario anterior queda bloqueado, para que nunca haya dos. Las solicitudes en curso se reintentan con el mismo identificador. Todo es diseño, salvo que varias instancias no publiquen el mismo aviso («Concurrencia y consistencia»).
+**Conmutación (5 minutos).** Los dos centros restantes confirman la pérdida (30 s), el balanceador retira el tráfico (30 s), una réplica asume si allí estaba el primario (1 min), las unidades críticas crecen para absorber la carga (2 min) y queda 1 minuto de margen. Un coordinador con un miembro por centro mantiene el turno del primario con mayoría de dos y promueve la réplica más adelantada. El primario anterior queda bloqueado, para que nunca haya dos. Las solicitudes en curso se reintentan con el mismo identificador, así que no se duplican. Todo esto es diseño, salvo que varias instancias no publiquen el mismo aviso, que ya está construido («Concurrencia y consistencia»).
 
-**Tras recuperar.** Lo crítico vuelve en 15 minutos, lo esencial en 1 hora y lo degradable en 4 horas. Los avisos pendientes salen en el siguiente ciclo y los dispositivos sincronizan lo que guardaban; un cambio sobre una versión perdida entra como conflicto. Estos tiempos son metas de diseño, que se comprobarían con un simulacro trimestral.
+**Tras recuperar.** Los pendientes salen en el siguiente ciclo de la bandeja de salida, los dispositivos sincronizan lo que guardaban, y un cambio hecho sobre una versión perdida entra como conflicto, nunca como sobrescritura. El restablecimiento sigue el orden de la clasificación del SRS: lo crítico en 15 minutos, lo esencial en 1 hora y lo degradable en 4 horas. Cada plazo tiene una razón:
+
+- **15 minutos para lo crítico.** La meta de 99,95 % permite 21,6 minutos de caída al mes. Una falla grave en un mes no puede gastar todo ese presupuesto, porque en el mismo mes pueden ocurrir fallas menores. Con 15 minutos queda un margen de 6,6 minutos, cerca de un 30 %. Con 20 minutos el margen sería de 1,6 minutos, y cualquier otro incidente incumpliría la meta. Además, la conmutación automática está diseñada para 5 minutos, así que los 15 cubren también el caso manual de dos centros perdidos.
+- **1 hora para lo esencial.** Validar evaluaciones, consolidar duplicados y consultar el mapa de daños trabajan sobre información que ya está a salvo en los dispositivos o en colas, así que esperar no pierde datos: retrasa el análisis. Una hora acota ese retraso a una fracción pequeña de un periodo operativo de una emergencia, que suele planearse en bloques de 12 horas. A un reporte por minuto, una hora equivale a unos 60 reportes por equipo en espera, que los dispositivos guardan y la recepción por lotes absorbe al volver. Con dos horas, la coordinación tomaría decisiones durante más tiempo sin el mapa de daños actualizado.
+- **4 horas para lo degradable.** La reconstrucción se planea en semanas y meses, las fotos esperan en el dispositivo, la consulta pública sigue sirviendo su última copia y las consultas históricas son de análisis. Cuatro horas, medio turno de 8, devuelven estas funciones dentro del mismo turno de trabajo, sin reservar para ellas la capacidad que se dedica a lo crítico.
+
+Cada plazo más corto exigiría más capacidad redundante, que en operación normal estaría ociosa. Los plazos son metas de diseño y se comprobarían con un simulacro trimestral de pérdida de centro.
 
 ### Escalabilidad y rendimiento
 
-Cada unidad crece por separado, agregando instancias iguales, al superar 60 % de uso sostenido durante 2 minutos (diseñado). El núcleo y servidor se dimensionan para quedar bajo 50 % en el pico y bajo 70 % con un centro perdido.
+Cada unidad crece por separado, agregando instancias iguales, cuando supera el 60 % de uso sostenido durante 2 minutos (diseñado). El umbral de 60 % deja margen para absorber la carga mientras arrancan las instancias nuevas, que deben operar en menos de 5 minutos (QA-ESC-01). El núcleo y servidor se dimensionan para quedar por debajo del 50 % en el pico y del 70 % con un centro perdido, porque al perder un centro los otros dos asumen su tráfico.
 
 | Fuente de carga | Supuesto | Carga resultante | Unidad |
 | --- | --- | --- | --- |
@@ -648,7 +722,7 @@ Cada unidad crece por separado, agregando instancias iguales, al superar 60 % de
 | Validación de sesiones | Una por solicitud protegida | Cerca de 210 lecturas por segundo | UD-02 |
 | Sistemas externos | Consultas periódicas y alertas | Menos de 10 mensajes por segundo | UD-08 y UD-04 |
 
-**Modelo de capacidad (estimación).** Supone 100 operaciones por segundo por instancia del núcleo o de servidor, y 500 respuestas desde caché por instancia de consulta pública; una prueba de carga debe reemplazar ese supuesto. Como referencia, una instancia de servidor atendió entre 314 y 350 consultas por segundo en una comprobación local de la versión 1.0.
+**Modelo de capacidad (estimación).** Supone 100 operaciones por segundo por instancia del núcleo o de servidor, y 500 respuestas desde caché por instancia de consulta pública. Una prueba de carga debe reemplazar ese supuesto. Como referencia, una instancia de servidor atendió entre 314 y 350 consultas por segundo en una comprobación local.
 
 | Unidad | Pico | Instancias mínimas | Uso en el pico | Con un centro menos |
 | --- | --- | --- | --- | --- |
@@ -656,7 +730,9 @@ Cada unidad crece por separado, agregando instancias iguales, al superar 60 % de
 | UD-02 Núcleo | 273 operaciones por segundo | 6 | 46 % | 68 % |
 | UD-07 Consulta pública | 267 consultas por segundo | 4 | 13 % | 27 % |
 
-Con 80.000 ciudadanos solo crecería la consulta pública, de 4 a 9 instancias. Con fotos de 5 MB, servidor pasaría de 6 a 12. Si la capacidad real fuera la mitad, el núcleo quedaría al 91 % y habría que duplicarlo.
+El modelo muestra por qué conviene separar las unidades. Con 80.000 ciudadanos solo crecería la consulta pública, de 4 a 9 instancias. Con fotos de 5 MB, servidor pasaría de 6 a 12 instancias. Si la capacidad real del núcleo fuera la mitad de la supuesta, quedaría al 91 % y habría que duplicarlo. Por eso su validación de sesiones es el primer punto a medir.
+
+Los tiempos de respuesta se reparten en un presupuesto por tramo. Así, cada equipo sabe cuánto puede gastar su parte, y una medición señala qué tramo se excede:
 
 | Tramo | Consulta (QA-REN-01, 2 s) | Registro (QA-REN-02, 3 s) |
 | --- | --- | --- |
@@ -667,368 +743,218 @@ Con 80.000 ciudadanos solo crecería la consulta pública, de 4 a 9 instancias. 
 | Respuesta | 0,4 s | 0,4 s |
 | Margen | 0,3 s | 0,9 s |
 
-**Medido en el ambiente entregado.** El tablero, la consulta más compuesta, tuvo p95 de 50 ms con un cliente y de 366 ms con 20 («Tablero de un desastre (servlet multihilo)»); en la versión 1.0, el registro de un desastre respondió en 22 ms con poca carga. Ninguna cifra incluye red real, réplica ni 10.000 usuarios. Confirmar en otro centro consumiría cerca de 0,8 s de los 3 s del registro, y con fotos de 5 MB el volumen de campo se multiplica por cinco. Las listas aún no se paginan (diseñado: de 20 en 20 con cursor).
+En el ambiente entregado, el tablero tuvo un percentil 95 de 50 ms con un cliente y de 366 ms con 20, y el registro de un desastre respondió en 22 ms con poca carga. Ninguna cifra incluye red real, réplica en otro centro ni 10.000 usuarios. Confirmar en otro centro consumiría cerca de 0,8 s de los 3 s del registro. Las listas aún no se paginan; está diseñado paginarlas de 20 en 20 con cursor.
 
 ### APIs y eventos
 
-| Convención | Regla |
-| --- | --- |
-| Versión | Prefijo /api sin número; un cambio incompatible se publica en /api/v2 y convive con el anterior |
-| Autenticación | Authorization: Bearer con el token; en gRPC, el mismo token en el metadato authorization |
-| Repetición segura | Toda escritura lleva un identificador del cliente; repetirla no duplica |
-| Control de versión | versionBase en el núcleo y en servidor; If-Match o version_esperada en Reconstrucción. Si cambió, 409 |
-| Formato | JSON; fechas ISO 8601 con zona; geometrías GeoJSON |
+Las APIs siguen las mismas convenciones en todas las unidades, para que un cliente que aprende una las conozca todas y para que repetir una solicitud siempre sea seguro:
 
-Códigos HTTP: 200 o 201 aplicada; 202 recibida para proceso diferido; 401 sin credencial válida; 403 sin permiso; 404 inexistente o fuera del ámbito; 409 conflicto; 413 y 415 tamaño o tipo; 422 regla de negocio (RN-xx en Reconstrucción); 429 límite; 503 degradada, con hora de reintento. En gRPC: FAILED_PRECONDITION por regla, PERMISSION_DENIED, NOT_FOUND, ABORTED por cambio simultáneo e INVALID_ARGUMENT.
-
-| Unidad | Operaciones construidas | Requisitos |
+| Convención | Regla | Por qué |
 | --- | --- | --- |
-| Núcleo | /auth/login, /auth/me, /auth/logout y /auth/usuarios (la app y las pruebas los usan a través de servidor, bajo /api/auth). GET /eventos, GET /eventos/{id} y su historial. PATCH /eventos/{id}/gravedad, /fase y /caracterizacion. Registro del desastre. Catálogo interno, con clave de integración. Inicio de sesión SOAP y EJB remoto | FC-07; RF-GD-01, 03, 05, 06, 07, 13, 14 |
-| servidor | GET /api/desastres, /api/catalogos (con tiposActivo, C1); PATCH /api/desastres/{id}/caracterizacion (C2), /fase y /gravedad; POST /api/campo/lotes; GET y PUT /api/campo/evaluaciones/{id}, con /historial, /foto y /desastre; GET /api/panorama; /api/salud | RF-ED-01 a 03, 07, 08, 11 a 14 |
-| Reconstrucción REST | Bajo /api/reconstruccion: desastres (iniciar reconstrucción, cerrar, evaluaciones, seguimiento, auditoría) y proyectos (crear, aprobar, iniciar, presupuesto, avance, costo, evidencia, estado, auditoría) | RF-RE-01 a 06 |
-| Reconstrucción gRPC | ReconstruccionService, 14 RPC: IniciarReconstruccion, CrearProyecto, CrearProyectosEnLote, AprobarProyecto, IniciarEjecucion, RegistrarAvance, RegistrarCosto, AdjuntarEvidencia, ModificarPresupuesto, CambiarEstado, ConsultarSeguimiento, ConsultarAuditoria, CerrarDesastre, ConsultarEvaluaciones | RF-RE-01 a 06 |
-| Portal | Páginas Razor y GET /tablero?desastre= (JSON del mapa, que reenvía al servicio de tablero) | Mínimos a, b, c y d |
-| Servicio de tablero | GET /tablero?desastre= con Authorization: Bearer; solo lo llama el portal | Mínimo c |
-| Notificaciones | POST /desastres (aviso desde la bandeja de salida); POST y GET /sistemas (suscripción) | RF-GD-13, RF-CO-06 |
+| Versión | Prefijo sin número; un cambio incompatible se publica como versión 2 y convive con la anterior | Las apps instaladas en campo se actualizan con lentitud |
+| Autenticación | Token Bearer; en gRPC, el mismo token en los metadatos | Un solo mecanismo de sesión para todos los canales |
+| Repetición segura | Toda escritura lleva un identificador del cliente; repetirla no duplica | Las redes de campo cortan después de guardar |
+| Control de versión | La escritura indica la versión que espera modificar; si cambió, responde conflicto | Ningún cambio sobrescribe a otro en silencio |
+| Formato | JSON; fechas ISO 8601 con zona; geometrías GeoJSON | Formatos abiertos que entienden los sistemas externos |
 
-Diseñadas, sin código: validación y duplicados de evaluaciones, documentos PDF, delimitación y consulta histórica, consolidación, participación y tareas, tipos de desastre, auditoría consolidada, consulta pública y alertas por fuente.
+Los códigos de respuesta distinguen qué debe hacer el cliente: 200 o 201, aplicada; 202, recibida para proceso diferido; 401, sin credencial válida (iniciar sesión); 403, sin permiso; 404, inexistente o fuera del ámbito; 409, conflicto (decidir); 413 y 415, tamaño o tipo; 422, regla de negocio; 429, límite; 503, degradada, con hora de reintento. En gRPC se usan los equivalentes: FAILED_PRECONDITION por regla, PERMISSION_DENIED, NOT_FOUND, ABORTED por cambio simultáneo e INVALID_ARGUMENT.
 
-| Contrato entre unidades | Qué fija | Estado |
+| Unidad | Recursos construidos | Requisitos |
 | --- | --- | --- |
-| C1 Tipos de activo | Nueve códigos (vivienda, edificio público, escuela, centro de salud, vía, puente, red de agua, red de energía, otro) en una tabla configurable, publicados en GET /api/catalogos. La evaluación guarda el código tal como llega; al leerse, uno desconocido o ausente queda como OTRO y se conserva el original, para no perder capturas de apps anteriores ni romper la idempotencia | Construido en servidor, el tablero, Reconstrucción y la app |
-| C2 Caracterización | PATCH /eventos/{id}/caracterizacion en el núcleo («Reglas de dominio por capacidad»), que servidor ofrece a la app como PATCH /api/desastres/{id}/caracterizacion y reenvía tal cual (200, 409 con la versión actual, 403, 404) | Construido en el núcleo, en servidor y en la app (probado en un celular real) |
-| C3 Resumen de evaluaciones | Totales por nivel y por tipo de activo | Opcional: el tablero lo arma con /api/panorama |
-| C4 Sesión | Token Bearer validado con /auth/me; 401 vencido, 403 sin permiso | Construido |
-| C5 Eventos de Reconstrucción | idEvento (también es el id del mensaje AMQP), tipo, ocurridoEn, desastreId (el UUID que usa Reconstrucción), proyectoId, organismoId y datos; intercambio reconstruccion.eventos, cola integracion.reconstruccion | Publicación y consumo construidos (ADR-27) |
+| Núcleo | Sesión (iniciar, consultar, cerrar) y usuarios del organismo; desastres con su historial, nivel, fase y caracterización; catálogo interno con clave de integración; inicio de sesión por SOAP y EJB remoto | RF-GD-01, 03, 05, 06, 07, 13, 14 |
+| servidor | Desastres y catálogos para la app, incluidos los tipos de activo (C1) y la caracterización (C2); lotes de campo; evaluaciones con historial, foto y desastre; panorama; salud | RF-ED-01 a 03, 07, 08, 11 a 14 |
+| Reconstrucción | REST y gRPC con las mismas 14 operaciones: iniciar reconstrucción, crear proyectos (uno o en lote), aprobar, iniciar ejecución, registrar avance y costo, adjuntar evidencia, modificar presupuesto, cambiar estado, seguimiento, auditoría, cerrar el desastre y consultar evaluaciones | RF-RE-01 a 06 |
+| Servicio de tablero | Tablero de un desastre; solo lo llama el portal | Tablero del desastre |
+| Notificaciones | Recepción de avisos desde las bandejas de salida; suscripción de sistemas | RF-GD-13, RF-CO-06 |
+
+Las unidades acuerdan cinco contratos explícitos, de modo que cada una puede cambiar por dentro sin romper a las demás:
+
+| Contrato | Qué fija | Estado |
+| --- | --- | --- |
+| C1 Tipos de activo | Nueve códigos en una tabla configurable. Un código desconocido o ausente se lee como OTRO y se conserva el original, para no perder capturas de apps anteriores | Construido en servidor, el tablero, Reconstrucción y la app |
+| C2 Caracterización | Operación del núcleo que servidor ofrece a la app y reenvía tal cual, con sus respuestas de éxito, conflicto, permiso e inexistencia | Construido en el núcleo, servidor y la app |
+| C3 Resumen de evaluaciones | Totales por nivel y por tipo de activo | Opcional; el tablero lo arma con el panorama |
+| C4 Sesión | Token validado contra el núcleo; 401 si venció, 403 sin permiso | Construido |
+| C5 Eventos de Reconstrucción | Identificador del evento (también el del mensaje), tipo, fecha, desastre, proyecto, organismo y datos | Publicación y consumo construidos (ADR-27) |
 
 | Aviso | Origen y canal | Estado |
 | --- | --- | --- |
-| DESASTRE_REGISTRADO, DESASTRE_GRAVEDAD_CAMBIADA | Núcleo → bandeja de salida → notificaciones → cola por suscriptor y correo | Construido |
-| PROYECTO_CREADO, PROYECTO_APROBADO, PROYECTO_ESTADO_CAMBIADO, PROYECTO_CON_SOBRECOSTO, PRESUPUESTO_MODIFICADO, DESASTRE_EN_RECONSTRUCCION, DESASTRE_CERRADO | Reconstrucción → bandeja de salida → C5 → notificaciones | Construido: correo para PROYECTO_APROBADO, PROYECTO_CON_SOBRECOSTO y DESASTRE_CERRADO; los demás se registran sin correo |
-| Alerta externa | SE-01 → intercambio desastres.entrada, cola desastres.registro | Cola construida; adaptadores diseñados |
+| Desastre registrado y nivel cambiado | Núcleo → bandeja de salida → notificaciones → cola por suscriptor y correo | Construido |
+| Proyecto creado, aprobado, con cambio de estado o con sobrecosto; presupuesto modificado; desastre en reconstrucción o cerrado | Reconstrucción → bandeja de salida → C5 → notificaciones | Construido; correo para aprobación, sobrecosto y cierre |
+| Alerta externa | SE-01 → cola de entrada | Cola construida; adaptadores diseñados |
 | Fase cambiada por el coordinador, delimitación, tarea, sistema externo caído | Núcleo y UD-08 | Diseñado |
 
-Cada cola tiene su cola de reintento, que devuelve el mensaje a los 5 s, y su cola de errores, visible para un operador. Los mensajes son JSON persistentes con identificador único.
+**Garantías de entrega.**
 
-**Garantías de entrega.** *Sin pérdida:* el aviso se guarda con su cambio y se entrega hasta que se acepta. *Al menos una vez:* un aviso puede repetirse y el destinatario lo descarta por su identificador. *Orden no garantizado:* cada aviso lleva el recurso y su versión, y el destinatario conserva la más alta. *Capacidad:* 10 alertas críticas simultáneas, porque el modelo de carga supone menos de 10 mensajes por segundo de todos los externos; por encima, se atiende por severidad y la espera crece, como degradación declarada. *Evolución:* dentro de una versión solo se agregan campos opcionales.
+- *Sin pérdida:* el aviso se guarda con su cambio y se entrega hasta que se acepta.
+- *Al menos una vez:* un aviso puede repetirse, y el destinatario lo descarta por su identificador.
+- *Orden no garantizado:* cada aviso lleva el recurso y su versión, y el destinatario conserva la más alta. Garantizar el orden obligaría a un solo consumidor y limitaría la capacidad.
+- *Capacidad:* 10 alertas críticas simultáneas, porque el modelo de carga supone menos de 10 mensajes por segundo de todos los externos. Por encima, se atiende por severidad y la espera crece, como degradación declarada.
+- *Robustez:* cada cola tiene una cola de reintento, que devuelve el mensaje a los 5 s, y una cola de errores visible para un operador.
 
 ### Operación sin conexión
 
-- La app exige un primer inicio de sesión con conexión y guarda el token en el almacenamiento seguro del dispositivo.
-- SQLite es la fuente de verdad local. Catálogo y capturas se separan por organismo, y las capturas también por usuario.
-- Sin conexión se captura y se corrige. Cada operación lleva un identificador del dispositivo y la versión base (ADR-04). Ante un conflicto, el evaluador elige y su decisión es una operación nueva.
-- El dispositivo no borra una captura hasta la confirmación. Revocar la sesión de un dispositivo perdido impide sincronizar, pero no borra lo guardado; por eso solo guarda catálogos y capturas del propio usuario. **Limitación:** el SQLite no va cifrado.
-- La app trata el 401 aparte de la falta de red, porque un evaluador puede pasar más de 8 horas sin señal: avisa que la sesión venció, conserva lo pendiente y no reintenta hasta un nuevo inicio de sesión. También elige el tipo de activo del catálogo descargado (C1) sin perder el texto libre, y caracteriza el desastre sin conexión (C2). Ante un 409, la caracterización queda en conflicto hasta que el evaluador decide.
-- **Evidencia:** la prueba instrumentada de la app ejecuta sus métodos reales con desconexión real, persistencia, conflicto y resolución, C1, C2, el 409 y el 401. El 17-nov pasó con 33 comprobaciones en un celular real (Samsung SM-A155M, Android 16), incluido cerrar sesión con la sesión vencida, y quedaron 18 capturas de la interfaz (E3).
+Los evaluadores trabajan donde la infraestructura de comunicaciones puede estar dañada, así que capturar no puede depender de la red (CON-08), y lo capturado no puede perderse ni duplicarse al sincronizar (QA-DIS-03, QA-CNF-01).
+
+- La app exige un primer inicio de sesión con conexión, para descargar los catálogos del organismo, y guarda el token en el almacenamiento seguro del dispositivo.
+- SQLite es la fuente de verdad local. Catálogo y capturas se separan por organismo, y las capturas también por usuario, para que un dispositivo compartido no mezcle información.
+- Sin conexión se captura y se corrige. Cada operación lleva un identificador generado en el dispositivo y la versión base, porque no puede pedirle un identificador al servidor (ADR-04). Ante un conflicto, el evaluador elige, y su decisión viaja como una operación nueva.
+- El dispositivo no borra una captura hasta que el servidor la confirma. Revocar la sesión de un dispositivo perdido impide sincronizar, pero no borra lo guardado; por eso el dispositivo solo guarda catálogos y capturas de su propio usuario. El SQLite no va cifrado, una limitación declarada.
+- La app trata la sesión vencida aparte de la falta de red: avisa, conserva lo pendiente y no reintenta hasta un nuevo inicio de sesión. Elige el tipo de activo del catálogo descargado (C1) sin perder el texto libre, y caracteriza el desastre sin conexión (C2).
 
 ### Concurrencia y consistencia
 
-- **Identificador del cliente y versión base.** Repetir una escritura no duplica; el mismo identificador con otro contenido, o una versión que ya no es la vigente, responde 409 sin cambiar nada.
-- **Transacción local.** El cambio, su historial, su auditoría y su aviso van juntos en la base de la unidad dueña. No hay transacciones entre unidades.
-- **Bloqueo del desastre.** Todo cambio de nivel, fase o caracterización bloquea la fila del desastre antes de comparar la versión.
-- **Reclamo de avisos.** La bandeja del núcleo reclama los avisos con un bloqueo que salta las filas ya tomadas y un vencimiento de 30 s; el envío HTTP a notificaciones ocurre fuera de la transacción, y si falla, el aviso vuelve a estar disponible al vencer el reclamo. Reconstrucción y los lotes diferidos de servidor usan el mismo bloqueo, así que varias instancias no publican dos veces lo mismo.
-- **Reconstrucción.** La base decide entre dos proyectos simultáneos sobre la misma evaluación (RN-09), y el repositorio rechaza la segunda escritura sobre una versión aunque el cliente no envíe If-Match.
-- **Consistencia eventual.** Las copias de lectura van segundos atrás (ADR-03); el tablero acota su concurrencia con un pool fijo (ADR-24).
+Varios usuarios y dispositivos pueden cambiar el mismo dato, y en el despliegue objetivo varias instancias atienden a la vez. Las reglas siguientes evitan duplicados, sobrescrituras y avisos repetidos sin recurrir a transacciones entre unidades:
+
+- **Identificador del cliente y versión base.** Repetir una escritura no duplica. El mismo identificador con otro contenido, o una versión que ya no es la vigente, responde conflicto sin cambiar nada.
+- **Transacción local.** El cambio, su historial, su auditoría y su aviso van juntos en la base de la unidad dueña. No hay transacciones entre unidades, porque acoplarían su disponibilidad.
+- **Bloqueo del desastre.** Todo cambio de nivel, fase o caracterización bloquea la fila del desastre antes de comparar la versión, para que dos cambios simultáneos no lean la misma versión.
+- **Reclamo de avisos.** La bandeja del núcleo reclama los avisos con un bloqueo que salta las filas ya tomadas y vence a los 30 s. El envío a notificaciones ocurre fuera de la transacción, y si falla, el aviso vuelve a estar disponible al vencer el reclamo. Reconstrucción y los lotes diferidos de servidor usan el mismo bloqueo, así que varias instancias no publican dos veces lo mismo.
+- **Reconstrucción.** La base decide entre dos proyectos simultáneos sobre la misma evaluación (RN-09), y el repositorio rechaza la segunda escritura sobre una versión aunque el cliente no indique cuál esperaba.
+- **Consistencia eventual.** Las copias de lectura van segundos atrás (ADR-03). Se acepta porque ninguna decisión crítica se toma sobre una copia: las operaciones que aplican reglas leen siempre al dueño.
 
 ## Decisiones arquitectónicas
 
-Cada ADR indica su estado en el código. Frente a la versión 1.0, ADR-01, 02, 03, 10, 11, 14, 17, 19, 20 y 22 se actualizan con lo construido, y ADR-23 a 29 son nuevas.
+Cada decisión indica su estado, los requisitos que la motivan, el contexto, lo decidido, las alternativas descartadas y sus consecuencias.
 
 #### Unidades de despliegue por consistencia y perfil de carga (ADR-01) · Construido en parte
 
-- **Requisitos.** QA-ESC-01, QA-DIS-01, QA-ESC-02; Escenario B.
-- **Contexto.** Hay que crecer solo lo necesario, y el dato, su historial, su auditoría y su aviso deben guardarse juntos.
-- **Alternativas.** Monolito modular; núcleo con satélites; servicios por consistencia y carga; un servicio por componente («Estilo arquitectónico»).
-- **Decisión.** Servicios de grano grueso. El núcleo reúne identidad, desastres y auditoría; lo demás va en unidades aparte. UD-05 se retira (ADR-28).
-- **Justificación.** Lo que recibe picos crece solo, y lo consistente queda en una transacción local.
-- **Consecuencias.** El núcleo es dependencia de todos. Construidas UD-01, 02, 03, 04, 06 y 09; diseñadas UD-07 y 08.
+**Requisitos:** QA-ESC-01, QA-ESC-02, QA-DIS-01. **Contexto:** hay que crecer solo lo que se satura, y un cambio, su historial, su auditoría y su aviso deben guardarse juntos. **Decisión:** servicios de grano grueso. El núcleo reúne identidad, desastres y auditoría; las evaluaciones, las notificaciones, Reconstrucción, el portal y el tablero van en unidades aparte («Vista de bloques»). **Alternativas:** monolito modular, núcleo con satélites y un servicio por componente, comparadas en «Estilo arquitectónico». **Consecuencias:** lo que recibe picos crece solo, y lo consistente queda en una transacción local. El núcleo es dependencia de todos, así que necesita redundancia.
 
 #### Comunicación entre unidades (ADR-02) · Construido
 
-- **Requisitos.** QA-RES-02, QA-REN-02, QA-REN-03.
-- **Contexto.** Una llamada inmediata acopla disponibilidades; una cola no responde en el momento.
-- **Alternativas.** Todo inmediato; todo por eventos; inmediato solo cuando se necesita la respuesta.
-- **Decisión.** Llamada inmediata con tiempo de espera cuando el usuario espera el resultado: REST entre tecnologías distintas, gRPC entre servicios Java (ADR-26). Colas para avisar, siempre desde una bandeja de salida.
-- **Justificación.** El registro se confirma con su resultado y no depende de notificaciones.
-- **Consecuencias.** Sin el núcleo, ninguna unidad atiende operaciones protegidas.
+**Requisitos:** QA-RES-02, QA-REN-02, QA-REN-03. **Contexto:** una llamada inmediata acopla la disponibilidad de quien llama a la del llamado; una cola desacopla, pero no da respuesta en el momento. **Decisión:** llamada inmediata con tiempo de espera solo cuando el usuario espera el resultado, con REST como regla y gRPC para el canal interno de Reconstrucción (ADR-26). Colas para avisar, siempre desde una bandeja de salida. **Alternativas:** todo inmediato, que propaga fallas; todo por eventos, que no permite confirmar un registro. **Consecuencias:** el registro se confirma con su resultado y no depende de notificaciones. Sin el núcleo, ninguna unidad atiende operaciones protegidas.
 
 #### Datos por unidad y copias de lectura derivadas (ADR-03) · Construido; copia pública diseñada
 
-- **Requisitos.** QA-ESC-01, QA-SEG-02; PREM-03.
-- **Contexto.** Miles de consultas compiten con los registros.
-- **Alternativas.** Base compartida; lectura pública sobre datos operativos; base por unidad con copias.
-- **Decisión.** Ninguna unidad lee la base de otra. servidor copia el catálogo de desastres; Reconstrucción, las evaluaciones de origen; la consulta pública tendrá solo lo publicable.
-- **Justificación.** La lectura no toca las bases críticas, y se publica por inclusión expresa.
-- **Consecuencias.** Consistencia eventual de unos segundos en la copia de servidor; las pruebas y la app esperan la sincronización.
+**Requisitos:** QA-ESC-01, QA-SEG-02. **Contexto:** miles de consultas compiten con los registros, y los organismos no deben ver datos ajenos. **Decisión:** ninguna unidad lee la base de otra. servidor copia el catálogo de desastres, Reconstrucción copia las evaluaciones de origen, y la consulta pública tendrá solo lo publicable, por inclusión expresa. **Alternativas:** base compartida, que acopla esquemas y fallas; lectura pública sobre los datos operativos, que expone y carga lo crítico. **Consecuencias:** consistencia eventual de segundos en las copias.
 
 #### Reconciliación tras trabajar sin conexión (ADR-04) · Construido
 
-- **Requisitos.** QA-CNF-01, QA-DIS-03; RF-ED-12, RF-ED-13.
-- **Contexto.** Lo capturado llega horas después, cuando otros pudieron cambiar los mismos datos.
-- **Alternativas.** Identificador del servidor (no funciona sin conexión); última escritura gana (sobrescribe en silencio); operaciones sobre versión base.
-- **Decisión.** Cada cambio viaja con un identificador del dispositivo y su versión base; si la vigente es otra, queda como conflicto explícito.
-- **Justificación.** Ni sobrescrituras silenciosas ni capturas perdidas.
-- **Consecuencias.** El dispositivo guarda más datos y alguien debe resolver los conflictos.
+**Requisitos:** QA-CNF-01, QA-DIS-03. **Contexto:** lo capturado llega horas después, cuando otros pudieron cambiar los mismos datos. **Decisión:** cada cambio viaja con un identificador generado en el dispositivo y su versión base; si la vigente es otra, queda como conflicto explícito, que decide una persona. **Alternativas:** identificador asignado por el servidor, que no funciona sin conexión; la última escritura gana, que sobrescribe en silencio. **Consecuencias:** ni sobrescrituras silenciosas ni capturas perdidas. A cambio, el dispositivo guarda más datos y alguien debe resolver los conflictos.
 
 #### Consolidación de reportes (ADR-05) · Diseñado
 
-- **Requisitos.** QA-CNF-02; RF-GD-11, RF-GD-16, RF-ED-10.
-- **Contexto.** Varios reportes pueden referirse al mismo evento o activo.
-- **Alternativas.** Reemplazar el original (pierde procedencia); mover registros entre bases (sin transacción común); unir por similitud; consolidación gobernada con alias.
-- **Decisión.** La similitud solo propone; decide una persona, salvo una regla certificada por dos. Consolidar crea un alias con vigencia hacia un evento canónico abierto que no es alias de otro, sin mover datos. Las consolidaciones simultáneas se resuelven por versión. Revertir cierra el alias.
-- **Justificación.** Un error de unión se corrige sin tocar datos.
-- **Consecuencias.** Toda consulta por evento resuelve el alias.
+**Requisitos:** QA-CNF-02. **Contexto:** varios reportes pueden referirse al mismo evento o activo. **Decisión:** la similitud solo propone y decide una persona, salvo una regla certificada por dos. Consolidar crea un alias hacia un evento canónico abierto, sin mover datos, y revertir cierra el alias. **Alternativas:** reemplazar el original, que pierde la procedencia; unir por similitud de forma automática, que puede fusionar eventos distintos. **Consecuencias:** un error de consolidación se corrige sin tocar datos, pero toda consulta por evento debe resolver el alias.
 
 #### Historia con dos fechas por versión (ADR-06) · Diseñado
 
-- **Requisitos.** QA-TRZ-02; RF-GD-09, RF-GD-14.
-- **Contexto.** El área cambia y los datos de campo llegan tarde.
-- **Alternativas.** Solo hora de registro; solo hora de vigencia; ambas.
-- **Decisión.** Cada versión de la delimitación y del nivel guarda desde cuándo aplica y cuándo se registró.
-- **Justificación.** Distingue qué estaba afectado a las 10:00 de qué se sabía a las 10:00.
-- **Consecuencias.** Consultas históricas más costosas y degradables. Hoy hay historial con versión y hora de registro.
+**Requisitos:** QA-TRZ-02. **Contexto:** el área afectada cambia durante el evento y los datos de campo llegan tarde. **Decisión:** cada versión de la delimitación y del nivel guarda desde cuándo aplica y cuándo se registró. **Alternativas:** guardar solo una de las dos fechas, que no permite reconstruir qué se sabía en cada momento. **Consecuencias:** distingue qué estaba afectado a las 10:00 de qué se sabía a las 10:00, a costa de consultas históricas más costosas, que por eso son degradables.
 
 #### Integración por adaptadores (ADR-07) · Diseñado; colas de suscriptor construidas
 
-- **Requisitos.** QA-INT-01, QA-INT-02, QA-RES-01, QA-EXT-01; CON-01 a CON-04.
-- **Contexto.** Ocho tipos de sistemas con formatos propios que no se pueden cambiar.
-- **Alternativas.** Integración directa desde cada servicio; formato impuesto (contradice CON-01); un adaptador por sistema.
-- **Decisión.** Un adaptador por sistema en UD-08 y cuatro mecanismos según la necesidad («Modelo de integración»).
-- **Justificación.** Integrar o cambiar un sistema toca un solo adaptador, y su falla queda en él.
-- **Consecuencias.** Un salto más y un modelo común que mantener.
+**Requisitos:** QA-INT-01, QA-INT-02, QA-RES-01, QA-EXT-01. **Contexto:** ocho tipos de sistemas con formatos propios que no se pueden cambiar y que fallan por su cuenta. **Decisión:** un adaptador por sistema en UD-08 y cuatro mecanismos según la necesidad («Modelo de integración»). **Alternativas:** integración directa desde cada servicio, que reparte formatos ajenos por todo el código; imponer un formato, que contradice CON-01. **Consecuencias:** integrar o cambiar un sistema toca un solo adaptador, y su falla queda en él. Cuesta un salto más y un modelo común que mantener.
 
 #### Variabilidad por configuración (ADR-08) · Diseñado
 
-- **Requisitos.** QA-MOD-01, QA-MOD-02; RF-GD-04, RF-ED-04 a 06.
-- **Contexto.** Tipos, activos, categorías y organismos deben agregarse sin código.
-- **Alternativas.** Extensiones con código; configuración con uno o con dos niveles de control.
-- **Decisión.** Catálogos como configuración ordinaria, auditada; reglas de seguridad, sesiones y consolidación como configuración de alto impacto, con dos personas.
-- **Justificación.** Cambia sin desplegar y sin perder trazabilidad.
-- **Consecuencias.** Hay que clasificar cada parámetro. Hoy los catálogos son fijos.
+**Requisitos:** QA-MOD-01, QA-MOD-02. **Contexto:** tipos de desastre, activos y organismos deben agregarse durante una emergencia, sin código y en menos de una hora. **Decisión:** los catálogos son configuración ordinaria y auditada; las reglas de seguridad, sesiones y consolidación son configuración de alto impacto, que exige dos personas. **Alternativas:** extensiones con código, que exigen desplegar. **Consecuencias:** cambia sin desplegar y sin perder trazabilidad. Hoy solo el catálogo de tipos de activo es configurable (C1).
 
 #### Recuperación ante falla grave (ADR-09) · Diseñado
 
-- **Requisitos.** QA-DIS-02.
-- **Contexto.** Recuperar lo crítico en 15 minutos sin perder lo confirmado.
-- **Alternativas.** Copia periódica con restauración manual; centro en espera con réplica diferida; tres centros con réplica síncrona.
-- **Decisión.** La pérdida de un centro se resuelve sola en 5 minutos; la de dos centros o una corrupción exige dos personas («Resiliencia y recuperación»).
-- **Justificación.** Las otras alternativas pierden lo último confirmado.
-- **Consecuencias.** Costo de tres centros; las fallas mayores pueden perder datos.
+**Requisitos:** QA-DIS-02. **Contexto:** recuperar lo crítico en 15 minutos sin perder lo confirmado. **Decisión:** la pérdida de un centro se resuelve sola en 5 minutos; la de dos centros o una corrupción lógica exige la decisión de dos personas («Resiliencia y recuperación»). **Alternativas:** copia periódica con restauración manual, o centro en espera con réplica diferida; ambas pierden lo último confirmado. **Consecuencias:** cuesta tres centros, y las fallas mayores pueden perder datos, que se completan con los dispositivos.
 
 #### Seguridad y control de acceso (ADR-10) · Construido; modo degradado diseñado
 
-- **Requisitos.** QA-SEG-01, QA-SEG-02, QA-TRZ-01; FC-07; CON-09.
-- **Contexto.** Varios organismos comparten la plataforma y un dispositivo puede perderse.
-- **Alternativas.** Credencial firmada sin consultar identidad (revocación lenta); proveedor externo (dependencia ajena); caché de validaciones (retrasa la revocación); sesión propia validada en el núcleo.
-- **Decisión.** Token de 8 horas validado contra el núcleo por cada unidad en cada solicitud; usuario, rol y organismo salen de esa validación («Seguridad»). Solo sin núcleo, servidor usaría la última validación por 15 minutos.
-- **Justificación.** Revocación inmediata; el organismo no se falsifica desde el cliente.
-- **Consecuencias.** Un salto al núcleo por operación; sin él nadie inicia sesión. Se mitiga con redundancia.
+**Requisitos:** QA-SEG-01, QA-SEG-02, QA-TRZ-01. **Contexto:** varios organismos comparten la plataforma y un dispositivo puede perderse. **Decisión:** token de 8 horas validado contra el núcleo por cada unidad en cada solicitud; usuario, rol y organismo salen de esa validación («Seguridad»). **Alternativas:** token firmado sin consulta, cuya revocación tarda hasta su vencimiento; proveedor de identidad externo, que agrega una dependencia ajena en lo crítico. **Consecuencias:** revocación inmediata y organismo imposible de falsificar desde el cliente, a costa de un salto al núcleo por operación.
 
 #### Protección de las funciones críticas (ADR-11) · Separación construida; redundancia diseñada
 
-- **Requisitos.** QA-DIS-01, QA-RES-02.
-- **Contexto.** El SRS clasifica las funciones en críticas, esenciales y degradables.
-- **Alternativas.** Tratar todo igual; separar dentro de una unidad; separar lo degradable en unidades aparte.
-- **Decisión.** Lo crítico vive en entrada, portal, núcleo, servidor y notificaciones, con capacidad sobrante y en los tres centros. Reconstrucción y consulta pública van aparte. El desastre se confirma antes de notificar.
-- **Justificación.** Medido: sin Reconstrucción, el tablero sigue respondiendo.
-- **Consecuencias.** Capacidad ociosa en operación normal.
+**Requisitos:** QA-DIS-01, QA-RES-02. **Contexto:** el SRS clasifica las funciones en críticas, esenciales y degradables. **Decisión:** lo crítico vive en la entrada, el portal, el núcleo, servidor y notificaciones, con capacidad sobrante y en los tres centros; Reconstrucción y la consulta pública van aparte, y el desastre se confirma antes de notificar. **Alternativas:** tratar todo igual, o separar por criticidad dentro de una unidad, donde una falla degradable sigue afectando lo crítico. **Consecuencias:** medido, sin Reconstrucción el tablero sigue respondiendo. Implica capacidad ociosa en operación normal.
 
 #### Tres centros de datos con réplica síncrona (ADR-12) · Diseñado
 
-- **Requisitos.** QA-DIS-01, QA-DIS-02.
-- **Contexto.** 99,95 % mensual son 21,6 minutos de caída.
-- **Alternativas.** Un centro redundante; dos centros, activo y en espera; tres centros.
-- **Decisión.** Tres centros independientes; cada base con primario y dos réplicas síncronas, confirmando con una; RabbitMQ en tres nodos.
-- **Justificación.** Cálculo ilustrativo de «Despliegue objetivo: tres centros de datos (diseñado)».
-- **Consecuencias.** Cerca de 0,8 s por escritura crítica; los centros no deben compartir dependencias.
+**Requisitos:** QA-DIS-01, QA-DIS-02. **Contexto:** 99,95 % mensual son 21,6 minutos de caída, sin perder lo confirmado. **Decisión:** tres centros independientes; cada base con primario y dos réplicas síncronas, que confirma con una; RabbitMQ en tres nodos. **Alternativas:** un centro redundante, o dos centros activo y en espera, que no pueden confirmar en ambos sin detenerse al perder uno. **Consecuencias:** unos 0,8 s más por escritura crítica, y los centros no deben compartir dependencias.
 
 #### La fotografía viaja con su evaluación (ADR-13) · Construido
 
-- **Requisitos.** QA-CNF-01, QA-ESC-02; RF-ED-07.
-- **Contexto.** Una evaluación lleva una foto de hasta 5 MB capturada sin conexión.
-- **Alternativas.** Canal aparte con carga reanudable; foto en la misma operación.
-- **Decisión.** La foto viaja con su evaluación y se guarda con ella; primero van los lotes sin foto.
-- **Justificación.** No hay evaluación sincronizada con su evidencia perdida, y la foto hereda sus permisos.
-- **Consecuencias.** Un corte obliga a reenviar todo el paquete. Falta medir con fotos grandes y redes reales.
+**Requisitos:** QA-CNF-01, QA-ESC-02. **Contexto:** una evaluación lleva una foto de hasta 5 MB capturada sin conexión. **Decisión:** la foto viaja con su evaluación y se guarda con ella; primero van los lotes sin foto. **Alternativas:** canal aparte con carga reanudable, que puede dejar evaluaciones sincronizadas sin su evidencia. **Consecuencias:** no hay evaluación sin su foto, y la foto hereda sus permisos. Un corte obliga a reenviar la foto completa.
 
 #### Entrada única (ADR-14) · Construido
 
-- **Requisitos.** QA-ESC-01, QA-SEG-01.
-- **Contexto.** Varios clientes entran a varias unidades.
-- **Alternativas.** Acceso directo; una entrada por cliente; entrada única.
-- **Decisión.** Nginx enruta por prefijo hacia el portal, servidor y Reconstrucción («Ambiente entregado: Docker Compose en una máquina»), y limita el tamaño de las solicitudes y los intentos de inicio de sesión. El límite del portal público queda diseñado con UD-07.
-- **Justificación.** Las unidades no se exponen.
-- **Consecuencias.** Todo pasa por ella; por eso no guarda estado.
+**Requisitos:** QA-ESC-01, QA-SEG-01. **Contexto:** varios clientes llegan a varias unidades. **Decisión:** Nginx enruta por prefijo hacia el portal, servidor y Reconstrucción, y limita el tamaño de las solicitudes y los intentos de inicio de sesión. **Alternativas:** acceso directo a cada unidad, que expone la topología y reparte los controles. **Consecuencias:** las unidades no se exponen. Como todo pasa por la entrada, no guarda estado y se replica.
 
 #### Notificación por dos canales (ADR-15) · Construido
 
-- **Requisitos.** QA-REN-03; RF-GD-13, RF-CO-06.
-- **Contexto.** Una alerta debe llegar a sistemas y a personas, y cualquier destino puede fallar.
-- **Alternativas.** Un canal con reintentos; dos canales independientes.
-- **Decisión.** Cola propia por sistema suscrito, más correo; cada canal con cola de reintento y de errores.
-- **Justificación.** Un suscriptor caído no retrasa a los demás.
-- **Consecuencias.** Avisos repetidos, que se descartan por identificador.
+**Requisitos:** QA-REN-03. **Contexto:** una alerta debe llegar a sistemas y a personas, y cualquier destino puede fallar. **Decisión:** una cola propia por sistema suscrito, más correo; cada canal con cola de reintento y de errores. **Alternativas:** un solo canal con reintentos, donde un destino caído retrasa a todos. **Consecuencias:** un suscriptor caído no retrasa a los demás. Los avisos pueden repetirse y se descartan por identificador.
 
 #### Monitoreo activo (ADR-16) · Solo sondas de salud
 
-- **Requisitos.** QA-RES-02, QA-ESC-01.
-- **Contexto.** Detectar en 10 s y crecer en 5 minutos exige medir siempre.
-- **Alternativas.** Reportes de usuarios; sondas; sondas con métricas.
-- **Decisión.** Sonda cada 5 s y métricas de uso, latencia y colas, que disparan reemplazo, crecimiento y conmutación.
-- **Justificación.** Sin medición continua no hay reacción automática.
-- **Consecuencias.** El monitoreo también debe ser redundante.
+**Requisitos:** QA-RES-02, QA-ESC-01. **Contexto:** detectar una falla en 10 s y crecer en 5 minutos exige medir siempre. **Decisión:** sonda cada 5 s y métricas de uso, latencia y colas, que disparan reemplazo, crecimiento y conmutación. **Alternativas:** depender de reportes de usuarios, que llegan tarde. **Consecuencias:** sin medición continua no hay reacción automática, y el monitoreo también debe ser redundante.
 
 #### Tecnologías de la implementación (ADR-17) · Construido
 
-- **Requisitos.** CON-07, CON-02; restricciones del curso («Restricciones del curso»).
-- **Contexto.** Los talleres usaron Jakarta EE, Spring Boot, .NET, mensajería, REST, SOAP, gRPC y llamadas remotas; el curso pide MVC, servlets multihilo y .NET sin conexión.
-- **Alternativas.** Una plataforma para todo; la que mejor se ajusta a cada unidad.
-- **Decisión.** Núcleo: Java 21 y Jakarta EE en WildFly 41 (EJB, JPA, JTA, JAX-RS, SOAP, EJB remoto). Portal: ASP.NET Core 10 con Razor Pages y cliente gRPC. Servicio de tablero: Java 21, Spring Boot 3.3 y servlets en Tomcat, con cliente gRPC. Reconstrucción: Java 17, Spring Boot 3.3, REST y gRPC. servidor: ASP.NET Core 10. App: .NET MAUI y SQLite. Notificaciones: Java 17 y Jakarta EE en Payara 6. Además, PostgreSQL 17, RabbitMQ 4.1, Nginx 1.28 y Docker Compose.
-- **Justificación.** JTA da la transacción local de ADR-01; Java para el *back-office* en línea y .NET para toda la presentación y lo desconectado. CON-02 se ejercita con REST, gRPC, SOAP y EJB remoto.
-- **Consecuencias.** Dos plataformas y tres servidores de aplicaciones; las copias del contrato gRPC en el portal y en el tablero deben igualar la de Reconstrucción, y lo comprueba la prueba del portal (E1).
+**Requisitos:** CON-02, CON-07, CON-10. **Contexto:** la organización exige .NET en la presentación y dispone de experiencia en Jakarta EE, Spring Boot, PostgreSQL y RabbitMQ. **Decisión:** la tecnología de cada unidad según su necesidad principal («Tecnologías»): Jakarta EE para el núcleo transaccional, Spring Boot para Reconstrucción y el tablero, ASP.NET Core para el portal y servidor, .NET MAUI con SQLite para la app. **Alternativas:** una sola plataforma para todo, que no cumple la restricción de presentación o desaprovecha JTA. **Consecuencias:** dos plataformas y tres servidores de aplicaciones que operar. CON-02 se ejercita con REST, gRPC, SOAP y EJB remoto.
 
 #### Incorporación inmediata o diferida de los lotes (ADR-18) · Construido
 
-- **Requisitos.** QA-ESC-02.
-- **Contexto.** servidor puede aplicar cada lote al recibirlo o después.
-- **Alternativas.** Inmediata con resultado por operación; diferida con acuse.
-- **Decisión.** Ambas, con el mismo contrato, elegidas por configuración; por defecto, inmediata.
-- **Justificación.** La inmediata confirma en la llamada; la diferida absorbe picos.
-- **Consecuencias.** En diferido, el evaluador no ve los conflictos de inmediato.
+**Requisitos:** QA-ESC-02. **Contexto:** servidor puede aplicar cada lote al recibirlo o después. **Decisión:** ambas formas, con el mismo contrato, elegidas por configuración; por defecto, inmediata. **Alternativas:** solo inmediata, que satura en ráfagas; solo diferida, que demora los conflictos. **Consecuencias:** la inmediata confirma en la llamada y la diferida absorbe picos, pero en diferido el evaluador no ve los conflictos de inmediato.
 
 #### Ámbito de acceso por organismo y por evento (ADR-19) · Organismo construido; evento diseñado
 
-- **Requisitos.** QA-SEG-02; RF-CO-04; RF-GD-12.
-- **Contexto.** Hay que aislar organismos y, a la vez, compartir en una emergencia.
-- **Alternativas.** Todo por organismo; todo visible; ámbitos según el dato.
-- **Decisión.** Ámbito de organismo y ámbito de evento (participación vigente), con el organismo de la sesión. El ámbito de caso de la versión 1.0 deja de aplicar (ADR-28).
-- **Justificación.** Se comparte solo lo que la coordinación necesita.
-- **Consecuencias.** Cada consulta comprueba la participación.
+**Requisitos:** QA-SEG-02. **Contexto:** hay que aislar a los organismos y, a la vez, permitirles compartir durante una emergencia. **Decisión:** ámbito de organismo y ámbito de evento, este último según la participación vigente en el desastre. **Alternativas:** todo por organismo, que impide coordinar; todo visible, que expone información ajena. **Consecuencias:** se comparte solo lo que la coordinación necesita, y cada consulta comprueba la participación.
 
 #### Auditoría local por unidad con consulta consolidada (ADR-20) · Auditoría local construida
 
-- **Requisitos.** QA-TRZ-01; RF-RE-04.
-- **Contexto.** No debe haber cambio sin registro, y no hay transacciones entre bases.
-- **Alternativas.** Almacén único escrito por llamada; auditoría local; local con copia consolidada.
-- **Decisión.** Cada unidad audita en su base, en la transacción del cambio, y envía una copia que SRV-12 reúne.
-- **Justificación.** Si existe el cambio, existe su registro.
-- **Consecuencias.** La consulta consolidada va segundos atrás. Construida en el núcleo y en Reconstrucción; envío y consolidación diseñados.
+**Requisitos:** QA-TRZ-01. **Contexto:** no debe haber cambio sin registro, y no hay transacciones entre bases. **Decisión:** cada unidad audita en su base, en la transacción del cambio, y envía una copia que se consolida para la consulta. **Alternativas:** un almacén único escrito por llamada, que puede fallar después del cambio y dejarlo sin registro. **Consecuencias:** si existe el cambio, existe su registro. La consulta consolidada va segundos atrás.
 
 #### Operaciones externas con confirmación explícita (ADR-21) · Diseñado
 
-- **Requisitos.** QA-RES-01; RF-RE-03; CON-04.
-- **Contexto.** Comprometer un presupuesto ante SE-06 depende de un sistema que puede no responder y no comparte transacción.
-- **Alternativas.** Llamar dentro de la operación; darla por hecha; darla por rechazada al vencer el plazo; dejarla pendiente y conciliar.
-- **Decisión.** Por confirmar hasta que el externo responde. Sin respuesta en el plazo, En conciliación: nada se libera ni se revierte, y se consulta por identificador; «no encontrada» no es definitivo. Si no hay consulta ni cancelación, decide una persona con motivo.
-- **Justificación.** Si el externo la aplicó, darla por rechazada dejaría los dos lados distintos.
-- **Consecuencias.** Estados intermedios visibles; cada contrato necesita consulta, cancelación o plazo de validez.
+**Requisitos:** QA-RES-01. **Contexto:** comprometer un presupuesto ante SE-06 depende de un sistema que puede no responder y no comparte transacción. **Decisión:** la operación queda Por confirmar hasta que el externo responde. Sin respuesta en el plazo pasa a En conciliación: no se libera ni se revierte nada, y se consulta su estado; si no hay forma de consultarlo, decide una persona con motivo. **Alternativas:** darla por hecha o por rechazada al vencer el plazo; si el externo sí la aplicó, ambos lados quedarían distintos. **Consecuencias:** los estados intermedios son visibles, y cada contrato externo necesita consulta, cancelación o plazo de validez.
 
 #### Registro de entregas en base de datos (ADR-22) · Diseñado
 
-- **Requisitos.** QA-DIS-01, QA-DIS-02, QA-REN-03.
-- **Contexto.** Notificaciones registra sus entregas en un archivo con un solo escritor.
-- **Alternativas.** Archivo con instancia en espera; base replicada; sin registro.
-- **Decisión.** Base propia y replicada; cada instancia toma avisos con bloqueo por fila, como ya hacen las bandejas del núcleo y de Reconstrucción.
-- **Justificación.** Varias instancias y un registro que sobrevive a un centro.
-- **Consecuencias.** Una base más; mientras tanto, una sola instancia activa. Se decide con ADR-27.
+**Requisitos:** QA-DIS-01, QA-REN-03. **Contexto:** notificaciones registra sus entregas en un archivo con un solo escritor. **Decisión:** una base propia y replicada, de la que cada instancia toma avisos con bloqueo por fila, como ya hacen el núcleo y Reconstrucción. **Alternativas:** archivo con instancia en espera, que no sobrevive a un centro. **Consecuencias:** permite varias instancias y un registro que sobrevive a un centro. Mientras tanto, hay una sola instancia activa.
 
 #### Presentación web en ASP.NET Core Razor Pages (ADR-23) · Construido
 
-- **Requisitos.** Restricción del curso: toda la presentación en .NET, con MVC, MVP o MVVM (aclaración del profesor del 17-nov-2026, que precisa la de "MVC con un framework"); QA-SEG-01, QA-ESC-01; mínimos a, b, c y d.
-- **Contexto.** La versión 2.0 tenía el portal en Spring MVC con Thymeleaf. El profesor aclaró que la presentación debe ser .NET y planteó escoger entre las opciones de ASP.NET: Web Forms, Web Pages, SPA y MVC. ASP.NET Core agrega Razor Pages y Blazor.
-- **Alternativas.**
-  - Web Forms (su patrón natural es MVP): solo existe en .NET Framework, sobre Windows e IIS. Microsoft no la llevó al .NET actual, así que no corre en los contenedores Linux del ambiente.
-  - Web Pages: tampoco existe en ASP.NET Core; su sucesor es Razor Pages.
-  - SPA con React, Angular o Vue, o Blazor. Microsoft recomienda Blazor para proyectos nuevos, pero en modo interactivo de servidor mantiene una conexión y un estado por usuario, y en el navegador (WebAssembly o JavaScript) el token del núcleo quedaría del lado del cliente.
-  - ASP.NET Core MVC: válido; es la traducción directa del portal anterior.
-  - Razor Pages.
-- **Decisión.** UD-09 Portal web en ASP.NET Core 10 con Razor Pages, como única interfaz web («Portal web (UD-09)»). Cada pantalla es una página: la vista Razor y su PageModel. Consume los servicios ya desplegados sin reescribir su lógica: REST con el núcleo, con servidor y con el servicio de tablero, y gRPC con Reconstrucción, con el cliente generado del mismo contrato.
-- **Justificación.**
-  - Las pantallas son formularios y listas. Razor Pages las organiza por página sobre la misma base de MVC (enlace de modelo, validación y resultados), con menos piezas que controladores y vistas por separado.
-  - Patrón: el PageModel expone las propiedades que la vista enlaza, validadas con anotaciones, y atiende los comandos de lectura y de envío. Hace de modelo de vista, por eso se documenta como MVVM del lado del servidor. Microsoft no le pone nombre de patrón: la clasificación es del equipo. La app MAUI adopta el mismo patrón de forma progresiva (ADR-25).
-  - Misma plataforma que servidor (ASP.NET Core 10): no agrega tecnología.
-  - Sin estado de vista por usuario, lo que favorece el escenario B. El token queda en el servidor y los formularios traen protección antifalsificación (CSRF) por defecto.
-  - Sigue el consejo del profesor de desplegar y consumir: solo cambió la capa de presentación; los servicios de negocio siguen igual.
-- **Consecuencias.**
-  - A favor: la prueba del portal pasa con 47 comprobaciones y tres roles (E1). Un cliente .NET usa el contrato gRPC de un servicio Java, lo que prueba la interoperabilidad (QA-INT-01).
-  - En contra: el servlet multihilo ya no puede vivir en la presentación y se suma un contenedor (ADR-24). Los tokens de sesión viven en la memoria del portal: con varias instancias hace falta afinidad o un almacén compartido. El contrato gRPC se copia en el portal y en el tablero; una prueba verifica que las copias son idénticas.
+**Requisitos:** CON-10; QA-SEG-01, QA-ESC-01. **Contexto:** toda interfaz de usuario debe construirse en .NET con un patrón que separe la vista de la lógica de presentación (MVC, MVP o MVVM), y debe consumir los servicios existentes sin reescribirlos. **Decisión:** el portal (UD-09) en ASP.NET Core 10 con Razor Pages. Cada pantalla es una vista Razor con su PageModel, que actúa como modelo de vista: MVVM del lado del servidor. Consume REST del núcleo, de servidor y del tablero, y gRPC de Reconstrucción. **Alternativas:**
+
+- Web Forms, cuyo patrón natural es MVP, solo existe en .NET Framework sobre Windows y no corre en contenedores Linux.
+- Una aplicación de una sola página, o Blazor interactivo, dejaría el token del lado del cliente o mantendría una conexión y un estado por usuario.
+- ASP.NET Core MVC era válido, pero agrega controladores comunes a pantallas que son formularios independientes.
+
+**Consecuencias:** misma plataforma que servidor, sin estado de vista por usuario y con protección antifalsificación por defecto. Los tokens viven en la memoria del portal, así que varias instancias necesitan afinidad o un almacén compartido. El servlet multihilo ya no cabe en la presentación (ADR-24).
 
 #### Servlet asíncrono y multihilo para el tablero (ADR-24) · Construido y medido
 
-- **Requisitos.** Restricción del curso (multihilo con servlets); QA-REN-01, QA-RES-02, QA-ESC-01; mínimo c.
-- **Contexto.** El tablero junta tres dueños. En secuencia, sus latencias se suman y una falla tumba la página. Desde la versión 2.1 la presentación es .NET (ADR-23), así que el servlet no puede vivir en el portal.
-- **Alternativas.** Consultas secuenciales en la página; paralelas desde el navegador; tareas en paralelo en el portal .NET (no es un servlet); el servlet dentro del núcleo, que tendría que llamar a servidor y crearía un ciclo, porque servidor ya llama al núcleo; un servicio de tablero propio con un servlet asíncrono y pool acotado.
-- **Decisión.** UD-10 Servicio de tablero (Spring Boot 3.3 en Tomcat), que solo consume el portal. Su servlet es asíncrono y reparte las consultas en un pool de 16 hilos con cola de 64; 1,5 s por fuente, respuesta parcial y 503 con el pool lleno («Tablero de un desastre (servlet multihilo)»). El portal le reenvía el token del usuario y, si una fuente responde 401, el servlet responde 401.
-- **Justificación.** Sin carga tarda lo de la fuente más lenta; una fuente caída no tumba el tablero; el pool limita la presión sobre los servicios. Las tres cosas están medidas («Tablero de un desastre (servlet multihilo)»).
-- **Consecuencias.** Trade-off medido: con 20 clientes en una sola máquina el paralelo no gana (p95 de 366 frente a 355 ms), porque los servicios de atrás ya están saturados. El salto del portal al servicio de tablero cuesta unos 6 ms en p95 con un cliente. Puntos de sensibilidad: el tamaño del pool, la cola, el límite por fuente y la vigencia de la copia del catálogo en Reconstrucción.
+**Requisitos:** QA-REN-01, QA-RES-02, QA-ESC-01. **Contexto:** el tablero junta tres dueños; en secuencia, sus latencias se suman y una falla tumba la página. Como la presentación es .NET, el servlet no puede vivir en el portal. **Decisión:** el servicio de tablero (UD-10, Spring Boot en Tomcat), que solo consume el portal. Su servlet asíncrono reparte las consultas en un pool de 16 hilos con cola de 64, con 1,5 s por fuente, respuesta parcial y 503 con el pool lleno. **Alternativas:**
+
+- Consultas secuenciales, que suman las latencias.
+- Paralelas desde el navegador, que exponen las fuentes.
+- El servlet dentro del núcleo, que crearía un ciclo con servidor.
+
+**Consecuencias:** sin carga tarda lo de la fuente más lenta; una fuente caída no tumba el tablero; el pool limita la presión sobre los servicios. Las tres propiedades están medidas. Con 20 clientes en una sola máquina el paralelo no gana, porque las fuentes ya están saturadas.
 
 #### Operación sin conexión con .NET MAUI y SQLite (ADR-25) · Construido y probado en un celular real
 
-- **Requisitos.** Restricción del curso (componentes .NET para operar sin conexión); CON-08; QA-DIS-03, QA-CNF-01; mínimos a y d.
-- **Contexto.** Los evaluadores trabajan donde no hay señal y pueden pasar más de un turno sin conexión. Capturar no puede depender de la red, y lo capturado no puede perderse ni duplicarse al sincronizar. El TallerNetCore tenía la app en Flutter.
-- **Alternativas.**
-  - Flutter, del TallerNetCore: funciona sin conexión, pero no es .NET.
-  - Aplicación web progresiva con el almacenamiento del navegador: menos control sobre el almacenamiento, la cámara y el GPS sin conexión.
-  - Modelo desconectado de ADO.NET (DataSet y DataAdapter, clase 16): resuelve una caché local, pero no la app móvil ni la reconciliación de versiones.
-  - .NET MAUI con SQLite.
-- **Decisión.** App de campo en .NET MAUI (Android) con SQLite como fuente de verdad local.
-  - Cada operación lleva un identificador estable generado en el dispositivo y la versión base (ADR-04).
-  - Sincroniza por lotes de hasta 20 operaciones contra POST /api/campo/lotes, que es idempotente: un lote reenviado responde lo mismo y no duplica.
-  - Un conflicto de versión se muestra y decide el evaluador; nunca se sobrescribe.
-  - El token va en el almacenamiento seguro del dispositivo; un 401 pide sesión sin borrar lo pendiente.
-- **Justificación.** Nada se pierde (QA-DIS-03): la captura no se borra hasta que servidor la confirma. Lo repetido no se duplica y los conflictos son explícitos. Comparte la plataforma .NET y los contratos con servidor, y cumple la restricción del curso.
-- **Consecuencias.**
-  - A favor: la prueba instrumentada de la app comprueba la desconexión real, la persistencia, el conflicto y su resolución, la caracterización (C2), el tipo de activo (C1) y la sesión vencida; el 17-nov pasó en un celular real (E3). La prueba de campo comprueba los lotes y su idempotencia (E1).
-  - En contra: solo Android. El SQLite no va cifrado (riesgo aceptado; SQLCipher como mejora). El primer inicio de sesión exige conexión, y con más de 8 horas sin señal el token vence y hay que entrar de nuevo antes de sincronizar. La pantalla de captura aún no separa un modelo de vista (MVVM, ADR-23): se adapta de forma progresiva.
-- *Borrador de Rol 1 para revisión de Rol 2.*
+**Requisitos:** CON-08, CON-10; QA-DIS-03, QA-CNF-01. **Contexto:** los evaluadores trabajan sin señal, a veces más de un turno; capturar no puede depender de la red, y lo capturado no puede perderse ni duplicarse. **Decisión:** app de campo en .NET MAUI para Android con SQLite como fuente de verdad local. Las operaciones llevan identificador del dispositivo y versión base, se sincronizan en lotes idempotentes de hasta 20, y un conflicto lo decide el evaluador. **Alternativas:**
+
+- Una aplicación web progresiva da menos control del almacenamiento, la cámara y el GPS sin conexión.
+- Un framework móvil fuera de .NET no cumple la restricción de presentación.
+
+**Consecuencias:** la captura no se borra hasta la confirmación, y comparte modelos y contratos con servidor. A cambio, solo funciona en Android, el SQLite no va cifrado, y con más de 8 horas sin señal hay que iniciar sesión de nuevo antes de sincronizar.
 
 #### Reconstrucción en Spring Boot con REST y gRPC interno (ADR-26) · Construido
 
-- **Requisitos.** Mínimo b; QA-INT-01, QA-TRZ-01; CON-02.
-- **Contexto.** El diseño del taller era .NET, pero el curso deja .NET para lo desconectado. Reconstrucción es un *back-office* en línea que comparte con el núcleo la identidad y la fase del desastre.
-- **Alternativas.** .NET con gRPC y SignalR, como en el taller; Jakarta EE dentro del núcleo; Spring Boot aparte.
-- **Decisión.** Unidad propia en Spring Boot 3.3 con su base. REST para clientes heterogéneos y scripts; gRPC (14 RPC) como canal interno hacia el portal .NET y el servicio de tablero. Valida el token contra el núcleo y publica desde una bandeja de salida con el formato C5.
-- **Justificación.** Mismo lenguaje que el núcleo y el servicio de tablero; reglas RN-01 a RN-21 en un dominio sin framework, probado en memoria; contrato gRPC tipado entre servicios Java.
-- **Consecuencias.** Una tercera base y un tercer servidor de aplicación. El refresco del tablero reemplaza el tiempo real (SignalR) del taller. No guarda datos de personas.
+**Requisitos:** QA-INT-01, QA-TRZ-01. **Contexto:** Reconstrucción es un servicio de gestión en línea con muchas reglas propias, que comparte con el núcleo la identidad y la fase del desastre. **Decisión:** unidad propia en Spring Boot con su base. Ofrece REST para clientes heterogéneos y gRPC como canal interno hacia el portal y el tablero, valida el token contra el núcleo y publica desde una bandeja de salida (C5). **Alternativas:** incorporarla al núcleo, que mezclaría una función degradable con lo crítico; implementarla en .NET, lo que separaría su lenguaje del de los demás servicios de gestión. **Consecuencias:** reglas probadas en un dominio sin framework y un contrato tipado entre servicios. A cambio, una tercera base y un tercer servidor de aplicaciones.
 
 #### Consumo de avisos en notificaciones con bandeja de entrada y deduplicación (ADR-27) · Construido
 
-- **Requisitos.** QA-REN-03 (alerta crítica en menos de 5 s, con 10 simultáneas); QA-RES-02; contrato C5.
-- **Contexto.** Reconstrucción publicaba sus avisos (C5) en integracion.reconstruccion, pero nadie los consumía. Notificaciones, que viene del Taller 3, tomaba un mensaje por segundo de cada cola con un temporizador y guarda su estado en un archivo. Un aviso puede llegar repetido, porque la bandeja de salida entrega al menos una vez, y el consumidor puede reiniciarse a mitad de un aviso.
-- **Alternativas.** Un MDB con JMS sobre RabbitMQ (adaptador de recursos en Payara: más configuración y otra pieza que mantener); un consumidor continuo suscrito a la cola; un temporizador que lee la cola por lotes, sobre el reintento y la cola de errores que ya existían; un servicio aparte.
-- **Decisión.** En notificaciones, un consumidor con temporizador lee la cola cada 2 s, hasta 20 avisos por ciclo, con el mismo mecanismo del taller: confirmación manual, reintento a los 5 s hasta 5 veces y cola de errores.
-  - Una bandeja de entrada persistente guarda el estado de cada idEvento: RECIBIDO, ENVIADO, SIN_CORREO, PENDIENTE o FALLIDO. Un aviso ya atendido se descarta, también después de un reinicio.
-  - Envía correo a los sistemas suscritos del organismo, o a la dirección de coordinación si no hay, para PROYECTO_APROBADO, PROYECTO_CON_SOBRECOSTO y DESASTRE_CERRADO. Los demás tipos se registran sin correo.
-  - El procesador de alertas del taller pasa a tomar hasta 20 mensajes por cola en cada ciclo de 1 s, en vez de uno.
-- **Justificación.** Reutiliza lo que ya estaba probado (reintento y errores) con un cambio pequeño. La deduplicación por idEvento hace idempotente un proceso que recibe al menos una vez. Un aviso mal formado va a la cola de errores y no bloquea la cola.
-- **Consecuencias.**
-  - Medido: la prueba de Reconstrucción comprueba el correo de aprobación, sobrecosto y cierre, que reenviar el mismo aviso no genera otro correo y que uno mal formado queda en la cola de errores, con la cola vacía al final (E1).
-  - En contra: entrega al menos una vez, así que si el proceso cae entre enviar y marcar, un correo puede repetirse una vez. La bandeja vive en un archivo: una sola instancia activa (ADR-22). El sondeo agrega hasta 2 s. Las 10 alertas simultáneas no están medidas.
-  - Al activarlo se procesaron los avisos acumulados por las pruebas; los del formato anterior a C5 quedaron en la cola de errores, como mal formados.
+**Requisitos:** QA-REN-03, QA-RES-02. **Contexto:** los avisos de Reconstrucción no se consumían; el componente de notificaciones tomaba un mensaje por segundo, y como la bandeja de salida entrega al menos una vez, un aviso puede llegar repetido o interrumpirse por un reinicio. **Decisión:** un consumidor periódico lee hasta 20 avisos por ciclo, con confirmación manual, reintento a los 5 s hasta cinco veces y cola de errores. Una bandeja de entrada persistente guarda el estado de cada aviso, para descartar los ya atendidos incluso después de un reinicio. **Alternativas:** consumidor por mensaje con JMS, que exige más configuración; un servicio aparte. **Consecuencias:** un proceso que recibe al menos una vez se vuelve idempotente, y un aviso mal formado no bloquea la cola. Si el proceso cae entre enviar y marcar, un correo puede repetirse una vez. La bandeja vive en un archivo, así que hay una sola instancia activa (ADR-22).
 
 #### Personas afectadas, recursos y donaciones como sistemas externos (ADR-28) · Aplicado
 
-- **Requisitos.** Enunciado «Restricciones», que nombra esos sistemas como existentes; CON-01; indicación del profesor en clase.
-- **Contexto.** La versión 1.0 diseñaba UD-05 (personas) y SRV-08 (recursos y donaciones), sin código.
-- **Alternativas.** Construirlas; dejarlas diseñadas dentro; tratarlas como sistemas externos.
-- **Decisión.** Son sistemas externos (SE-04 y SE-05) con su punto de integración. UD-05 se retira sin renumerar. Las Solicitudes de recursos del Taller 2 salen del portal; su código sigue en el núcleo y en servidor hasta que el equipo acuerde retirarlo. Reconstrucción no registra personas ni número de afectados.
-- **Justificación.** Coincide con el enunciado y con el profesor, y concentra el esfuerzo en los mínimos.
-- **Consecuencias.** RF-PA y RF-GR pasan a fuera de alcance en el SRS; el ámbito de caso deja de aplicar.
+**Requisitos:** CON-01. **Contexto:** la gestión de personas afectadas y la de recursos y donaciones ya la hacen sistemas de otras entidades, que la plataforma no debe reemplazar. **Decisión:** se tratan como sistemas externos (SE-04 y SE-05), con su punto de integración; la unidad de personas afectadas (UD-05) se retira sin reutilizar su número, y Reconstrucción no registra personas. **Alternativas:** construirlas dentro de la plataforma, duplicando sistemas existentes y datos personales. **Consecuencias:** el esfuerzo se concentra en las capacidades del alcance, se guarda menos información personal, y el ámbito de caso deja de aplicar.
 
 #### Metas de rendimiento con percentiles medidos (ADR-29) · Aplicado
 
-- **Requisitos.** QA-REN-01 a QA-REN-03; anotación del profesor sobre los escenarios.
-- **Contexto.** El enunciado da tiempos sin decir cómo medirlos, y el promedio esconde las solicitudes lentas.
-- **Alternativas.** Promedio; máximo; percentiles.
-- **Decisión.** p50 y p95, medidos en el ambiente entregado con el número de solicitudes y la concurrencia. Las metas de los tres centros son metas de diseño.
-- **Justificación.** Bass, Clements y Kazman miden latencia y tasa de incumplimiento: «p95 menor que 2 s» es una latencia máxima con hasta 5 % de incumplimiento. El libro de SRE de Google (Beyer et al., 2016, cap. 4) trata las latencias como distribuciones.
-- **Consecuencias.** No se extrapola al despliegue objetivo. Evidencia: la medición del tablero y su informe (E2).
+**Requisitos:** QA-REN-01 a QA-REN-03. **Contexto:** las metas dan tiempos sin decir cómo medirlos, y el promedio esconde las solicitudes lentas. **Decisión:** se miden el percentil 50 y el 95, con el número de solicitudes y la concurrencia. Las metas de los tres centros se tratan como metas de diseño. **Alternativas:** el promedio o el máximo, que esconden o exageran. **Consecuencias:** «p95 menor que 2 s» es una latencia máxima con hasta 5 % de incumplimiento, como proponen Bass, Clements y Kazman. Lo medido en una máquina no se extrapola al despliegue objetivo.
 
 ## Requisitos de calidad
 
 ### Árbol de calidad
 
-Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) y dificultad (D): A alta, M media, B baja.
+Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) y dificultad (D): A alta, M media, B baja. Los de importancia y dificultad altas guiaron las decisiones principales.
 
 | Atributo | Refinamiento | Escenario del SRS | (I, D) |
 | --- | --- | --- | --- |
@@ -1044,49 +970,65 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Modificabilidad | Tipo de desastre y organismo | QA-MOD-01, QA-MOD-02 | (M, B) |
 | Confiabilidad | Reconciliación; consolidación | QA-CNF-01, QA-CNF-02 | (A, A); (M, M) |
 
-### Meta, enfoque, decisión y evidencia
+### Verificación
 
-| Meta | Enfoque | ADR | Evidencia al 17-nov-2026 |
+La arquitectura se verifica en tres niveles, porque cada uno detecta fallas que los otros no ven. Las **pruebas de dominio** comprueban las reglas de negocio en memoria, sin red ni base (E7). Las **pruebas de punta a punta** ejercitan el ambiente entregado completo a través de sus APIs, como lo haría un cliente real, incluidas las fallas inducidas. La **prueba instrumentada de la app** corre en un celular real y ejecuta los métodos de la app con desconexión real (E3). Las pruebas de punta a punta se agrupan por capacidad y se ejecutan con un solo comando (E1):
+
+| Prueba | Qué comprueba | Atributos |
+| --- | --- | --- |
+| API e integración | Catálogos, versiones, validación, importación de geometrías, cambios concurrentes, mapa de calor y fotos | QA-INT-01, QA-CNF-01 |
+| Campo | Captura en campo y su llegada a servidor vinculada al desastre | QA-ESC-02 |
+| Reconstrucción | Fases, reglas de proyectos y permisos por REST y gRPC, avisos y correo | QA-TRZ-01, QA-SEG-02 |
+| Evolución | Cambios de nivel repetidos sin duplicar, conflictos de versión, historial, correcciones de evaluaciones sin sobrescritura y sesión por SOAP | QA-CNF-01, QA-TRZ-01, QA-INT-01 |
+| Unificación | Sesión única y roles entre unidades, aislamiento entre organismos, identidad tomada del token y avisos que esperan con RabbitMQ detenido | QA-SEG-02, QA-RES-02, QA-REN-03 |
+| Caracterización y tipos de activo | C1 y C2 entre la app, servidor y el núcleo, incluido el conflicto de versión | QA-CNF-01 |
+| Portal | Las pantallas con los tres roles, el tablero y el cierre de sesión | QA-SEG-01, QA-SEG-02 |
+| Seguridad | Acceso sin token, clave de integración y límite de intentos | QA-SEG-01 |
+| EJB remoto | El mismo inicio y cierre de sesión que REST | QA-INT-01 |
+| App en un celular real | Desconexión, persistencia, conflicto, C1, C2 y sesión vencida | QA-DIS-03, QA-CNF-01 |
+
+En la última corrida pasaron todas: 271 comprobaciones de punta a punta (E1) y 33 en el celular (E3). La verificación cubre el comportamiento funcional y las fallas inducidas. No cubre la disponibilidad de los tres centros ni la carga de 10.000 usuarios, que requieren el despliegue objetivo. La tabla siguiente resume cómo atiende la arquitectura cada escenario y qué evidencia lo respalda:
+
+| Escenario | Cómo lo atiende la arquitectura | ADR | Evidencia |
 | --- | --- | --- | --- |
 | QA-DIS-01 | Redundancia de lo crítico; lo degradable aparte | 01, 11, 12 | Diseño; el tablero sigue sin Reconstrucción (medido) |
-| QA-DIS-02 | Réplica síncrona y conmutación | 09, 12 | Ninguna: sin código |
-| QA-DIS-03, QA-CNF-01 | Operaciones sobre versión base; almacén local | 04, 13, 25 | Prueba de la app en un celular real (E3) y prueba de evolución (E1) |
+| QA-DIS-02 | Réplica síncrona y conmutación | 09, 12 | Solo diseño |
+| QA-DIS-03, QA-CNF-01 | Operaciones sobre versión base; almacén local | 04, 13, 25 | Prueba en celular real (E3) y de evolución (E1) |
 | QA-ESC-01 | Unidades que crecen por separado; entrada única; portal sin estado de vista | 01, 03, 14, 23 | Modelo de capacidad (estimación) |
 | QA-ESC-02 | Unidad propia para campo; fotos después; incorporación diferida | 13, 18 | Prueba de campo (E1); sin prueba con 500 equipos |
-| QA-REN-01 | Copias de lectura; consultas en paralelo | 03, 24, 29 | Tablero: p95 de 50 ms con 1 cliente y de 366 ms con 20 |
-| QA-REN-02 | Presupuesto por tramo; resultado en la misma llamada | 02, 29 | 22 ms con poca carga (versión 1.0) |
-| QA-REN-03 | Bandeja de salida; cola por suscriptor; consumo por lotes con deduplicación | 02, 15, 27 | 2,7 s y 3,2 s con avisos aislados (versión 1.0); 10 simultáneas sin medir |
-| QA-RES-01 | Adaptador con corte de circuito y cola | 07, 21 | Cola por suscriptor y bandeja de salida verificadas |
-| QA-RES-02 | Procesos separados; respuesta parcial | 11, 16, 24 | 60 de 60 respuestas parciales con Reconstrucción caída |
-| QA-INT-01, QA-INT-02, QA-EXT-01 | Adaptadores; REST, gRPC, SOAP y EJB remoto | 07, 17, 26 | Prueba gRPC desde un cliente externo; prueba de EJB remoto (E8); suscripción de sistemas |
-| QA-SEG-01, QA-SEG-02 | Sesión validada en el núcleo; permisos en el backend | 10, 19, 23 | Pruebas de seguridad (10), del portal (47) y de unificación (E1) |
-| QA-TRZ-01 | Auditoría en la transacción del cambio | 20 | Pruebas de Reconstrucción y de caracterización (E1) |
-| QA-TRZ-02, QA-MOD-01, QA-MOD-02, QA-CNF-02 | Dos fechas; configuración; alias | 05, 06, 08 | Sin código, salvo el catálogo configurable de tipos de activo (C1); los tipos de desastre siguen fijos |
+| QA-REN-01 | Copias de lectura; consultas en paralelo | 03, 24, 29 | Tablero: p95 de 50 ms con 1 cliente y de 366 ms con 20 (E2) |
+| QA-REN-02 | Presupuesto por tramo; resultado en la misma llamada | 02, 29 | 22 ms con poca carga |
+| QA-REN-03 | Bandeja de salida; cola por suscriptor; consumo por lotes con deduplicación | 02, 15, 27 | 2,7 s y 3,2 s con avisos aislados; 10 simultáneas sin medir |
+| QA-RES-01 | Adaptador con corte de circuito y cola | 07, 21 | Cola por suscriptor y bandeja de salida verificadas (E1) |
+| QA-RES-02 | Procesos separados; respuesta parcial | 11, 16, 24 | 60 de 60 respuestas parciales con Reconstrucción caída (E2) |
+| QA-INT-01, QA-INT-02, QA-EXT-01 | Adaptadores; REST, gRPC, SOAP y EJB remoto | 07, 17, 26 | gRPC desde un cliente .NET; EJB remoto (E8); suscripción de sistemas |
+| QA-SEG-01, QA-SEG-02 | Sesión validada en el núcleo; permisos en el backend | 10, 19, 23 | Pruebas de seguridad, portal y unificación (E1) |
+| QA-TRZ-01 | Auditoría en la transacción del cambio | 20 | Pruebas de Reconstrucción y caracterización (E1) |
+| QA-TRZ-02, QA-MOD-01, QA-MOD-02, QA-CNF-02 | Dos fechas; configuración; alias | 05, 06, 08 | Solo diseño, salvo el catálogo configurable de tipos de activo (C1) |
 
 ## Riesgos y deuda técnica
+
+Los riesgos se ordenan por su efecto sobre las metas de calidad. *Aceptado* significa que se convive con el riesgo de forma consciente; *abierto*, que tiene una acción pendiente.
 
 | Riesgo o deuda | Impacto | Estado | Acción |
 | --- | --- | --- | --- |
 | Tres centros sin montar (réplicas, promoción y bloqueo del primario) | QA-DIS-01 y QA-DIS-02 solo tienen sustento de diseño | Aceptado | Montarlo y hacer el simulacro |
-| Modo degradado de servidor sin código | Sin núcleo, servidor rechaza todo, incluido el mapa | Abierto | Implementarlo; mientras tanto, redundancia del núcleo |
 | El núcleo valida cada sesión | Si se satura o cae, lo sienten todas las unidades | Abierto | Redundancia; medir la validación bajo carga |
-| UD-07 Consulta pública y UD-08 Integración sin código | La parte ciudadana del Escenario B y los adaptadores de A y C solo están en diseño | Aceptado | Empezar por SE-01, SE-02 y SE-06 |
-| Notificaciones guarda las entregas y la bandeja de entrada en archivos | Una sola instancia activa; 10 alertas simultáneas sin medir | Abierto | Pasar a PostgreSQL (ADR-22) y medir |
-| Entrega de avisos al menos una vez | Si notificaciones cae entre enviar y marcar, un correo puede repetirse una vez | Aceptado | Documentado (ADR-27) |
-| El servicio de notificaciones no autentica a quien lo llama | Dentro de la red de Docker, cualquiera podría publicar o suscribirse | Abierto, en curso | Clave de servicio en sus rutas |
-| SQLite del móvil sin cifrar | Un dispositivo perdido expone las capturas de su usuario | Aceptado como limitación | SQLCipher |
-| Clave EJB como argumento de construcción del núcleo | Quedaba en el historial de la imagen | Cerrado: el núcleo crea el usuario técnico al arrancar, con las variables de entorno | — |
-| Código de Solicitudes de recursos en el núcleo y en servidor | Mantener y exponer algo fuera de alcance | Abierto | Retirarlo de ambos lados, con sus pruebas, cuando el equipo lo acuerde |
-| Catálogo de servidor con consistencia eventual de unos segundos | Una evaluación de un desastre recién creado queda preliminar unos segundos | Aceptado | Documentado; las pruebas esperan |
-| Trade-off del tablero en una máquina saturada | Más carga simultánea sobre los servicios de atrás | Aceptado | Ajustar pool y límite; medir con servicios escalados |
-| Tokens de sesión del portal en memoria | Varias instancias exigen afinidad; un reinicio del portal pide entrar de nuevo | Abierto | Afinidad en la entrada o almacén compartido (por ejemplo, Redis) |
-| Sin pruebas de carga de 10.000 usuarios ni de 500 equipos con fotos | Metas de escala sin evidencia | Abierto | Prueba con red real |
+| Modo degradado de servidor sin código | Sin núcleo, servidor rechaza todo, incluido el mapa | Abierto | Implementarlo; mientras tanto, redundancia del núcleo |
+| Consulta pública e integración sin código | La parte ciudadana del escenario B y los adaptadores de A y C solo están en diseño | Aceptado | Empezar por SE-01, SE-02 y SE-06 |
+| Notificaciones guarda sus entregas en archivos | Una sola instancia activa; 10 alertas simultáneas sin medir | Abierto | Pasar a PostgreSQL (ADR-22) y medir |
+| El servicio de notificaciones no autentica a quien lo llama | Dentro de la red interna, cualquier contenedor podría publicar o suscribirse | Abierto | Clave de servicio en sus rutas |
+| Sin pruebas de carga de 10.000 usuarios ni de 500 equipos con fotos | Las metas de escala no tienen evidencia | Abierto | Prueba con red real |
 | Validación de evaluaciones sin código | Reconstrucción toma como validada una evaluación vinculada a un desastre | Abierto | Validación por un coordinador distinto |
-| Con la sesión vencida, «Cerrar sesión» en la app falla con un mensaje de falta de conexión | El evaluador no puede cerrar sesión hasta entrar de nuevo; no se pierde nada | Cerrado: corregido y verificado en un celular real (E3) | Con la sesión vencida, se borra la sesión local sin llamar al servidor |
+| Tokens de sesión del portal en memoria | Varias instancias exigen afinidad; un reinicio pide entrar de nuevo | Abierto | Afinidad en la entrada o almacén compartido |
 | Un cambio de fase del coordinador no emite aviso | Los organismos no se enteran de un cierre directo | Abierto | Emitirlo desde la bandeja de salida |
-| Sin TLS ni cifrado en reposo; puertos de prueba en 127.0.0.1 | Datos en claro dentro de la máquina | Aceptado para el laboratorio | Despliegue objetivo; cerrar el puerto del núcleo tras C2 |
+| SQLite del móvil sin cifrar | Un dispositivo perdido expone las capturas de su usuario | Aceptado | Cifrado de la base local |
+| Sin TLS ni cifrado en reposo en el ambiente entregado | Datos en claro dentro de la máquina | Aceptado para el laboratorio | Despliegue objetivo con TLS y gestor de secretos |
+| Entrega de avisos al menos una vez | Si notificaciones cae entre enviar y marcar, un correo puede repetirse una vez | Aceptado | Documentado (ADR-27) |
+| Catálogo de servidor con consistencia eventual | Una evaluación de un desastre recién creado queda preliminar unos segundos | Aceptado | Documentado; las pruebas esperan la sincronización |
+| Funcionalidad de solicitudes de recursos sin uso en el núcleo y en servidor | Mantener código fuera del alcance | Abierto | Retirarla con sus pruebas |
 | Catálogos fijos; consolidación, dos fechas, coordinación y auditoría consolidada sin código | QA-MOD-01, QA-CNF-02 y QA-TRZ-02 solo en diseño | Abierto | ADR-05, 06, 08, 19 y 20 |
-| Mosaicos del mapa desde OpenStreetMap | Sin internet, el mapa no muestra fondo | Aceptado | Servidor de mosaicos propio si se requiere |
+| Mosaicos del mapa desde un servicio público | Sin internet, el mapa no muestra el fondo | Aceptado | Servidor de mosaicos propio si se requiere |
 
 ## Glosario
 
@@ -1095,23 +1037,20 @@ Los escenarios completos están en el SRS. Aquí se ordenan por importancia (I) 
 | Fase del desastre | Registro, Caracterización, Reconstrucción o Cierre |
 | Caracterización | Ubicación, radio, nivel y descripción de un desastre (C2) |
 | Nivel 1 a 4 | Clasificación del desastre por impacto; distinta del nivel de afectación 1 a 5 de una evaluación |
-| Función crítica, esencial o degradable | Clasificación del SRS según lo que pasa si la función falta |
+| Función crítica, esencial o degradable | Clasificación del SRS según el daño que causa la ausencia de la función |
 | Unidad de despliegue (UD) | Proceso que se despliega, crece y falla por separado, dueño de su base |
-| Componente (SRV) | Responsabilidad lógica; varios pueden vivir en una unidad |
-| Respuesta parcial | Respuesta del tablero que trae las fuentes disponibles y nombra la que faltó |
-| Razor Pages | Modelo de ASP.NET Core en el que cada pantalla es una página: la vista Razor más su PageModel |
-| MVVM | Modelo, vista y modelo de vista: la vista enlaza propiedades del modelo de vista, que atiende sus comandos |
 | Aviso | Mensaje que anuncia un cambio ya guardado y viaja por una cola |
 | Bandeja de salida | Tabla donde el cambio y su aviso se guardan en la misma transacción |
 | Versión base | Versión que el cliente tenía cuando hizo el cambio |
 | Clave de idempotencia | Identificador del cliente que evita aplicar dos veces una solicitud repetida |
-| Ámbito de acceso | Alcance de un permiso: organismo o evento |
-| Operación externa | Operación que queda Por confirmar hasta que un sistema externo responde |
-| En conciliación | Operación externa sin resultado conocido: no se revierte y se consulta hasta tener un resultado definitivo |
-| Adaptador | Pieza de UD-08 que traduce entre un sistema externo y el modelo común |
+| Respuesta parcial | Respuesta del tablero que trae las fuentes disponibles y nombra la que faltó |
+| MVVM | Modelo, vista y modelo de vista: la vista enlaza datos que expone el modelo de vista, que atiende sus acciones |
+| Adaptador | Pieza de la unidad de integración que traduce entre un sistema externo y el modelo común |
 | Corte de circuito | Deja de llamar a un sistema que falla y lo prueba cada cierto tiempo |
+| En conciliación | Operación externa sin resultado conocido: no se revierte y se consulta hasta tener uno definitivo |
 | Réplica síncrona | Copia en otro centro que confirma un cambio antes de responder |
-| Copia aislada | Respaldo con versiones, sin acceso desde la operación, para datos corruptos |
+| Copia aislada | Respaldo con versiones, sin acceso desde la operación, para recuperar datos corruptos |
+| Gestor de secretos | Servicio que guarda credenciales, las entrega en tiempo de ejecución y registra su uso |
 | p50 y p95 | Tiempo por debajo del cual queda el 50 % o el 95 % de las solicitudes medidas |
 
 ## Anexo. Registro de evidencias
@@ -1120,8 +1059,8 @@ Los resultados medidos citan su evidencia con un identificador. Son los mismos i
 
 | ID | Qué muestra | Registro |
 | --- | --- | --- |
-| E1 | Verificación de punta a punta del 17-nov: 271 comprobaciones de API, integración, campo, Reconstrucción, evolución, unificación, caracterización, portal y seguridad | evidencias/rol1-build/2026-11-17_verificar_final.log |
-| E2 | Mediciones del tablero del 15 y del 17-nov, con 1 y 20 clientes y con Reconstrucción congelada | evidencias/rol1-tablero/ |
-| E3 | Prueba de la app en un celular real (17-nov): 33 comprobaciones y capturas de la interfaz | evidencias/rol2-campo/ |
-| E7 | Pruebas del dominio y de los casos de uso de Reconstrucción (15-nov) | Informe de Maven, no versionado |
-| E8 | EJB remoto (10-nov) | evidencias/evolucion-rpc-pruebas.log |
+| E1 | Verificación de punta a punta: 271 comprobaciones de API, integración, campo, Reconstrucción, evolución, unificación, caracterización, portal, seguridad y EJB remoto | evidencias/rol1-build/2026-11-18_verificar_r1-08.log |
+| E2 | Mediciones del tablero con 1 y 20 clientes y con Reconstrucción congelada | evidencias/rol1-tablero/ |
+| E3 | Prueba instrumentada de la app en un celular real: 33 comprobaciones y capturas de la interfaz | evidencias/rol2-campo/ |
+| E7 | Pruebas del dominio y de los casos de uso de Reconstrucción | Informe de las pruebas de Reconstrucción |
+| E8 | Inicio y cierre de sesión por EJB remoto | evidencias/evolucion-rpc-pruebas.log |

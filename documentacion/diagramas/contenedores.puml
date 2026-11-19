@@ -2,7 +2,7 @@
 !include <C4/C4_Container>
 !include estilo.iuml
 LAYOUT_TOP_DOWN()
-title Contenedores de la plataforma (C4 nivel 2) · ambiente entregado, 17-nov-2026
+title Contenedores de la plataforma (C4 nivel 2) · ambiente entregado
 
 Person(coord, "Coordinador", "Registra desastres, inicia la reconstrucción y aprueba proyectos")
 Person(eval, "Evaluador de campo", "Caracteriza y evalúa daños; opera los proyectos asignados")
